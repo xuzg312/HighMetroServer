@@ -1,0 +1,17 @@
+# .NET 编译产物
+**/bin/
+**/obj/
+
+# Rider IDE缓存
+.idea/
+.rider/
+*.DotSettings.user
+
+# Avalonia设计器缓存
+.avalonia/
+
+# Mac系统文件
+.DS_Store
+
+# Windows缓存
+Thumbs.db
