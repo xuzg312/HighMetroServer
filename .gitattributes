@@ -1,0 +1,11 @@
+*.cs     text eol=lf
+*.axaml  text eol=lf
+*.axaml.cs text eol=lf
+*.csproj text eol=lf
+*.json   text eol=lf
+*.md     text eol=lf
+*.png    binary
+*.ico    binary
+*.svg    binary
+*.dll    binary
+*.exe    binary

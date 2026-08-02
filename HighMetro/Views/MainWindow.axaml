@@ -1,0 +1,39 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:HighMetro.ViewModels"
+        xmlns:views="using:HighMetro.Views.Controls"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        WindowState="Maximized"
+        CanResize="False"
+        x:Class="HighMetro.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="HighMetro">
+
+    <Design.DataContext>
+        <!-- This only sets the DataContext for the previewer in an IDE,
+             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
+        <vm:MainViewModel />
+    </Design.DataContext>
+    
+    <Grid>
+        <!-- 底层主页面 -->
+        <ContentControl Content="{Binding MainPageVm}">
+            <ContentControl.ContentTemplate>
+                <DataTemplate DataType="vm:MainPageViewModel">
+                    <views:MainPageView />
+                </DataTemplate>
+            </ContentControl.ContentTemplate>
+        </ContentControl>
+
+        <!-- 上层遮罩弹窗层 -->
+        <Grid IsVisible="{Binding ShowOverlay}">
+            <Border Background="#80000000"/>
+            <Grid HorizontalAlignment="Center" VerticalAlignment="Center" Width="480">
+                <ContentControl Content="{Binding ActivePopupVm}" />
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

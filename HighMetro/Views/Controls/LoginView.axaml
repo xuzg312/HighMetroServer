@@ -1,0 +1,21 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="HighMetro.Views.Controls.LoginView"
+             Width="420">
+    <Border Background="White" Padding="24" CornerRadius="8">
+        <StackPanel Spacing="14">
+            <TextBlock Text="系统登录" FontSize="18" FontWeight="Bold"/>
+            <TextBox Watermark="用户名" Text="{Binding Username}" TextChanged="OnTextChanged"/>
+            <TextBox Watermark="密码" Text="{Binding Password}" PasswordChar="●" TextChanged="OnTextChanged"/>
+            <TextBlock Text="{Binding Msg}" Foreground="Red"/>
+
+            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+                <Button Content="登录" Command="{Binding LoginCommand}"/>
+                <Button Content="取消" Command="{Binding CancelCommand}"/>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

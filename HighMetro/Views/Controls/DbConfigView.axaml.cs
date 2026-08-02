@@ -1,0 +1,27 @@
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Markup.Xaml;
+using HighMetro.ViewModels;
+
+namespace HighMetro.Views.Controls;
+
+public partial class DbConfigView : UserControl
+{
+    public DbConfigView()
+    {
+        InitializeComponent();
+    }
+    private void InitializeComponent()
+    {
+        AvaloniaXamlLoader.Load(this);
+    }
+    private void OnTextChanged(object? sender, TextChangedEventArgs e)
+    {
+        // 获取ViewModel
+        if (DataContext is DbConfigViewModel vm)
+        {
+            // 清空错误文本
+            vm.MessageText = string.Empty;
+        }
+    }
+}
