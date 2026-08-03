@@ -90,5 +90,6 @@ public partial class MainViewModel : ViewModelBase
         // 2.关闭数据库连接
         // 3.停止后台定时器、异步任务
         // 4.释放视频解码、图像资源
+        Console.WriteLine("程序结束，释放资源！");
     }
 }
