@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Logging;
 using Avalonia.Markup.Xaml;
 using HighMetro.ViewModels;
 using HighMetro.Views;
@@ -21,7 +22,6 @@ public partial class App : Application
             mainWindow.DataContext = new MainViewModel(mainWindow);
             desktop.MainWindow = mainWindow;
         }
-
         base.OnFrameworkInitializationCompleted();
     }
 }

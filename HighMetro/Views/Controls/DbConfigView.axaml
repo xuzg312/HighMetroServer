@@ -10,19 +10,19 @@
             <TextBlock Text="数据库连接配置" FontSize="18" FontWeight="Bold"/>
 
             <Grid ColumnDefinitions="80,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
-                <TextBlock Grid.Row="0" Text="地址："/>
+                <TextBlock Grid.Column="0" Grid.Row="0" Text="地址："/>
                 <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Host}" TextChanged="OnTextChanged"/>
 
-                <TextBlock Grid.Row="1" Text="端口："/>
+                <TextBlock Grid.Column="0" Grid.Row="1" Text="端口："/>
                 <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Port}" TextChanged="OnTextChanged"/>
 
-                <TextBlock Grid.Row="2" Text="账号："/>
+                <TextBlock Grid.Column="0" Grid.Row="2" Text="账号："/>
                 <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding DbUser}" TextChanged="OnTextChanged"/>
 
-                <TextBlock Grid.Row="3" Text="密码："/>
+                <TextBlock Grid.Column="0" Grid.Row="3" Text="密码："/>
                 <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding DbPassword}" PasswordChar="●" TextChanged="OnTextChanged"/>
 
-                <TextBlock Grid.Row="4" Grid.ColumnSpan="2" Text="{Binding MessageText}" Foreground="#c0392b"/>
+                <TextBlock Grid.Column="0" Grid.Row="4" Grid.ColumnSpan="2" Text="{Binding MessageText}" Foreground="#c0392b"/>
             </Grid>
 
             <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" Margin="0,10,0,0">

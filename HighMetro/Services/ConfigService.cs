@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Text.Json;
-using HighMetro.Models;
 using HighMetro.Parameters;
 
 namespace HighMetro.Services;
@@ -17,17 +16,17 @@ public class ConfigService : IConfigService
         _configPath = Path.Combine(folder, "config.json");
     }
 
-    public DbSetting? LoadDbConfig()
+    public DbSetting LoadDbConfig()
     {
         var appConfig = LoadAppConfig();
         return appConfig.Database ?? new DbSetting();
     }
-    public LoginSetting? LoadLoginConfig()
+    public LoginSetting LoadLoginConfig()
     {
         var appConfig = LoadAppConfig();
         return appConfig.LoginInfo ?? new LoginSetting();
     }
-    public HostSetting? LoadHostConfig()
+    public HostSetting LoadHostConfig()
     {
         var appConfig = LoadAppConfig();
         return appConfig.HostInfo ?? new HostSetting();

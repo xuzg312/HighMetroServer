@@ -9,13 +9,13 @@
             <TextBlock Text="工控机列表：" FontSize="16"/>
 
             <!-- 替换为 ListBox 单选列表 -->
-            <ListBox ItemsSource="{Binding HostList}"
+            <ListBox ItemsSource="{Binding HostModalsList}"
                      SelectedItem="{Binding SelectedHost}"
                      Height="220">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="{Binding Code}" Width="80"/>
+                            <TextBlock Text="{Binding Bh}" Width="80"/>
                             <TextBlock Text="{Binding Name}"/>
                         </StackPanel>
                     </DataTemplate>

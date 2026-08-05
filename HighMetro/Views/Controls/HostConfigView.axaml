@@ -1,0 +1,53 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="450"
+             x:Class="HighMetro.Views.Controls.HostConfigView"
+             x:Name="Root">
+    <Grid RowDefinitions="Auto,Auto" RowSpacing="2"
+          DataContext="{Binding HostConfigViewModelVm, ElementName=Root}">
+        <!-- 第一行：同一行横向排列：标题｜红色提示框｜消息栏 -->
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,10,*,10,2*" VerticalAlignment="Center">
+        
+            <!-- 固定标题 -->
+            <TextBlock Grid.Column="0" Text="工控机参数配置" FontSize="16" VerticalAlignment="Center"/>
+
+            <!-- 红色提示框 -->
+            <TextBlock Grid.Column="2"  Text="⚠️ 监控端一旦修改，需要重新启动才生效！" Foreground="Red" 
+                       IsVisible="{Binding HasUnappliedConfig}" VerticalAlignment="Center"/>
+
+            <!-- 消息栏：接收消息提示 -->
+            <TextBlock Grid.Column="4" Text="{Binding MessageText}" 
+                       Foreground="#FF333333" VerticalAlignment="Center" TextWrapping="Wrap"/>
+        </Grid>
+        <!-- 第二行：输入框 + 按钮 -->
+        <Grid Grid.Row="1"
+              ColumnDefinitions="Auto,6,120,
+                         12,Auto,6,100,
+                         12,Auto,6,120,
+                         12,Auto,6,180,
+                         12,Auto,6,Auto" 
+              VerticalAlignment="Center">
+
+            <TextBlock Grid.Column="0"  Text="IP：" VerticalAlignment="Center"/>
+            <TextBox Grid.Column="2"  Text="{Binding Ip}" 
+                     IsEnabled="{Binding !IsReadOnly}" Watermark="请输入IP地址"/>
+
+            <TextBlock Grid.Column="4"  Text="端口：" VerticalAlignment="Center"/>
+            <TextBox Grid.Column="6"  Text="{Binding Port}" 
+                     IsEnabled="{Binding !IsReadOnly}" Watermark="端口号"/>
+
+            <TextBlock Grid.Column="8"  Text="Code：" VerticalAlignment="Center"/>
+            <TextBox Grid.Column="10" Text="{Binding Code}" 
+                     IsEnabled="{Binding !IsReadOnly}" Watermark="设备编码"/>
+
+            <TextBlock Grid.Column="12" Text="名称：" VerticalAlignment="Center"/>
+            <TextBox Grid.Column="14" Text="{Binding Name}" 
+                     IsEnabled="{Binding !IsReadOnly}" Watermark="设备名称"/>
+
+            <Button Grid.Column="16" Content="打开" Command="{Binding OpenCommand}" MinWidth="70"/>
+            <Button Grid.Column="18" Content="关闭" Command="{Binding CloseCommand}" MinWidth="70"/>
+        </Grid>
+    </Grid>
+</UserControl>

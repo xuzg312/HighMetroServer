@@ -3,6 +3,8 @@ using System.ComponentModel.DataAnnotations;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using HighMetro.BaseModel;
+using HighMetro.Models;
 using HighMetro.Parameters;
 using HighMetro.Services;
 
@@ -12,7 +14,8 @@ public partial class LoginViewModel : ObservableValidator
 {
     private readonly IDbService _dbService;
     private readonly IConfigService _configService;
-
+    private readonly DbSetting _dbSetting;
+    
     public Action<LoginSetting>? OnLoginSuccess;
     public Action? OnLoginCancel;
 
@@ -27,13 +30,12 @@ public partial class LoginViewModel : ObservableValidator
     [ObservableProperty]
     private string _msg = "";
 
-    public LoginViewModel(IConfigService configService, IDbService dbService)
+    public LoginViewModel(IConfigService configService, IDbService dbService,LoginSetting loginSetting,DbSetting dbSetting)
     {
         _dbService = dbService;
         _configService = configService;
-        var loginConfig = _configService.LoadLoginConfig() ?? new LoginSetting();
-        Username = loginConfig.LoginUser;
-        Password = loginConfig.LoginPassword;
+        Username = loginSetting.LoginUser;
+        _dbSetting = dbSetting;
     }
     [RelayCommand]
     private void Login()
@@ -44,16 +46,23 @@ public partial class LoginViewModel : ObservableValidator
         {
             return; 
         }
-        if (_dbService.VerifyUser(Username, Password))
+        var setting = BuildSetting();
+        ResultInfo resultInfo = _dbService.VerifyUser(setting,_dbSetting);
+        if (resultInfo.Code.Equals(PublicConst.FlagYes))
         {
-            var setting = BuildSetting();
             _configService.SaveLoginConfig(setting);
             Msg = "";
+            UserInfo userInfo = new UserInfo()
+            {
+                Username = setting.LoginUser,
+                Password=setting.LoginPassword
+            };
+            ParaSetupModules.UserInfo = userInfo;
             OnLoginSuccess?.Invoke(setting);
         }
         else
         {
-            Msg = "用户名或密码错误";
+            Msg = resultInfo.Message;
         }
     }
 

@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using HighMetro.BaseModel;
 using HighMetro.Models;
 using HighMetro.Parameters;
 using HighMetro.Services;
@@ -10,7 +12,6 @@ namespace HighMetro.ViewModels;
 
 public partial class HostSelectViewModel : ObservableValidator
 {
-    private readonly IDbService _dbService;
     private readonly IConfigService _configService;
 
     // 回调
@@ -18,26 +19,36 @@ public partial class HostSelectViewModel : ObservableValidator
     public Action? OnCancel;
 
     [ObservableProperty]
-    private ObservableCollection<HostInfo> _hostList = [];
+    private ObservableCollection<HostModals> _hostModalsList = [];
     
-    private HostInfo? _selectedHost;
+    private HostModals? _selectedHost;
 
     [ObservableProperty]
     private string _messageText = "";
-    public HostSelectViewModel(IConfigService configService, IDbService dbService)
+    public HostSelectViewModel(IConfigService configService, ResultHostInfo resultHostInfo)
     {
-        _dbService = dbService;
         _configService = configService;
-        HostList = new ObservableCollection<HostInfo>
+        if (resultHostInfo.ReturnInfo.Code.Equals(PublicConst.FlagYes))
         {
-            new HostInfo("IPC-01", "一号工业计算机"),
-            new HostInfo("IPC-02", "二号工业计算机"),
-            new HostInfo("IPC-03", "三号工业计算机"),
-            new HostInfo("IPC-04", "四号工业计算机"),
-            new HostInfo("IPC-05", "五号工业计算机")
-        };
+            List<HostInfo> hostList = resultHostInfo.HostList;
+            if (hostList.Count > 0)
+            {
+                int length = hostList.Count;
+                HostModalsList = new ObservableCollection<HostModals>();
+                for (var i = 0; i < length; i++)
+                {
+                    HostInfo hostInfo = hostList[i];
+                    HostModals hostModals = new HostModals(hostInfo.Bh,"("+hostInfo.Code+")"+hostInfo.Name);
+                    HostModalsList.Add(hostModals);
+                }
+            }
+        }
+        else
+        {
+            MessageText = resultHostInfo.ReturnInfo.Message;
+        }
     }
-    public HostInfo? SelectedHost
+    public HostModals? SelectedHost
     {
         get => _selectedHost;
         set
@@ -49,7 +60,7 @@ public partial class HostSelectViewModel : ObservableValidator
             }
         }
     } 
-    private void OnHostSelectedChanged(HostInfo? selectItem)
+    private void OnHostSelectedChanged(HostModals? selectItem)
     {
         if (selectItem == null)
         {
@@ -83,7 +94,7 @@ public partial class HostSelectViewModel : ObservableValidator
     {
         return new HostSetting
         {
-            SystemHost = SelectedHost.Code
+            Bh = SelectedHost.Bh
         };
     }
 }

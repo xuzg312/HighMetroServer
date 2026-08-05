@@ -5,12 +5,12 @@ namespace HighMetro.Services;
 
 public interface IConfigService
 {
-    DbSetting? LoadDbConfig();
+    DbSetting LoadDbConfig();
     void SaveDbConfig(DbSetting setting);
-    LoginSetting? LoadLoginConfig();
+    LoginSetting LoadLoginConfig();
     void SaveLoginConfig(LoginSetting setting);
     
-    HostSetting? LoadHostConfig();
+    HostSetting LoadHostConfig();
     
     void SaveHostConfig(HostSetting setting);
 }

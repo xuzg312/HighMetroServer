@@ -3,7 +3,9 @@ using System.ComponentModel.DataAnnotations;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HighMetro.Attributes;
+using HighMetro.BaseModel;
 using HighMetro.Models;
+using HighMetro.Parameters;
 using HighMetro.Services;
 
 namespace HighMetro.ViewModels;
@@ -36,23 +38,26 @@ public partial class DbConfigViewModel : ObservableValidator
 
     [ObservableProperty]
     private string _messageText = "";
-    public DbConfigViewModel(IConfigService configService, IDbService dbService)
+    public DbConfigViewModel(IConfigService configService, IDbService dbService,DbSetting setting,ResultInfo resultInfo)
     {
         _dbService = dbService;
         _configService = configService;
-        var dbConfig = _configService.LoadDbConfig() ?? new DbSetting();
-        Host = dbConfig.DbHost;
-        Port = dbConfig.DbPort;
-        DbUser = dbConfig.DbUser;
-        DbPassword = dbConfig.DbPassword;
+        Host = setting.DbHost;
+        Port = setting.DbPort;
+        DbUser = setting.DbUser;
+        DbPassword = setting.DbPassword;
+        if (resultInfo.Code.Equals(PublicConst.FlagYes))
+        {
+            MessageText = "❌ 连接失败，请检查参数:"+resultInfo.Message;
+        }
     }
 
     [RelayCommand]
     private void TestConnection()
     {
         var setting = BuildSetting();
-        var ok = _dbService.TestConnection(setting);
-        MessageText = ok ? "✅ 数据库连接成功！" : "❌ 连接失败，请检查参数";
+        ResultInfo resultInfo = _dbService.TestConnection(setting);
+        MessageText = resultInfo.Code.Equals(PublicConst.FlagYes) ? "✅ 数据库连接成功！" : "❌ 连接失败，请检查参数:"+resultInfo.Message;
     }
     [RelayCommand]
     private void Confirm()
@@ -65,12 +70,12 @@ public partial class DbConfigViewModel : ObservableValidator
         }
         var setting = BuildSetting();
         // 新增：测试数据库连接
-        //bool connected = _dbService.TestConnection(setting);
-        //if (!connected)
-        //{
-            //MessageText = "❌ 连接失败，请检查参数！";
-            //return; 
-        //}
+        ResultInfo resultInfo = _dbService.TestConnection(setting);
+        if (!resultInfo.Code.Equals(PublicConst.FlagYes))
+        {
+            MessageText = "❌ 连接失败，请检查参数:"+resultInfo.Message;
+            return;    
+        }
         _configService.SaveDbConfig(setting);
         OnDbConfigSuccess?.Invoke(setting);
     }

@@ -1,0 +1,94 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="using:HighMetro.Views.Controls"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="450"
+             x:Class="HighMetro.Views.Controls.SerialConfigView"
+             x:Name="Root">
+    <!-- 5组：标签+控件，横向均匀排布，组内间距很小 -->
+    <Grid RowDefinitions="Auto,Auto" RowSpacing="2" 
+          DataContext="{Binding SerialConfigViewModelVm, ElementName=Root}">
+        <!-- 第一行：同一行横向排列：标题｜红色提示框｜消息栏 -->
+        <Grid Grid.Row="0" 
+              ColumnDefinitions="Auto,10,*,10,2*" 
+              VerticalAlignment="Center">
+        
+            <!-- 固定标题 -->
+            <TextBlock Grid.Column="0" Text="主板参数配置" FontSize="16" VerticalAlignment="Center"/>
+
+            <!-- 红色提示框 -->
+            <TextBlock Grid.Column="2"  Text="⚠️ 参数一旦修改，需要重新启动才生效！" Foreground="Red" 
+                       IsVisible="{Binding HasUnappliedConfig}" VerticalAlignment="Center"/>
+
+            <!-- 消息栏：接收消息提示 -->
+            <TextBlock Grid.Column="4" Text="{Binding MessageText}" 
+                       Foreground="#FF333333" VerticalAlignment="Center" TextWrapping="Wrap"/>
+        </Grid>
+        <Grid Grid.Row="1" ColumnSpacing="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="180"/>
+                <ColumnDefinition Width="180"/>
+                <ColumnDefinition Width="180"/>
+                <ColumnDefinition Width="180"/>
+                <ColumnDefinition Width="180"/>
+                <ColumnDefinition Width="120"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 串口号 -->
+            <StackPanel Grid.Column="0"  Orientation="Horizontal" Spacing="4">
+                <TextBlock Text="串口号："/>
+                <ComboBox MinWidth="100"
+                          ItemsSource="{Binding PortNameList}"
+                          SelectedItem="{Binding SelectPortName}"
+                          DisplayMemberBinding="{Binding DisplayName}"
+                          IsEnabled="{Binding !IsReadOnly}"/>
+            </StackPanel>
+
+            <!-- 波特率 -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                <TextBlock Text="波特率："/>
+                <ComboBox MinWidth="100"
+                          ItemsSource="{Binding BaudRateList}"
+                          SelectedItem="{Binding SelectedBaudRate}"
+                          DisplayMemberBinding="{Binding DisplayName}"
+                          IsEnabled="{Binding !IsReadOnly}"/>
+            </StackPanel>
+
+            <!-- 数据位 -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+                <TextBlock Text="数据位："/>
+                <ComboBox MinWidth="100"
+                          ItemsSource="{Binding DataBitsList}"
+                          SelectedItem="{Binding SelectedDataBits}"
+                          DisplayMemberBinding="{Binding DisplayName}"
+                          IsEnabled="{Binding !IsReadOnly}"/>
+            </StackPanel>
+
+            <!-- 奇偶校验 -->
+            <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4">
+                <TextBlock Text="奇偶校验："/>
+                <ComboBox MinWidth="100"
+                          ItemsSource="{Binding ParityList}"
+                          SelectedItem="{Binding SelectedParity}"
+                          DisplayMemberBinding="{Binding DisplayName}"
+                          IsEnabled="{Binding !IsReadOnly}"/>
+            </StackPanel>
+
+            <!-- 停止位 -->
+            <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="4">
+                <TextBlock Text="停止位："/>
+                <ComboBox MinWidth="100"
+                          ItemsSource="{Binding StopBitsList}"
+                          SelectedItem="{Binding SelectedStopBits}"
+                          DisplayMemberBinding="{Binding DisplayName}"
+                          IsEnabled="{Binding !IsReadOnly}"/>
+            </StackPanel>
+            <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="4">
+                <Button Content="打开" Command="{Binding OpenSerialPortCommand}"/>
+                <Button Content="关闭" Command="{Binding CloseSerialPortCommand}"/>
+                <Button Content="修改" Command="{Binding OpenConfigDialogCommand}"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

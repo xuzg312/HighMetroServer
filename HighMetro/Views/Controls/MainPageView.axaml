@@ -2,9 +2,19 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="using:HighMetro.Views.Controls"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="HighMetro.Views.Controls.MainPageView">
-    <Grid Background="#f8f9fa">
-        <TextBlock Text="{Binding WelcomeText}" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-    </Grid>
+    <StackPanel Margin="2" Spacing="2">
+        <Border Padding="5" Background="#f0f0f0">
+            <controls:HostConfigView
+                Config="{Binding HostConfig}"
+                IsReadOnly="True"/>
+        </Border>
+        <Border Padding="5" Background="#f0f0f0">
+            <controls:SerialConfigView
+                Config="{Binding SerialConfig}"
+                IsReadOnly="True"/>
+        </Border>
+</StackPanel>
 </UserControl>
