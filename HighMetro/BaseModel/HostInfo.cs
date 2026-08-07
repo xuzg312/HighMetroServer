@@ -1,4 +1,5 @@
 ﻿using System;
+using HighMetro.Event;
 
 namespace HighMetro.BaseModel;
 
@@ -11,7 +12,52 @@ public class HostInfo
     public int Port { get; set; }
     public string Effect { get ; set ; } = string.Empty;
     public bool Open { get; set; }
-    public EventHandler? BufferDataProdEvent { get; set; } = null;
-    public EventHandler? ErrorDataProdEvent { get; set; } = null;
-    public EventHandler? ClientConnEvent { get; set; } = null;
+    //接收数据；
+    private EventHandler? _bufferDataProdEvent;
+    public event EventHandler? BufferDataProdEvent
+    {
+        add => _bufferDataProdEvent ??= value;
+        remove => _bufferDataProdEvent -= value;
+    }
+    public EventHandler? GetBufferDataProdEvent()
+    {
+        return _bufferDataProdEvent;
+    }
+    public void RaiseBufferDataProdEvent(SocketDataBlock socketDataBlock)
+    {
+        _bufferDataProdEvent?.Invoke(null, new SocketDataEventArgs(socketDataBlock));
+    }
+    //展示ASC消息；
+    private EventHandler? _ascDataProdEvent;
+    public event EventHandler? AscDataProdEvent
+    {
+        add => _ascDataProdEvent ??= value;
+        remove => _ascDataProdEvent -= value;
+    }
+    public void RaiseAscDataProdEvent(string message)
+    {
+        _ascDataProdEvent?.Invoke(null, new StringEventArgs(message));
+    }
+    //展示十六进制消息；
+    private EventHandler? _hexDataProdEvent;
+    public event EventHandler? HexDataProdEvent
+    {
+        add => _hexDataProdEvent ??= value;
+        remove => _hexDataProdEvent -= value;
+    }
+    public void RaiseHexDataProdEvent(SocketDataBlock socketDataBlock)
+    {
+        _hexDataProdEvent?.Invoke(null, new SocketDataEventArgs(socketDataBlock));
+    }
+    //展示客户端连接消息;
+    private EventHandler? _clientConnEvent;
+    public event EventHandler? ClientConnEvent
+    {
+        add => _clientConnEvent ??= value;
+        remove => _clientConnEvent -= value;
+    }
+    public void RaiseClientConnEvent(string message)
+    {
+        _clientConnEvent?.Invoke(null, new StringEventArgs(message));
+    }
 }

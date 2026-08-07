@@ -15,11 +15,7 @@
               VerticalAlignment="Center">
         
             <!-- 固定标题 -->
-            <TextBlock Grid.Column="0" Text="主板参数配置" FontSize="16" VerticalAlignment="Center"/>
-
-            <!-- 红色提示框 -->
-            <TextBlock Grid.Column="2"  Text="⚠️ 参数一旦修改，需要重新启动才生效！" Foreground="Red" 
-                       IsVisible="{Binding HasUnappliedConfig}" VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="0" Text="主板参数" FontSize="16" VerticalAlignment="Center"/>
 
             <!-- 消息栏：接收消息提示 -->
             <TextBlock Grid.Column="4" Text="{Binding MessageText}" 
@@ -41,8 +37,7 @@
                 <ComboBox MinWidth="100"
                           ItemsSource="{Binding PortNameList}"
                           SelectedItem="{Binding SelectPortName}"
-                          DisplayMemberBinding="{Binding DisplayName}"
-                          IsEnabled="{Binding !IsReadOnly}"/>
+                          DisplayMemberBinding="{Binding DisplayName}"/>
             </StackPanel>
 
             <!-- 波特率 -->
@@ -51,8 +46,7 @@
                 <ComboBox MinWidth="100"
                           ItemsSource="{Binding BaudRateList}"
                           SelectedItem="{Binding SelectedBaudRate}"
-                          DisplayMemberBinding="{Binding DisplayName}"
-                          IsEnabled="{Binding !IsReadOnly}"/>
+                          DisplayMemberBinding="{Binding DisplayName}"/>
             </StackPanel>
 
             <!-- 数据位 -->
@@ -61,8 +55,7 @@
                 <ComboBox MinWidth="100"
                           ItemsSource="{Binding DataBitsList}"
                           SelectedItem="{Binding SelectedDataBits}"
-                          DisplayMemberBinding="{Binding DisplayName}"
-                          IsEnabled="{Binding !IsReadOnly}"/>
+                          DisplayMemberBinding="{Binding DisplayName}"/>
             </StackPanel>
 
             <!-- 奇偶校验 -->
@@ -71,8 +64,7 @@
                 <ComboBox MinWidth="100"
                           ItemsSource="{Binding ParityList}"
                           SelectedItem="{Binding SelectedParity}"
-                          DisplayMemberBinding="{Binding DisplayName}"
-                          IsEnabled="{Binding !IsReadOnly}"/>
+                          DisplayMemberBinding="{Binding DisplayName}"/>
             </StackPanel>
 
             <!-- 停止位 -->
@@ -81,8 +73,7 @@
                 <ComboBox MinWidth="100"
                           ItemsSource="{Binding StopBitsList}"
                           SelectedItem="{Binding SelectedStopBits}"
-                          DisplayMemberBinding="{Binding DisplayName}"
-                          IsEnabled="{Binding !IsReadOnly}"/>
+                          DisplayMemberBinding="{Binding DisplayName}"/>
             </StackPanel>
             <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="4">
                 <Button Content="打开" Command="{Binding OpenSerialPortCommand}"/>

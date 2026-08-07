@@ -15,8 +15,8 @@ public partial class DbConfigViewModel : ObservableValidator
     private readonly IDbService _dbService;
     private readonly IConfigService _configService;
 
-    public Action<DbSetting>? OnDbConfigSuccess;
-    public Action? OnDbConfigCancel;
+    public event Action<DbSetting>? OnDbConfigSuccess;
+    public event Action? OnDbConfigCancel;
     
     [ObservableProperty]
     [Required(ErrorMessage = "地址不能为空")]

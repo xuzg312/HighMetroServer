@@ -16,8 +16,8 @@ public partial class LoginViewModel : ObservableValidator
     private readonly IConfigService _configService;
     private readonly DbSetting _dbSetting;
     
-    public Action<LoginSetting>? OnLoginSuccess;
-    public Action? OnLoginCancel;
+    public event Action<LoginSetting>? OnLoginSuccess;
+    public event Action? OnLoginCancel;
 
     [ObservableProperty]
     [Required(ErrorMessage = "用户名不能为空")]

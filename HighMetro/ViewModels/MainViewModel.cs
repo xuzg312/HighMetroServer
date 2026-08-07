@@ -80,10 +80,10 @@ public partial class MainViewModel : ViewModelBase
         var vm = new LoginViewModel(_configService,_dbService,loginSetting,_dbSetting);
         vm.OnLoginSuccess += OnLoginSuccess;
         vm.OnLoginCancel += ExitApplication;
-        if (ActivePopupVm is DbConfigViewModel oldLoginVm)
+        if (ActivePopupVm is DbConfigViewModel oldDbConfigVm)
         {
-            oldLoginVm.OnDbConfigSuccess = null;
-            oldLoginVm.OnDbConfigCancel = null;
+            oldDbConfigVm.OnDbConfigSuccess -= OnDbConfigSuccess;
+            oldDbConfigVm.OnDbConfigCancel -= ExitApplication;
         }
         ActivePopupVm = vm;
     }
@@ -111,10 +111,10 @@ public partial class MainViewModel : ViewModelBase
             var vm = new HostSelectViewModel(_configService, resultHostInfo);
             vm.OnConfirm += OnHostSuccess;
             vm.OnCancel += ExitApplication;
-            if (ActivePopupVm is HostSelectViewModel oldHostVm)
+            if (ActivePopupVm is LoginViewModel oldloginVm)
             {
-                oldHostVm.OnConfirm = null;
-                oldHostVm.OnCancel = null;
+                oldloginVm.OnLoginSuccess -= OnLoginSuccess;
+                oldloginVm.OnLoginCancel -= ExitApplication;
             }
             ActivePopupVm = vm;
         }
@@ -128,8 +128,8 @@ public partial class MainViewModel : ViewModelBase
     {
         if (ActivePopupVm is HostSelectViewModel oldHostVm)
         {
-            oldHostVm.OnConfirm = null;
-            oldHostVm.OnCancel = null;
+            oldHostVm.OnConfirm -= OnHostSuccess;
+            oldHostVm.OnCancel -=  ExitApplication;
         }
         //保存数据库连接；
         DataBaseConnect dataBaseConnect = DataBaseConnect.Instance;

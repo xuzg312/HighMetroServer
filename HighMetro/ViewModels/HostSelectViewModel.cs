@@ -15,8 +15,8 @@ public partial class HostSelectViewModel : ObservableValidator
     private readonly IConfigService _configService;
 
     // 回调
-    public Action<HostSetting>? OnConfirm;
-    public Action? OnCancel;
+    public event Action<HostSetting>? OnConfirm;
+    public event Action? OnCancel;
 
     [ObservableProperty]
     private ObservableCollection<HostModals> _hostModalsList = [];

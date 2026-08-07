@@ -7,7 +7,7 @@ namespace HighMetro.ViewModels;
 
 public partial class LoadParaViewModel : ViewModelBase
 {
-    public Action? OnCancel;
+    public event Action? OnCancel;
     
     [ObservableProperty]
     private string _errorMessage = "";

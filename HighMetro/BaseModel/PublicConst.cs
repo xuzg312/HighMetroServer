@@ -44,4 +44,8 @@ public class PublicConst
     public const string DireBDoor = "B";//B门; 
     public const string DireDoor = "-";//不区分; 
 
+    public const byte IdentifyNone = 0;//未验证；
+    public const byte IdentifyHeart = 1;//验证,仅发送心跳；
+    public const byte IdentifyAll = 2;//验证,实时监控数据；
+    public const byte IdentifyPhoto = 3;//获取拍照的图片文件；
 }
