@@ -5,13 +5,18 @@
              mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="450"
              x:Class="HighMetro.Views.Controls.HostConfigView"
              x:Name="Root">
-    <Grid RowDefinitions="Auto,Auto" RowSpacing="5"
+    <Border BorderBrush="Black" 
+            BorderThickness="1" 
+            CornerRadius="1"
+            Padding="2">
+    <Grid RowDefinitions="Auto,Auto" RowSpacing="5" 
           DataContext="{Binding HostConfigViewModelVm, ElementName=Root}">
         <!-- 第一行：同一行横向排列：标题｜红色提示框｜消息栏 -->
         <Grid Grid.Row="0" ColumnDefinitions="Auto,10,*,10,2*" VerticalAlignment="Center">
         
             <!-- 固定标题 -->
-            <TextBlock Grid.Column="0" Text="{Binding HostState}" VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="0" Text="{Binding HostState}" 
+                       VerticalAlignment="Center" FontWeight="Bold"/>
 
             <!-- 消息栏：接收消息提示 -->
             <TextBlock Grid.Column="4" Text="{Binding MessageText}" 
@@ -48,4 +53,5 @@
                     Width="60" />
         </Grid>
     </Grid>
+    </Border>
 </UserControl>

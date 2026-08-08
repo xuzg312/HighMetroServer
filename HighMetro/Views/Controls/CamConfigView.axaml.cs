@@ -1,5 +1,6 @@
 ﻿using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using HighMetro.Models;
 using HighMetro.ViewModels;
@@ -34,6 +35,14 @@ public partial class CamConfigView : UserControl
     {
         CamConfigViewModelVm = new CamConfigViewModel(false);
         InitializeComponent();
+        Unloaded += OnViewUnloaded;
+    }
+    private void OnViewUnloaded(object? sender, RoutedEventArgs e)
+    {
+        if(DataContext is CamConfigViewModel vm)
+        {
+            vm.Unsubscribe();
+        }
     }
     static CamConfigView()
     {
@@ -50,5 +59,4 @@ public partial class CamConfigView : UserControl
             view.CamConfigViewModelVm.IsReadOnly = newVal;
         });
     }
-
 }

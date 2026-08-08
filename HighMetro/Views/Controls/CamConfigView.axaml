@@ -5,13 +5,18 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="HighMetro.Views.Controls.CamConfigView"
              x:Name="Root">
+    <Border BorderBrush="Black" 
+            BorderThickness="1" 
+            CornerRadius="1"
+            Padding="2">
     <Grid RowDefinitions="Auto,Auto" RowSpacing="5"
           DataContext="{Binding CamConfigViewModelVm, ElementName=Root}">
         <!-- 第一行：同一行横向排列：标题｜红色提示框｜消息栏 -->
         <Grid Grid.Row="0" ColumnDefinitions="Auto,10,*,10,2*" VerticalAlignment="Center">
         
             <!-- 固定标题 -->
-            <TextBlock Grid.Column="0" Text="{Binding CamState}" VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="0" Text="{Binding CamState}" 
+                       VerticalAlignment="Center" FontWeight="Bold"/>
 
             <!-- 消息栏：接收消息提示 -->
             <TextBlock Grid.Column="4" Text="{Binding MessageText}" 
@@ -38,10 +43,11 @@
             <TextBox Grid.Column="10" Text="{Binding UserName}" 
                      IsReadOnly="{Binding IsReadOnly}" Watermark="用户名"/>
 
-            <Button Grid.Column="16" Content="启动" Command="{Binding OpenCommand}" 
+            <Button Grid.Column="12" Content="启动" Command="{Binding OpenCommand}" 
                     Width="60"/>
-            <Button Grid.Column="18" Content="关闭" Command="{Binding CloseCommand}" 
+            <Button Grid.Column="14" Content="关闭" Command="{Binding CloseCommand}" 
                     Width="60" />
         </Grid>
     </Grid>
+    </Border>
 </UserControl>

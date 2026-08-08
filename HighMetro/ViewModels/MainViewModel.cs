@@ -1,10 +1,13 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Windows.Input;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using HighMetro.BaseModel;
+using HighMetro.Message;
 using HighMetro.Models;
 using HighMetro.Parameters;
 using HighMetro.Services;
@@ -32,9 +35,14 @@ public partial class MainViewModel : ViewModelBase
         _mainWindow = mainWindow;
         _configService = new ConfigService();
         _dbService = new DbService();
+        // 绑定命令与执行方法
+        CameraMaintainCmd = new RelayCommand(CameraMaintain);
+        BoardMaintainCmd = new RelayCommand(BoardMaintain);
+        OpenPhotoQueryCmd = new RelayCommand(OpenPhotoQuery);
+        OpenFaultQueryCmd = new RelayCommand(OpenFaultQuery);
+        IsMenuEnabled = false;
         InitializeStartup();
     }
-
     private void InitializeStartup()
     {
         // 读取本地数据库配置
@@ -100,9 +108,11 @@ public partial class MainViewModel : ViewModelBase
         else
         {
             //工控机参数未配置，或者配置无效；
-            resultInfo = new ResultInfo();
-            resultInfo.Code = PublicConst.FlagNo;
-            resultInfo.Message = "";
+            resultInfo = new ResultInfo
+            {
+                Code = PublicConst.FlagNo,
+                Message = ""
+            };
         }
         if (!resultInfo.Code.Equals(PublicConst.FlagYes))
         {
@@ -132,19 +142,23 @@ public partial class MainViewModel : ViewModelBase
             oldHostVm.OnCancel -=  ExitApplication;
         }
         //保存数据库连接；
-        DataBaseConnect dataBaseConnect = DataBaseConnect.Instance;
+        var dataBaseConnect = DataBaseConnect.Instance;
         dataBaseConnect.SetDataBaseConn(_dbSetting.GetConnectionString());
         //获取工控机；、主板1、主板2、硬盘摄像机；
-        HostInfo hostInfo = new HostInfo();
-        hostInfo.Bh = setting.Bh;
-        ResultInfo resultInfo = _dbService.GetHostInfo(hostInfo);
+        var hostInfo = new HostInfo
+        {
+            Bh = setting.Bh
+        };
+        var resultInfo = _dbService.GetHostInfo(hostInfo);
         if (resultInfo.Code.Equals(PublicConst.FlagYes))
         {
             //获取摄像机；
-            HardInfo hardInfo = new HardInfo();
-            hardInfo.HostBh = hostInfo.Bh;
-            hardInfo.Type = PublicConst.PhotoCamera;
-            resultInfo=_dbService.GetHardCamera(hardInfo);
+            var hardInfo = new HardInfo
+            {
+                HostBh = hostInfo.Bh,
+                Type = PublicConst.PhotoCamera
+            };
+            resultInfo = _dbService.GetHardCamera(hardInfo);
             if (resultInfo.Code.Equals(PublicConst.FlagYes))
             {
                 //获取主板，最多2个主板；
@@ -156,6 +170,7 @@ public partial class MainViewModel : ViewModelBase
                     MainPageVm = new MainPageViewModel(hostInfo,hardInfo,resultSerialCommInfo.SerialCommList,_dbService);
                     ActivePopupVm = null;
                     ShowOverlay = false;
+                    IsMenuEnabled = true;
                     return;
                 }
             }
@@ -164,6 +179,62 @@ public partial class MainViewModel : ViewModelBase
         var vm = new LoadParaViewModel(resultInfo);
         vm.OnCancel += ExitApplication;
         ActivePopupVm = vm; 
+    }
+    public ICommand CameraMaintainCmd { get; }
+    public ICommand BoardMaintainCmd { get; }
+    public ICommand OpenPhotoQueryCmd { get; }
+    public ICommand OpenFaultQueryCmd { get; }
+
+    private bool _isMenuEnabled;
+    public bool IsMenuEnabled
+    {
+        get => _isMenuEnabled;
+        set => SetProperty(ref _isMenuEnabled, value);
+    }
+    //===== 菜单点击命令 =====
+    private void CameraMaintain()
+    {
+        //获取摄像机；
+        var hardInfo = new HardInfo
+        {
+            HostBh = ParaSetupModules.HostInfo!.Bh,
+            Type = PublicConst.PhotoCamera
+        };
+        var resultInfo = _dbService.GetHardCamera(hardInfo);
+        var vm = new EditCamConfigViewModel(_dbService, hardInfo,resultInfo);
+        vm.OnHardConfigSuccess += OnHardEnd;
+        vm.OnHardConfigCancel += OnHardEnd;
+        IsMenuEnabled = false;
+        ActivePopupVm = vm;
+        ShowOverlay = true;
+    }
+
+    private void OnHardEnd()
+    {
+        if (ActivePopupVm is EditCamConfigViewModel oldHardVm)
+        {
+            oldHardVm.OnHardConfigSuccess -= OnHardEnd;
+            oldHardVm.OnHardConfigCancel -= OnHardEnd;
+        }
+        ActivePopupVm = null;
+        ShowOverlay = false;
+        IsMenuEnabled = true;
+    }
+
+    private void BoardMaintain()
+    {
+        // ActivePopupVm = new BoardMaintainViewModel();
+        // ShowOverlay = true;
+    }
+    private void OpenPhotoQuery()
+    {
+        // ActivePopupVm = new PhotoQueryViewModel();
+        // ShowOverlay = true;
+    }
+    private void OpenFaultQuery()
+    {
+        // ActivePopupVm = new FaultQueryViewModel();
+        // ShowOverlay = true;
     }
     private void ExitApplication()
     {
@@ -175,6 +246,7 @@ public partial class MainViewModel : ViewModelBase
         // 2.关闭数据库连接
         // 3.停止后台定时器、异步任务
         // 4.释放视频解码、图像资源
+        WeakReferenceMessenger.Default.Send(new AppCleanupMessage());
         Console.WriteLine("程序结束，释放资源！");
     }
 }

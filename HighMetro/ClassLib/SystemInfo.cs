@@ -3,41 +3,41 @@ using System.IO;
 
 namespace HighMetro.ClassLib;
 
-public class SystemInfo
+public static class SystemInfo
 {
     #region 静态私有数据成员
-    private static string _currentDir;           //当前目录；
-    private static string _logErrorDir;          //错误日志目录；
-    private static string _systemLib;            //系统类库路径；
-    private static string _sysConfigDir;         //系统配置路径；
-    private static string _tempDir;              //临时目录；
-    private static string _updateDir;            //更新日志目录；
-    private static string _photoDir;             //图像、录像目录；
+    public static string CurrentDir { get; private set; }//当前目录；
+    public static string SystemLib { get; private set; }//系统类库路径；
+    public static string LogErrorDir { get; private set; }//错误日志目录；
+    public static string SysConfigDir { get; private set; }//系统配置路径；
+    public static string TempDir { get; private set; }//临时目录；
+    public static string UpdateDir { get; private set; }//更新日志目录；
+    public static string PhotoDir { get; private set; }//图像、录像目录；
     #endregion
 
     #region 构造函数；
     static SystemInfo()
     {
         //_currentDir = Directory.GetCurrentDirectory();
-        _currentDir = AppContext.BaseDirectory;
-        _systemLib = _currentDir + @"\SystemLib\";
-        _logErrorDir = _currentDir + @"\Log\";
-        _sysConfigDir = _currentDir + @"\Config\";
-        _tempDir = _currentDir + @"\Temp\";
-        UpdateDir = _currentDir + @"\Update\";
-        PhotoDir = _currentDir + @"\PhotoLog\";
+        CurrentDir = AppContext.BaseDirectory;
+        SystemLib = Path.Combine(CurrentDir,"SystemLib");
+        LogErrorDir = Path.Combine(CurrentDir,"Log");
+        SysConfigDir = Path.Combine(CurrentDir,"Config");
+        TempDir = Path.Combine(CurrentDir,"Temp");
+        UpdateDir = Path.Combine(CurrentDir,"Update");
+        PhotoDir = Path.Combine(CurrentDir,"PhotoLog");
         #region 创建目录；
-        if (!Directory.Exists(_logErrorDir))
+        if (!Directory.Exists(LogErrorDir))
         {
-            Directory.CreateDirectory(_logErrorDir);
+            Directory.CreateDirectory(LogErrorDir);
         }
-        if (!Directory.Exists(_tempDir))
+        if (!Directory.Exists(TempDir))
         {
-            Directory.CreateDirectory(_tempDir);
+            Directory.CreateDirectory(TempDir);
         }
-        if (!Directory.Exists(_sysConfigDir))
+        if (!Directory.Exists(SysConfigDir))
         {
-            Directory.CreateDirectory(_sysConfigDir);
+            Directory.CreateDirectory(SysConfigDir);
         }
         if (!Directory.Exists(UpdateDir))
         {
@@ -49,15 +49,5 @@ public class SystemInfo
         }
         #endregion
     }
-    #endregion
-
-    #region 访问器成员函数属性；
-    public static String CurrentDir { get { return _currentDir; } }
-    public static String SystemLib { get { return _systemLib; } }
-    public static String LogErrorDir { get { return _logErrorDir; } }
-    public static String SysConfigDir { get { return _sysConfigDir; } }
-    public static String TempDir { get { return _tempDir; } }
-    public static string UpdateDir { get => _updateDir; set => _updateDir = value; }
-    public static string PhotoDir { get => _photoDir; set => _photoDir = value; }
     #endregion
 }

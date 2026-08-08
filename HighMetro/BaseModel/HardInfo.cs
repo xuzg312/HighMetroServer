@@ -12,4 +12,13 @@ public class HardInfo
     public int UserId { get; set; }
     public int RealHandle { get; set; }
     public string Type { get ; set; }= string.Empty;
+    public bool IsValid()
+    {
+        return HostBh>0 && 
+               Bh>0 && 
+               !Ip.Equals(string.Empty) && 
+               Port>1000 && 
+               !UserName.Equals(string.Empty) && 
+               !PassWord.Equals(string.Empty);
+    }
 }

@@ -1,5 +1,6 @@
 ﻿using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using HighMetro.Models;
 using HighMetro.ViewModels;
@@ -34,6 +35,14 @@ public partial class HostConfigView : UserControl
     {
         HostConfigViewModelVm = new HostConfigViewModel(false);
         InitializeComponent();
+        Unloaded += OnViewUnloaded;
+    }
+    private void OnViewUnloaded(object? sender, RoutedEventArgs e)
+    {
+        if(DataContext is HostConfigViewModel vm)
+        {
+            vm.Unsubscribe();
+        }
     }
     static HostConfigView()
     {

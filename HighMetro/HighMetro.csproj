@@ -1,9 +1,10 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <OutputType>WinExe</OutputType>
         <TargetFramework>net8.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ApplicationManifest>app.manifest</ApplicationManifest>
+	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
     <ItemGroup>
@@ -22,5 +23,42 @@
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2"/>
         <PackageReference Include="MySqlConnector" Version="2.3.6" />
         <PackageReference Include="System.IO.Ports" Version="8.0.0" />
+    </ItemGroup>
+
+    <!-- ========== Windows x64 原生库拷贝 ========== -->
+    <!-- <ItemGroup Condition="'$(RuntimeIdentifier)'=='win-x64'">
+    	<None Include="NativeLib\win‑x64\**\*">
+      		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      		<Link>%(RecursiveDir)%(Filename)%(Extension)</Link>
+    	</None>
+    </ItemGroup>-->
+    <!-- ========== Linux‑x64 (UOS、麒麟x86‑64) 原生库拷贝 ========== -->
+    <!-- <ItemGroup Condition="'$(RuntimeIdentifier)'=='linux-x64'">
+    	<None Include="NativeLib/linux‑x64/**/*">
+      		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      		<Link>%(RecursiveDir)%(Filename)%(Extension)</Link>
+    	</None>
+    </ItemGroup>-->
+    <!-- ========== Linux‑ARM64 (飞腾、鲲鹏) 原生库拷贝 ========== -->
+    <!-- <ItemGroup Condition="'$(RuntimeIdentifier)'=='linux-arm64'">
+    	<None Include="NativeLib/linux‑arm64/**/*">
+      		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      		<Link>%(RecursiveDir)%(Filename)%(Extension)</Link>
+    	</None>
+    </ItemGroup>-->
+
+    <ItemGroup>
+  	<None Include ="NativeLib/win‑x64/**/*">
+    		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    		<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+  	</None>
+  	<None Include ="NativeLib/linux‑x64/**/*">
+    		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    		<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+  	</None>
+  	<None Include ="NativeLib/linux‑arm64/**/*">
+    		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    		<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+  	</None>
     </ItemGroup>
 </Project>

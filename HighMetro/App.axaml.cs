@@ -1,7 +1,9 @@
+using System;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Logging;
 using Avalonia.Markup.Xaml;
+using HighMetro.HikVision;
 using HighMetro.ViewModels;
 using HighMetro.Views;
 

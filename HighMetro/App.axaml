@@ -19,5 +19,8 @@
         <DataTemplate DataType="viewModels:HostSelectViewModel">
             <views:HostSelectView /> <!-- 确保这里指向正确的 UserControl -->
         </DataTemplate>
+        <DataTemplate DataType="viewModels:EditCamConfigViewModel">
+            <views:EditCamConfigView /> <!-- 确保这里指向正确的 UserControl -->
+        </DataTemplate>
     </Application.DataTemplates>
 </Application>
