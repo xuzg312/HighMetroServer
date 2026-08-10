@@ -12,15 +12,15 @@
     <Grid RowDefinitions="Auto,Auto" RowSpacing="5" 
           DataContext="{Binding HostConfigViewModelVm, ElementName=Root}">
         <!-- 第一行：同一行横向排列：标题｜红色提示框｜消息栏 -->
-        <Grid Grid.Row="0" ColumnDefinitions="Auto,10,*,10,2*" VerticalAlignment="Center">
-        
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto" VerticalAlignment="Center">
             <!-- 固定标题 -->
             <TextBlock Grid.Column="0" Text="{Binding HostState}" 
                        VerticalAlignment="Center" FontWeight="Bold"/>
 
             <!-- 消息栏：接收消息提示 -->
-            <TextBlock Grid.Column="4" Text="{Binding MessageText}" 
-                       Foreground="#FF333333" VerticalAlignment="Center" TextAlignment="Left" TextWrapping="NoWrap"/>
+            <TextBlock Grid.Column="1" Text="{Binding MessageText}" 
+                       Foreground="ForestGreen" VerticalAlignment="Center" 
+                       TextAlignment="Left" TextWrapping="NoWrap"/>
         </Grid>
         <!-- 第二行：输入框 + 按钮 -->
         <Grid Grid.Row="1"
@@ -30,7 +30,6 @@
                          12,Auto,6,180,
                          12,Auto,6,Auto" 
               VerticalAlignment="Center">
-
             <TextBlock Grid.Column="0"  Text="IP：" VerticalAlignment="Center"/>
             <TextBox Grid.Column="2"  Text="{Binding Ip}" 
                      IsReadOnly="{Binding IsReadOnly}" Watermark="请输入IP地址"/>
@@ -48,9 +47,9 @@
                      IsReadOnly="{Binding IsReadOnly}" Watermark="设备名称"/>
 
             <Button Grid.Column="16" Content="监听" Command="{Binding OpenCommand}" 
-                    Width="60"/>
+                    Width="60" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             <Button Grid.Column="18" Content="关闭" Command="{Binding CloseCommand}" 
-                    Width="60" />
+                    Width="60" HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </Grid>
     </Grid>
     </Border>

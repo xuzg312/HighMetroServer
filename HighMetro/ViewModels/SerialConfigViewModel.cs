@@ -1,10 +1,14 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using HighMetro.Models;
+using HighMetro.Parameters;
 using HighMetro.Views.Controls;
 
 namespace HighMetro.ViewModels;
@@ -20,11 +24,20 @@ public partial class SerialConfigViewModel : ObservableObject
     private bool _isReadOnly;
 
     // 3. 控件内部自己的数据（比如波特率下拉列表）
-    public ObservableCollection<CodeNameModals> PortNameList { get; }
-    public ObservableCollection<CodeNameModals> BaudRateList { get; }
-    public ObservableCollection<CodeNameModals> DataBitsList { get; }
-    public ObservableCollection<CodeNameModals> ParityList { get; }
-    public ObservableCollection<CodeNameModals> StopBitsList { get; } 
+    [ObservableProperty] 
+    private ObservableCollection<CodeNameModals> _portNameList= new ([]);
+
+    [ObservableProperty] 
+    private ObservableCollection<CodeNameModals> _baudRateList=new ([]);
+
+    [ObservableProperty]
+    private ObservableCollection<CodeNameModals> _dataBitsList=new ([]);
+
+    [ObservableProperty] 
+    private ObservableCollection<CodeNameModals> _parityList=new ([]);
+
+    [ObservableProperty] 
+    private ObservableCollection<CodeNameModals> _stopBitsList=new ([]);
     
     [ObservableProperty] 
     private CodeNameModals? _selectPortName;
@@ -41,90 +54,80 @@ public partial class SerialConfigViewModel : ObservableObject
     [ObservableProperty] 
     private CodeNameModals? _selectedParity;
 
-    public SerialConfigViewModel(bool isReadOnly)
+    [ObservableProperty] 
+    private string? _messageText;
+
+    private readonly bool _start;
+    private int _serial;
+    public SerialConfigViewModel(bool isReadOnly,int serial)
     {
         IsReadOnly = isReadOnly;
-        if (IsReadOnly)
-        {
-            PortNameList = new ObservableCollection<CodeNameModals>([]);
-            BaudRateList = new ObservableCollection<CodeNameModals>([]);
-            DataBitsList = new ObservableCollection<CodeNameModals>([]);
-            ParityList = new ObservableCollection<CodeNameModals>([]);
-            StopBitsList = new ObservableCollection<CodeNameModals>([]);
-        }
-        else
-        {
+        _serial = serial;
+        _start = false;
+    }
+    public void UpdateParams(bool isReadOnly, int serial, SerialPortOptions? options)
+    {
+        IsReadOnly = isReadOnly;
+        _serial = serial;
+        InitComboSource(options);
+    }
+    private CodeNameModals? BuildSingleItem(
+        IEnumerable<CodeNameModals> sourcePool,
+        Func<CodeNameModals, bool> matchRule,
+        ObservableCollection<CodeNameModals> targetCollection)
+    {
+        var matched = sourcePool.FirstOrDefault(matchRule);
+        if (matched == null)
+            return null;
 
-            PortNameList = new ObservableCollection<CodeNameModals>(
-            [
-                new CodeNameModals(1, "COM1"),
-                new CodeNameModals(2, "COM2")
-            ]);
-            BaudRateList = new ObservableCollection<CodeNameModals>(
-            [
-                new CodeNameModals(9600, "9600"),
-                new CodeNameModals(19200, "19200"),
-                new CodeNameModals(38400, "38400"),
-                new CodeNameModals(57600, "57600"),
-                new CodeNameModals(115200, "115200")
-            ]);
-            DataBitsList = new ObservableCollection<CodeNameModals>(
-            [
-                new CodeNameModals(7, "7:位数据"),
-                new CodeNameModals(8, "8:位数据")
-            ]);
-            ParityList = new ObservableCollection<CodeNameModals>(
-            [
-                new CodeNameModals(0, "0:无校验"),
-                new CodeNameModals(1, "1:奇校验"),
-                new CodeNameModals(2, "2:偶校验")
-            ]);
-            StopBitsList = new ObservableCollection<CodeNameModals>(
-            [
-                new CodeNameModals(1, "1:停止位"),
-                new CodeNameModals(2, "2:停止位")
-            ]);
-        }
+        var newItem = new CodeNameModals(matched.Value, matched.DisplayName);
+        targetCollection.Add(newItem);
+        return newItem;
     }
-    // 5. 当外部传入 Config 时，自动同步给 ComboBox 的选中项
-    partial void OnConfigChanged(SerialPortOptions? value)
+    private void InitComboSource(SerialPortOptions? value)
     {
-        if (value is null)
-            return;
-        SelectedBaudRate = BaudRateList.FirstOrDefault(x => x.Value == value.BaudRate);
-        SelectedDataBits = DataBitsList.FirstOrDefault(x => x.Value == value.DataBits);
-        SelectedStopBits = StopBitsList.FirstOrDefault(x => x.Value == value.StopBits);
-        SelectedParity = ParityList.FirstOrDefault(x => x.Value == value.Parity);
-        if (IsReadOnly)
+        if (value is null) return;
+        PortNameList.Clear();
+        BaudRateList.Clear();
+        DataBitsList.Clear();
+        ParityList.Clear();
+        StopBitsList.Clear();
+        SelectPortName = BuildSingleItem(CommParameter.PortNameList, x => x.DisplayName == value.PortName, PortNameList);
+        SelectedBaudRate = BuildSingleItem(CommParameter.BaudRateList, x => x.Value == value.BaudRate, BaudRateList);
+        SelectedDataBits = BuildSingleItem(CommParameter.DataBitsList, x => x.Value == value.DataBits, DataBitsList);
+        SelectedStopBits = BuildSingleItem(CommParameter.StopBitsList, x => x.Value == value.StopBits, StopBitsList);
+        SelectedParity = BuildSingleItem(CommParameter.ParityList, x => x.Value == value.Parity, ParityList);
+    }
+    [RelayCommand(CanExecute = nameof(CanOpen))]
+    private void Open()
+    {
+        var serialCommList = ParaSetupModules.SerialCommList;
+        if (serialCommList!.Count < _serial)
         {
-            if (SelectedBaudRate is not null) BaudRateList.Add(SelectedBaudRate);
-            if (SelectedDataBits is not null) DataBitsList.Add(SelectedDataBits);
-            if (SelectedParity is not null) ParityList.Add(SelectedParity);
-            if (SelectedStopBits is not null) StopBitsList.Add(SelectedStopBits);
+            MessageText = "主板内部处理逻辑有误，serial与主板列表不一致！";
+            return;            
         }
-    }
-    
-    // 6. 当用户在界面上选择了新的波特率，同步回 Config
-    partial void OnSelectedBaudRateChanged(CodeNameModals? value)
-    {
-        if (Config != null && value != null)
-            Config.BaudRate = value.Value;
+        var serialCommInfo = serialCommList[_serial-1];
+        if (!serialCommInfo.IsValid())
+        {
+            MessageText = "主板参数无效，如果已经配置过，请重新启动程序加载！";
+            return;            
+        }
+        //连接尝试串口
+        
     }
 
-    partial void OnSelectedDataBitsChanged(CodeNameModals? value)
+    [RelayCommand(CanExecute = nameof(CanClose))]
+    private void Close()
     {
-        if (Config != null && value != null)
-            Config.DataBits = value.Value;
-    }
-    partial void OnSelectedStopBitsChanged(CodeNameModals? value)
-    {
-        if (Config != null && value != null )
-            Config.StopBits = value.Value;
     }
 
-    partial void OnSelectedParityChanged(CodeNameModals? value)
+    private bool CanOpen()
     {
-        if (Config != null && value != null )
-            Config.Parity = value.Value;
+        return !_start && _serial is > 0 and < 2; 
+    }
+    private bool CanClose()
+    {
+        return _start; 
     }
 }

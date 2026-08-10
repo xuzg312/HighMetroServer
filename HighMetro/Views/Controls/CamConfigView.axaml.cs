@@ -48,7 +48,6 @@ public partial class CamConfigView : UserControl
     {
         ConfigProperty.Changed.AddClassHandler<CamConfigView, CamOptions>((view, args) =>
         {
-            // GetNewValue<T>() 自动拆包BindingValue，拿到真实对象
             var newVal = args.GetNewValue<CamOptions>();
             view.CamConfigViewModelVm.Config = newVal;
         });

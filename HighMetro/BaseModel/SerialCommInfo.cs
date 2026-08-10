@@ -1,4 +1,7 @@
-﻿namespace HighMetro.BaseModel;
+﻿using System;
+using HighMetro.Event;
+
+namespace HighMetro.BaseModel;
 
 public class SerialCommInfo
 {
@@ -14,4 +17,40 @@ public class SerialCommInfo
     public int Sign { get; set; }
     public string CommType { get; set; } = string.Empty;
     public bool Open { get; set; }
+    public bool IsValid()
+    {
+        return HostBh>0 && 
+               Bh>0 && 
+               !string.IsNullOrWhiteSpace(CommName) && 
+               BaudRate>0 && 
+               DataBits>0 && 
+               Parity>=0 &&
+               StopBits>0;
+    }
+    //接收数据；
+    private EventHandler? _bufferDataProdEvent;
+    public event EventHandler? BufferDataProdEvent
+    {
+        add => _bufferDataProdEvent ??= value;
+        remove => _bufferDataProdEvent -= value;
+    }
+    public EventHandler? GetBufferDataProdEvent()
+    {
+        return _bufferDataProdEvent;
+    }
+    public void RaiseBufferDataProdEvent(SocketDataBlock socketDataBlock)
+    {
+        _bufferDataProdEvent?.Invoke(null, new SocketDataEventArgs(socketDataBlock));
+    }
+    //展示ASC消息；
+    private EventHandler? _ascDataProdEvent;
+    public event EventHandler? AscDataProdEvent
+    {
+        add => _ascDataProdEvent ??= value;
+        remove => _ascDataProdEvent -= value;
+    }
+    public void RaiseAscDataProdEvent(string message)
+    {
+        _ascDataProdEvent?.Invoke(null, new StringEventArgs(message));
+    }
 }

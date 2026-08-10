@@ -12,23 +12,20 @@
     <Grid RowDefinitions="Auto,Auto" RowSpacing="5"
           DataContext="{Binding CamConfigViewModelVm, ElementName=Root}">
         <!-- 第一行：同一行横向排列：标题｜红色提示框｜消息栏 -->
-        <Grid Grid.Row="0" ColumnDefinitions="Auto,10,*,10,2*" VerticalAlignment="Center">
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto" VerticalAlignment="Center">
         
             <!-- 固定标题 -->
             <TextBlock Grid.Column="0" Text="{Binding CamState}" 
                        VerticalAlignment="Center" FontWeight="Bold"/>
 
             <!-- 消息栏：接收消息提示 -->
-            <TextBlock Grid.Column="4" Text="{Binding MessageText}" 
-                       Foreground="#FF333333" VerticalAlignment="Center" TextAlignment="Left" TextWrapping="NoWrap"/>
+            <TextBlock Grid.Column="1" Text="{Binding MessageText}" 
+                       Foreground="ForestGreen" VerticalAlignment="Center" 
+                       TextAlignment="Left" TextWrapping="NoWrap"/>
         </Grid>
         <!-- 第二行：输入框 + 按钮 -->
         <Grid Grid.Row="1"
-              ColumnDefinitions="Auto,6,120,
-                         12,Auto,6,100,
-                         12,Auto,6,120,
-                         12,Auto,6,180,
-                         12,Auto,6,Auto" 
+              ColumnDefinitions="Auto,10,140,10,Auto,10,100,10,Auto,10,150,10,80,5,60"
               VerticalAlignment="Center">
 
             <TextBlock Grid.Column="0"  Text="IP：" VerticalAlignment="Center"/>
@@ -44,9 +41,9 @@
                      IsReadOnly="{Binding IsReadOnly}" Watermark="用户名"/>
 
             <Button Grid.Column="12" Content="启动" Command="{Binding OpenCommand}" 
-                    Width="60"/>
+                    Width="60" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             <Button Grid.Column="14" Content="关闭" Command="{Binding CloseCommand}" 
-                    Width="60" />
+                    Width="60" HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </Grid>
     </Grid>
     </Border>

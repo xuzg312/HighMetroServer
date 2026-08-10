@@ -26,7 +26,7 @@ public class DbSetting
     public bool IsValid()
     {
         return !string.IsNullOrWhiteSpace(DbHost) &&
-               !(DbPort < 1001 || DbPort > 65535) &&
+               DbPort is >= 1001 and <= 65535 &&
                !string.IsNullOrWhiteSpace(DbUser) &&
                !string.IsNullOrWhiteSpace(DbPassword);
     }

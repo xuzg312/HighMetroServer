@@ -13,4 +13,6 @@ public interface IDbService
     ResultInfo GetHostInfo(HostInfo hostInfo);
     ResultInfo GetHardCamera(HardInfo hardInfo);
     ResultSerialCommInfo GetCommInfoList(HostInfo hostInfo, string commType);
+    ResultInfo AddHardCamera(HardInfo hardInfo);
+    ResultInfo EditHardCamera(HardInfo hardInfo);
 }

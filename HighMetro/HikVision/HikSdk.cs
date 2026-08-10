@@ -8,8 +8,8 @@ public delegate void RealDataCallBackEx(int lRealHandle, uint dwDataType, IntPtr
 
 public static partial class HikSdk
 {
-    [DllImport("HCNetSDK", CallingConvention = CallingConvention.Cdecl)]
-    public static extern bool NET_DVR_Init();
+    [LibraryImport("HCNetSDK")]
+    public static partial int NET_DVR_Init();
     
     [DllImport("HCNetSDK", CallingConvention = CallingConvention.Cdecl)]
     public static extern int NET_DVR_Login_V40(
@@ -33,13 +33,6 @@ public static partial class HikSdk
 
     [LibraryImport("HCNetSDK")]
     public static partial int NET_DVR_Cleanup();
-
-    [LibraryImport("HCNetSDK")]
-    public static partial int NET_DVR_SetRealDataCallBack_V30(
-        int lUserId,
-        RealDataCallBackEx fRealDataCallBack,
-        IntPtr pUser,
-        int dwBufferSize);
     
     [LibraryImport("HCNetSDK")]
     public static partial int NET_DVR_StopRealPlay(int lRealPlayHandle);

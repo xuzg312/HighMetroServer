@@ -16,17 +16,25 @@
         <StackPanel Grid.Column="0" Spacing="2" Margin="0 0 2 0">
             <Border Padding="5" Background="#f0f0f0" BorderThickness="1">
                 <controls:HostConfigView
-                    Config="{Binding HostConfig}"
+                    Config="{Binding HostConfig,Mode=OneWay}"
                     IsReadOnly="True"/>
             </Border>
             <Border Padding="5" Background="#f0f0f0" BorderThickness="1">
                 <controls:CamConfigView
-                    Config="{Binding CamConfig}"
+                    Config="{Binding CamConfig,Mode=OneWay}"
                     IsReadOnly="True"/>
             </Border>
             <Border Padding="5" Background="#f0f0f0" BorderThickness="1">
-                <controls:SerialConfigView
-                    Config="{Binding SerialConfig}"/>
+                <controls:SerialConfigView 
+                    SerialNo="1" 
+                    IsReadOnly="True"
+                    Config="{Binding SerialConfig1,Mode=OneWay}"/>
+            </Border>
+            <Border Padding="5" Background="#f0f0f0" BorderThickness="1">
+                <controls:SerialConfigView 
+                    SerialNo="2" 
+                    IsReadOnly="True"
+                    Config="{Binding SerialConfig2,Mode=OneWay}"/>
             </Border>
         </StackPanel>
 
@@ -34,7 +42,7 @@
         <Grid Grid.Column="1">
             <Grid.RowDefinitions>
                 <RowDefinition Height="40"/>
-                <RowDefinition Height="400"/>
+                <RowDefinition Height="*"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
             <Border Grid.Row="0" Padding="5" Margin="0 0 0 2" 

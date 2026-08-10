@@ -18,8 +18,7 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
     private IDataBufferPool? _iDataBufferPool;
     private readonly List<IGetBufferData> _getBufferDataImplList=[];
     private Task? _readTask;
-    private readonly ConcurrentDictionary<string, IChildCommunication> _dictionary
-                                   = new ConcurrentDictionary<string, IChildCommunication>();
+    private readonly ConcurrentDictionary<string, IChildCommunication> _dictionary=[];
     private bool _start;
     private CancellationTokenSource? _ctsServer;
     private Task? _acceptLoopTask;
@@ -54,7 +53,6 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
         }
         catch (Exception)
         {
-            _start = false;
             ClearResource();
             hostInfo.RaiseClientConnEvent("启动Server失败！");
             return false;
@@ -219,7 +217,6 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
     {
         if (!_start)
             return;
-        _start = false;
         ClearResource();
     }
     #endregion
@@ -286,5 +283,6 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
             //忽略；
         }
         _ctsServer = null;
+        _start = false;
     }
 }

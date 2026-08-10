@@ -20,7 +20,7 @@ public partial class EditCamConfigView : UserControl
     private void OnTextChanged(object? sender, TextChangedEventArgs e)
     {
         // 获取ViewModel
-        if (DataContext is DbConfigViewModel vm)
+        if (DataContext is EditCamConfigViewModel vm)
         {
             // 清空错误文本
             vm.MessageText = string.Empty;

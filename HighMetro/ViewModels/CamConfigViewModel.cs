@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using HighMetro.BaseModel;
+using HighMetro.HikVision;
 using HighMetro.Message;
 using HighMetro.Models;
 using HighMetro.Services;
@@ -60,23 +61,33 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
         var camInfo = ParaSetupModules.CamInfo;
         if (camInfo == null)
         {
-            MessageText = "摄像头参数未配置！";
+            MessageText = "摄像头参数未配置，如果已经配置过，请重新启动程序加载！";
             return;
         }
         if (!camInfo.IsValid())
         {
-            MessageText = "摄像头参数配置不正确！";
+            MessageText = "摄像头参数配置不正确，如果已经配置过，请重新启动程序加载！";
             return;
         }
-        //初始化；
-        var loadCamResult = CamRemoteLinkImpl.Init();
-        if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
+        if (HikPlatform.IsMac)
         {
-            MessageText = "摄像头初始化失败！";
-            return;
+            MessageText = "MAC环境，不支持此操作，请切换到：Windows/Linux环境测试！";
+            return;        
+        }
+        if (!InitDrive.InitSign)
+        {
+            //初始化；
+            var loadCamResult00 = CamRemoteLinkImpl.Init();
+            if (!loadCamResult00.Code.Equals(PublicConst.FlagYes))
+            {
+                MessageText = "摄像头初始化失败！";
+                return;
+            }
+
+            InitDrive.InitSign = true;
         }
         //尝试登录;
-        loadCamResult = CamRemoteLinkImpl.Login(camInfo);
+        var loadCamResult = CamRemoteLinkImpl.Login(camInfo);
         if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
         {
             MessageText = loadCamResult.Message;
@@ -121,6 +132,8 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
         }
         var camInfo = ParaSetupModules.CamInfo;
         CamRemoteLinkImpl.Logout(camInfo!.UserId);
+        //释放摄像机资源；
+        CamRemoteLinkImpl.Clear();
     }
     public void Receive(AppCleanupMessage message)
     {

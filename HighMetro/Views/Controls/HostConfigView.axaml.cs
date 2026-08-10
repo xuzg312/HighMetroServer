@@ -33,7 +33,7 @@ public partial class HostConfigView : UserControl
     public HostConfigViewModel HostConfigViewModelVm { get; }
     public HostConfigView()
     {
-        HostConfigViewModelVm = new HostConfigViewModel(false);
+        HostConfigViewModelVm = new HostConfigViewModel();
         InitializeComponent();
         Unloaded += OnViewUnloaded;
     }
@@ -43,12 +43,12 @@ public partial class HostConfigView : UserControl
         {
             vm.Unsubscribe();
         }
+        Unloaded -= OnViewUnloaded;
     }
     static HostConfigView()
     {
         ConfigProperty.Changed.AddClassHandler<HostConfigView, HostOptions>((view, args) =>
         {
-            // GetNewValue<T>() 自动拆包BindingValue，拿到真实对象
             var newVal = args.GetNewValue<HostOptions>();
             view.HostConfigViewModelVm.Config = newVal;
         });

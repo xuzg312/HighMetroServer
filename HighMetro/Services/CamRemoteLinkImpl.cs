@@ -13,7 +13,7 @@ public static class CamRemoteLinkImpl
         var value = HikSdk.NET_DVR_Init();
         var loadCamResult = new LoadCamResult
         {
-            Code = value? PublicConst.FlagYes : PublicConst.FlagNo
+            Code = value!=0? PublicConst.FlagYes : PublicConst.FlagNo
         };
         return loadCamResult;
     }
@@ -122,6 +122,15 @@ public static class CamRemoteLinkImpl
         {
             Marshal.FreeHGlobal(bufferPtr);
         }
+    }
+    public static LoadCamResult Clear()
+    {
+        var value = HikSdk.NET_DVR_Cleanup();
+        var loadCamResult = new LoadCamResult
+        {
+            Code = value!=0? PublicConst.FlagYes : PublicConst.FlagNo
+        };
+        return loadCamResult;
     }
     private static LoadCamResult GetLastError()
     {

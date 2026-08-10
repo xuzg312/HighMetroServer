@@ -4,8 +4,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HighMetro.Attributes;
 using HighMetro.BaseModel;
+using HighMetro.HikVision;
 using HighMetro.Models;
-using HighMetro.Parameters;
 using HighMetro.Services;
 
 namespace HighMetro.ViewModels;
@@ -32,10 +32,12 @@ public partial class EditCamConfigViewModel : ObservableValidator
 
     [ObservableProperty]
     [Required(ErrorMessage = "密码不能为空")]
-    private string _Password;
+    private string _password;
 
     [ObservableProperty]
     private string _messageText = "";
+
+    private readonly HardInfo _hardInfo;
     public EditCamConfigViewModel(IDbService dbService,HardInfo hardInfo,ResultInfo resultInfo)
     {
         _dbService = dbService;
@@ -46,33 +48,75 @@ public partial class EditCamConfigViewModel : ObservableValidator
         Ip = hardInfo.Ip;
         Port = hardInfo.Port;
         UserName = hardInfo.UserName;
-        Password = hardInfo.PassWord; 
+        Password = hardInfo.PassWord;
+        _hardInfo = hardInfo;
     }
 
     [RelayCommand]
     private void TestConnection()
     {
+        ValidateAllProperties();
+        if (HasErrors)
+        {
+            return; 
+        }
+        if (HikPlatform.IsMac)
+        {
+            MessageText = "MAC环境，不支持此操作，请切换到：Windows/Linux环境测试！";
+            return;        
+        }
+        //尝试连接摄像机；
+        if (!InitDrive.InitSign)
+        {
+            //初始化；
+            var loadCamResult00 = CamRemoteLinkImpl.Init();
+            if (!loadCamResult00.Code.Equals(PublicConst.FlagYes))
+            {
+                MessageText = "摄像头初始化失败！";
+                return;
+            }
+            InitDrive.InitSign = true;
+        }
         var setting = BuildSetting();
-        //ResultInfo resultInfo = _dbService.TestConnection(setting);
-        //MessageText = resultInfo.Code.Equals(PublicConst.FlagYes) ? "✅ 数据库连接成功！" : "❌ 连接失败，请检查参数:"+resultInfo.Message;
+        //尝试登录;
+        var loadCamResult = CamRemoteLinkImpl.Login(setting);
+        if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
+        {
+            MessageText = loadCamResult.Message;
+            return;
+        }
+        //连接成功，退出登录；
+        loadCamResult = CamRemoteLinkImpl.Logout(loadCamResult.Value);
+        if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
+        {
+            MessageText = "退出登录失败！";
+            return;
+        }
+        MessageText = "登录摄像机正常 ✅ ！";
     }
     [RelayCommand]
     private void Confirm()
     {
-        // 清除旧的错误并验证所有属性
+        MessageText = "";
         ValidateAllProperties();
         if (HasErrors)
         {
             return; 
         }
         var setting = BuildSetting();
-        // 新增：测试数据库连接
-        /*ResultInfo resultInfo = _dbService.TestConnection(setting);
+        //保存到数据库；
+        _hardInfo.Ip = Ip;
+        _hardInfo.Port = Port;
+        _hardInfo.UserName = UserName;
+        _hardInfo.PassWord = Password;
+        var resultInfo = _hardInfo.Bh == 0 
+            ? _dbService.AddHardCamera(_hardInfo) 
+            : _dbService.EditHardCamera(_hardInfo);
         if (!resultInfo.Code.Equals(PublicConst.FlagYes))
         {
-            MessageText = "❌ 连接失败，请检查参数:"+resultInfo.Message;
-            return;    
-        }*/
+            MessageText = resultInfo.Message;
+            return;
+        }
         OnHardConfigSuccess?.Invoke();
     }
 
@@ -82,14 +126,14 @@ public partial class EditCamConfigViewModel : ObservableValidator
         OnHardConfigCancel?.Invoke();
     }
 
-    private HardSetting BuildSetting()
+    private HardInfo BuildSetting()
     {
-        return new HardSetting
+        return new HardInfo
         {
             Ip = Ip,
             Port = Port,
             UserName = UserName,
-            Password = Password
+            PassWord = Password
         };
     }
 }

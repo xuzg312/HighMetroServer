@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Windows.Input;
 using Avalonia.Controls;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -56,9 +57,11 @@ public partial class MainViewModel : ViewModelBase
         else
         {
             //数据库参数未配置，或者配置无效；
-            resultInfo = new ResultInfo();
-            resultInfo.Code = PublicConst.FlagNo;
-            resultInfo.Message = "";
+            resultInfo = new ResultInfo
+            {
+                Code = PublicConst.FlagNo,
+                Message = ""
+            };
         }
         if (!resultInfo.Code.Equals(PublicConst.FlagYes))
         {
@@ -72,7 +75,7 @@ public partial class MainViewModel : ViewModelBase
         }
         else
         {
-            LoginSetting loginSetting = _configService.LoadLoginConfig();
+            var loginSetting = _configService.LoadLoginConfig();
             var vm = new LoginViewModel(_configService,_dbService,loginSetting,_dbSetting);
             vm.OnLoginSuccess += OnLoginSuccess;
             vm.OnLoginCancel += ExitApplication;            
@@ -84,26 +87,29 @@ public partial class MainViewModel : ViewModelBase
     private void OnDbConfigSuccess(DbSetting setting)
     {
         _dbSetting = setting;
-        LoginSetting loginSetting = _configService.LoadLoginConfig();
-        var vm = new LoginViewModel(_configService,_dbService,loginSetting,_dbSetting);
-        vm.OnLoginSuccess += OnLoginSuccess;
-        vm.OnLoginCancel += ExitApplication;
-        if (ActivePopupVm is DbConfigViewModel oldDbConfigVm)
+        var loginSetting = _configService.LoadLoginConfig();
+        Dispatcher.UIThread.Post(() =>
         {
-            oldDbConfigVm.OnDbConfigSuccess -= OnDbConfigSuccess;
-            oldDbConfigVm.OnDbConfigCancel -= ExitApplication;
-        }
-        ActivePopupVm = vm;
+            var vm = new LoginViewModel(_configService, _dbService, loginSetting, _dbSetting);
+            vm.OnLoginSuccess += OnLoginSuccess;
+            vm.OnLoginCancel += ExitApplication;
+            if (ActivePopupVm is DbConfigViewModel oldDbConfigVm)
+            {
+                oldDbConfigVm.OnDbConfigSuccess -= OnDbConfigSuccess;
+                oldDbConfigVm.OnDbConfigCancel -= ExitApplication;
+            }
+            ActivePopupVm = vm;
+        });
     }
 
     private void OnLoginSuccess(LoginSetting setting)
     {
-        HostSetting hostSetting = _configService.LoadHostConfig();
+        var hostSetting = _configService.LoadHostConfig();
         ResultInfo resultInfo;
         if (hostSetting.IsValid())
         {
             //选择了工控机，确认是否正确？
-            resultInfo = _dbService.VerifyHost(hostSetting,_dbSetting);
+            resultInfo = _dbService.VerifyHost(hostSetting,_dbSetting!);
         }
         else
         {
@@ -117,16 +123,19 @@ public partial class MainViewModel : ViewModelBase
         if (!resultInfo.Code.Equals(PublicConst.FlagYes))
         {
             //未设置，或者异常，需要重新选择工控机；
-            ResultHostInfo resultHostInfo = _dbService.GetHostList(_dbSetting);
-            var vm = new HostSelectViewModel(_configService, resultHostInfo);
-            vm.OnConfirm += OnHostSuccess;
-            vm.OnCancel += ExitApplication;
-            if (ActivePopupVm is LoginViewModel oldloginVm)
+            var resultHostInfo = _dbService.GetHostList(_dbSetting);
+            Dispatcher.UIThread.Post(() =>
             {
-                oldloginVm.OnLoginSuccess -= OnLoginSuccess;
-                oldloginVm.OnLoginCancel -= ExitApplication;
-            }
-            ActivePopupVm = vm;
+                var vm = new HostSelectViewModel(_configService, resultHostInfo);
+                vm.OnConfirm += OnHostSuccess;
+                vm.OnCancel += ExitApplication;
+                if (ActivePopupVm is LoginViewModel oldloginVm)
+                {
+                    oldloginVm.OnLoginSuccess -= OnLoginSuccess;
+                    oldloginVm.OnLoginCancel -= ExitApplication;
+                }
+                ActivePopupVm = vm;
+            });
         }
         else
         {
@@ -136,14 +145,17 @@ public partial class MainViewModel : ViewModelBase
     
     private void OnHostSuccess(HostSetting setting)
     {
-        if (ActivePopupVm is HostSelectViewModel oldHostVm)
+        Dispatcher.UIThread.Post(() =>
         {
-            oldHostVm.OnConfirm -= OnHostSuccess;
-            oldHostVm.OnCancel -=  ExitApplication;
-        }
+            if (ActivePopupVm is HostSelectViewModel oldHostVm)
+            {
+                oldHostVm.OnConfirm -= OnHostSuccess;
+                oldHostVm.OnCancel -= ExitApplication;
+            }
+        });
         //保存数据库连接；
         var dataBaseConnect = DataBaseConnect.Instance;
-        dataBaseConnect.SetDataBaseConn(_dbSetting.GetConnectionString());
+        dataBaseConnect.SetDataBaseConn(_dbSetting!.GetConnectionString());
         //获取工控机；、主板1、主板2、硬盘摄像机；
         var hostInfo = new HostInfo
         {
@@ -162,23 +174,33 @@ public partial class MainViewModel : ViewModelBase
             if (resultInfo.Code.Equals(PublicConst.FlagYes))
             {
                 //获取主板，最多2个主板；
-                ResultSerialCommInfo resultSerialCommInfo = _dbService.GetCommInfoList(hostInfo,PublicConst.Mainboard);
+                var resultSerialCommInfo = _dbService.GetCommInfoList(hostInfo,PublicConst.Mainboard);
                 resultInfo = resultSerialCommInfo.ReturnInfo;
                 if (resultInfo.Code.Equals(PublicConst.FlagYes))
                 {
-                    //所有参数都正常，打开主页面；
-                    MainPageVm = new MainPageViewModel(hostInfo,hardInfo,resultSerialCommInfo.SerialCommList,_dbService);
-                    ActivePopupVm = null;
-                    ShowOverlay = false;
-                    IsMenuEnabled = true;
+                    Dispatcher.UIThread.Post(() => 
+                    {
+                       //所有参数都正常，打开主页面；
+                        ParaSetupModules.HostInfo = hostInfo;
+                        ParaSetupModules.CamInfo = hardInfo;
+                        ParaSetupModules.SerialCommList = resultSerialCommInfo.SerialCommList;
+                        ParaSetupModules.DbService = _dbService;
+                        MainPageVm = new MainPageViewModel();
+                        ActivePopupVm = null;
+                        ShowOverlay = false;
+                        IsMenuEnabled = true;
+                    });
                     return;
                 }
             }
         }
         //展示错误信息；
-        var vm = new LoadParaViewModel(resultInfo);
-        vm.OnCancel += ExitApplication;
-        ActivePopupVm = vm; 
+        Dispatcher.UIThread.Post(() =>
+        {
+            var vm = new LoadParaViewModel(resultInfo);
+            vm.OnCancel += ExitApplication;
+            ActivePopupVm = vm;
+        });
     }
     public ICommand CameraMaintainCmd { get; }
     public ICommand BoardMaintainCmd { get; }
@@ -242,10 +264,6 @@ public partial class MainViewModel : ViewModelBase
     }
     public void CleanResources()
     {
-        // 1.停止海康摄像头预览、释放SDK
-        // 2.关闭数据库连接
-        // 3.停止后台定时器、异步任务
-        // 4.释放视频解码、图像资源
         WeakReferenceMessenger.Default.Send(new AppCleanupMessage());
         Console.WriteLine("程序结束，释放资源！");
     }

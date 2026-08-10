@@ -48,22 +48,16 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
 
     private bool _start;
     private readonly HostInfo _hostInfo;
-    private readonly TcpServerListenerImpl _tcpServer;
-    private List<ISerialComm> _mainBordSerialCommList;
+    private TcpServerListenerImpl? _tcpServer;
     private List<SerialComm>? _serialList;
-    public HostConfigViewModel(bool isReadOnly)
+    private bool _buildServer;
+    public HostConfigViewModel()
     {
         _isInfoHit = true;
-        IsReadOnly = isReadOnly;
         _start = false;
+        _buildServer = false;
         _hostInfo = ParaSetupModules.HostInfo!;
         HostState = "【 TCP端口监听状态：❌ 】";
-        if (!Design.IsDesignMode && _hostInfo != null)
-        {
-            _hostInfo.BufferDataProdEvent += OnShowTcpServerDataProdEvent;
-            _hostInfo.ClientConnEvent += OnClientConnEvent;
-            _tcpServer = new TcpServerListenerImpl(_hostInfo, 2); //建立2个消费者线程；
-        }
         WeakReferenceMessenger.Default.RegisterAll(this);
     }
     partial void OnConfigChanged(HostOptions? value)
@@ -76,32 +70,17 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
         Code = value.Code;
         Name = value.Name;
     }
-    public void AppendMessage(string msg)
-    {
-        MessageText = $"[{DateTime.Now:HH:mm:ss}] {msg}";
-    }
-    /*partial void OnIpChanged(string value)
-    {
-        if(Config is not null) Config.Ip = value;
-    }
-
-    partial void OnPortChanged(int value)
-    {
-        if(Config is not null) Config.Port = value;
-    }
-    partial void OnCodeChanged(string value)
-    {
-        if(Config is not null) Config.Code = value;
-    }
-    partial void OnNameChanged(string value)
-    {
-        if(Config is not null) Config.Name = value;
-    }*/
     [RelayCommand(CanExecute = nameof(CanOpen))]
     private void Open()
     {
-        var hostInfo = ParaSetupModules.HostInfo;
-        if (_tcpServer.Start())
+        if (!_buildServer)
+        {
+            _hostInfo.BufferDataProdEvent += OnShowTcpServerDataProdEvent;
+            _hostInfo.ClientConnEvent += OnClientConnEvent;
+            _tcpServer = new TcpServerListenerImpl(_hostInfo, 2); //建立2个消费者线程；
+            _buildServer = true;
+        }
+        if (_tcpServer!.Start())
         {
             _start = true;
             HostState = "【 TCP端口监听状态：✅ 】";
@@ -120,7 +99,7 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
     private void Close()
     {
         //关闭监听端口
-        _tcpServer.CloseServer();
+        _tcpServer?.CloseServer();
         _start = false;
         HostState = "【 TCP端口监听状态：❌ 】";
         OpenCommand.NotifyCanExecuteChanged();
@@ -175,13 +154,13 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
                     var iPosition = 7;
                     socketDataBlock.Content![iPosition] = (byte)(onLine ? 0XCE : 0XDE);
                     //发送摄像机状态到客户端；
-                    _tcpServer.IdentifyInfo(socketDataBlock, tcpDataBean);
+                    _tcpServer!.IdentifyInfo(socketDataBlock, tcpDataBean);
                     return;
                 case PublicConst.IdentifyPhoto:
                     var fileData = ParseClientData.GetPhotoFile(tcpDataBean);
                     if (fileData != null)
                     {
-                        _tcpServer.SendPhotoFile(socketDataBlock, tcpDataBean, fileData);
+                        _tcpServer!.SendPhotoFile(socketDataBlock, tcpDataBean, fileData);
                     }
                     else
                     {
@@ -251,7 +230,7 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
     }
     private void ClearResource()
     {
-        _tcpServer.CloseServer();
+        _tcpServer?.CloseServer();
         Console.WriteLine("释放TCP资源！");
     }
     public void Receive(AppCleanupMessage message)

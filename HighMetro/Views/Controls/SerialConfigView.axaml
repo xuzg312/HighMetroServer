@@ -2,35 +2,28 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:controls="using:HighMetro.Views.Controls"
              mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="450"
              x:Class="HighMetro.Views.Controls.SerialConfigView"
-             x:Name="Root">
+             >
     <!-- 5组：标签+控件，横向均匀排布，组内间距很小 -->
-    <Grid RowDefinitions="Auto,Auto" RowSpacing="2" 
-          DataContext="{Binding SerialConfigViewModelVm, ElementName=Root}">
+    <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="2" 
+          >
         <!-- 第一行：同一行横向排列：标题｜红色提示框｜消息栏 -->
         <Grid Grid.Row="0" 
-              ColumnDefinitions="Auto,10,*,10,2*" 
+              ColumnDefinitions="Auto,Auto" 
               VerticalAlignment="Center">
         
             <!-- 固定标题 -->
             <TextBlock Grid.Column="0" Text="主板参数" FontSize="16" VerticalAlignment="Center"/>
 
             <!-- 消息栏：接收消息提示 -->
-            <TextBlock Grid.Column="4" Text="{Binding MessageText}" 
-                       Foreground="#FF333333" VerticalAlignment="Center" TextWrapping="Wrap"/>
+            <TextBlock Grid.Column="1" Text="{Binding MessageText}" 
+                       Foreground="ForestGreen" VerticalAlignment="Center" 
+                       TextAlignment="Left" TextWrapping="NoWrap"/>
         </Grid>
-        <Grid Grid.Row="1" ColumnSpacing="4">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="180"/>
-                <ColumnDefinition Width="180"/>
-                <ColumnDefinition Width="180"/>
-                <ColumnDefinition Width="180"/>
-                <ColumnDefinition Width="180"/>
-                <ColumnDefinition Width="120"/>
-            </Grid.ColumnDefinitions>
-
+        <Grid Grid.Row="1" ColumnSpacing="4"
+              ColumnDefinitions="180,180,180,180,180,120">
+            
             <!-- 串口号 -->
             <StackPanel Grid.Column="0"  Orientation="Horizontal" Spacing="4">
                 <TextBlock Text="串口号："/>
@@ -76,10 +69,55 @@
                           DisplayMemberBinding="{Binding DisplayName}"/>
             </StackPanel>
             <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="4">
-                <Button Content="打开" Command="{Binding OpenSerialPortCommand}"/>
-                <Button Content="关闭" Command="{Binding CloseSerialPortCommand}"/>
-                <Button Content="修改" Command="{Binding OpenConfigDialogCommand}"/>
+                <Button Content="打开" Command="{Binding OpenCommand}"
+                        Width="60" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <Button Content="关闭" Command="{Binding CloseCommand}"
+                        Width="60" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </StackPanel>
+        </Grid>
+        <Grid Grid.Row="2" Height="250" 
+              ColumnDefinitions="*,*,*,*" 
+              VerticalAlignment="Center">
+            <Border Grid.Column="0" Padding="5" Margin="0 0 0 2" 
+                    Background="#f8f8f8" BorderBrush="#cccccc" BorderThickness="1">
+                <ScrollViewer>
+                    <TextBlock 
+                        Text="{Binding MessageText1}"
+                        TextWrapping="Wrap" 
+                        VerticalAlignment="Top"
+                        Foreground="#FF222222"/>
+                </ScrollViewer>
+            </Border>
+            <Border Grid.Column="1" Padding="5" Margin="0 0 0 2" 
+                    Background="#f8f8f8" BorderBrush="#cccccc" BorderThickness="1">
+                <ScrollViewer>
+                    <TextBlock 
+                        Text="{Binding MessageText2}"
+                        TextWrapping="Wrap" 
+                        VerticalAlignment="Top"
+                        Foreground="#FF222222"/>
+                </ScrollViewer>
+            </Border>
+            <Border Grid.Column="2" Padding="5" Margin="0 0 0 2" 
+                    Background="#f8f8f8" BorderBrush="#cccccc" BorderThickness="1">
+                <ScrollViewer>
+                    <TextBlock 
+                        Text="{Binding MessageText3}"
+                        TextWrapping="Wrap" 
+                        VerticalAlignment="Top"
+                        Foreground="#FF222222"/>
+                </ScrollViewer>
+            </Border>
+            <Border Grid.Column="3" Padding="5" Margin="0 0 0 2" 
+                    Background="#f8f8f8" BorderBrush="#cccccc" BorderThickness="1">
+                <ScrollViewer>
+                    <TextBlock 
+                        Text="{Binding MessageText4}"
+                        TextWrapping="Wrap" 
+                        VerticalAlignment="Top"
+                        Foreground="#FF222222"/>
+                </ScrollViewer>
+            </Border>
         </Grid>
     </Grid>
 </UserControl>

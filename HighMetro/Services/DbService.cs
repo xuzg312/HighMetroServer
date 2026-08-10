@@ -290,22 +290,91 @@ public class DbService : IDbService
                             serialList.Add(serialComm00);
                         }
                         resultSerialCommInfo.SerialCommList = serialList;
-                        ResultInfo resultInfo = new ResultInfo();
-                        resultInfo.Code = PublicConst.FlagYes;
-                        resultInfo.Message = "";
-                        resultSerialCommInfo.ReturnInfo = resultInfo;
-                        return resultSerialCommInfo;
                     }
                 }
             }
+            var resultInfo = new ResultInfo
+            {
+                Code = PublicConst.FlagYes,
+                Message = ""
+            };
+            resultSerialCommInfo.ReturnInfo = resultInfo;
+            return resultSerialCommInfo;
         }
         catch (Exception ex)
         {
-            ResultInfo resultInfo = new ResultInfo();
-            resultInfo.Code = PublicConst.FlagNo;
-            resultInfo.Message = "连接异常，请检查配置信息：" + ex.Message;
+            var resultInfo = new ResultInfo
+            {
+                Code = PublicConst.FlagNo,
+                Message = "连接异常，请检查配置信息：" + ex.Message
+            };
             resultSerialCommInfo.ReturnInfo = resultInfo;
             return resultSerialCommInfo;
+        }
+    }
+    public ResultInfo AddHardCamera(HardInfo hardInfo)
+    {
+        var resultInfo = new ResultInfo();
+        try
+        {
+            using (MySqlConnection conn = new MySqlConnection(GetConnectionString()))
+            {
+                conn.Open();
+                string sql = "INSERT INTO t_hardcamera (hostbh,type,ip, port,username,password) " +
+                             "VALUES (@hostbh,@type,@ip, @port,@username,@password);SELECT LAST_INSERT_ID();";
+                using (MySqlCommand cmd = new MySqlCommand(sql, conn))
+                {
+                    // 添加参数（避免拼接字符串导致SQL注入）
+                    cmd.Parameters.AddWithValue("@hostbh", hardInfo.HostBh);
+                    cmd.Parameters.AddWithValue("@type", hardInfo.Type);
+                    cmd.Parameters.AddWithValue("@ip", hardInfo.Ip);
+                    cmd.Parameters.AddWithValue("@port", hardInfo.Port);
+                    cmd.Parameters.AddWithValue("@username", hardInfo.UserName);
+                    cmd.Parameters.AddWithValue("@password", hardInfo.PassWord);
+                    var row = cmd.ExecuteNonQuery();
+                }
+            }
+            resultInfo.Code = PublicConst.FlagYes;
+            resultInfo.Message = "";
+            return resultInfo;
+        }
+        catch (Exception ex)
+        {
+            resultInfo.Code = PublicConst.FlagNo;
+            resultInfo.Message = "保存摄像机信息异常："+ ex.Message;
+            return resultInfo;
+        }
+    }
+    public ResultInfo EditHardCamera(HardInfo hardInfo)
+    {
+        var resultInfo = new ResultInfo();
+        try
+        {
+            using (MySqlConnection conn = new MySqlConnection(GetConnectionString()))
+            {
+                conn.Open();
+                string sql = "update t_hardcamera set hostbh=@hostbh,ip=@ip,port=@port,username=@username,password=@password where bh=@bh";
+                using (MySqlCommand cmd = new MySqlCommand(sql, conn))
+                {
+                    // 添加参数（避免拼接字符串导致SQL注入）
+                    cmd.Parameters.AddWithValue("@hostbh", hardInfo.HostBh);
+                    cmd.Parameters.AddWithValue("@ip", hardInfo.Ip);
+                    cmd.Parameters.AddWithValue("@port", hardInfo.Port);
+                    cmd.Parameters.AddWithValue("@username", hardInfo.UserName);
+                    cmd.Parameters.AddWithValue("@password", hardInfo.PassWord);
+                    cmd.Parameters.AddWithValue("@bh", hardInfo.Bh);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            resultInfo.Code = PublicConst.FlagYes;
+            resultInfo.Message = "";
+            return resultInfo;
+        }
+        catch (Exception ex)
+        {
+            resultInfo.Code = PublicConst.FlagNo;
+            resultInfo.Message = "保存摄像机信息异常："+ ex.Message;
+            return resultInfo;
         }
     }
 }
