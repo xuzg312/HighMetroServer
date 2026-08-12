@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using HighMetro.BaseModel;
-using HighMetro.ClassLib;
 using HighMetro.Event;
 using HighMetro.Models;
 
@@ -22,9 +20,30 @@ public class GetBufferDataImpl : IGetBufferData
     {
         _iDataBufferPool = dataBufferPool;
         _cts = new CancellationTokenSource();
-        _workerTask = Task.Run(() => GetBufferSocketData(_cts.Token));
+        _workerTask = Task.Run(() => GetData(_cts.Token), _cts.Token);
     }
     #endregion
+
+    private async Task GetData(CancellationToken token)
+    {
+        try
+        {
+            await GetBufferSocketData(token);
+        }
+        catch (OperationCanceledException)
+        {
+            //主动取消监听，正常优雅关闭，不打错误日志
+        }
+        catch (Exception ex)
+        {
+            var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            ParaSetupModules.RaiseAscDataProdEvent($"数据池获取数据顶层异常：{ex.Message}【{currDateTime}】");
+        }
+        finally
+        {
+            DisConnect();
+        }
+    }
 
     #region 获取数据池中数据；
     private async Task GetBufferSocketData(CancellationToken token)
@@ -74,16 +93,16 @@ public class GetBufferDataImpl : IGetBufferData
         {
             //忽略;
         }
+        _workerTask = null;
         try
         {
             _cts?.Dispose();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             //忽略;
         }
         _cts = null;
-        _workerTask = null;
         _disposed = true;
     }
     #endregion

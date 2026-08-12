@@ -293,6 +293,15 @@ public class TcpServerChatImpl : IChildCommunication
         {
             //忽略；
         }
+        try
+        {
+            _readTask?.Wait(500);
+        }
+        catch (Exception)
+        {
+            //忽略;
+        }
+        _readTask = null;
         _dictionary.TryRemove(_key, out var _);
         try
         {

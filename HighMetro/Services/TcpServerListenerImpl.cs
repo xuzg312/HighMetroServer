@@ -307,12 +307,26 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
         //断开与客户端的连接；
         foreach (var kv in _dictionary)
         {
-            kv.Value.CloseClient();
+            try
+            {
+                kv.Value.CloseClient();
+            }
+            catch (Exception)
+            {
+                //忽略；
+            }
         }
-        _dictionary.Clear(); // 清除集合，不要 =null
+        _dictionary.Clear(); 
         foreach (var item in _getBufferDataImplList)
         {
-            item.DisConnect();
+            try
+            {
+                item.DisConnect();
+            }
+            catch (Exception)
+            {
+                //忽略；
+            }
         }
         _getBufferDataImplList.Clear();
         try
