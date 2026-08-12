@@ -14,8 +14,8 @@
               VerticalAlignment="Center">
         
             <!-- 固定标题 -->
-            <TextBlock Grid.Column="0" Text="主板参数" FontSize="16" VerticalAlignment="Center"/>
-
+            <TextBlock Grid.Column="0" Text="{Binding CommState}" 
+                       VerticalAlignment="Center" FontWeight="Bold"/>
             <!-- 消息栏：接收消息提示 -->
             <TextBlock Grid.Column="1" Text="{Binding MessageText}" 
                        Foreground="ForestGreen" VerticalAlignment="Center" 

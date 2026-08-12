@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using HighMetro.BaseModel;
 using HighMetro.ClassLib;
+using HighMetro.Models;
 
 namespace HighMetro.Services;
 
@@ -17,11 +18,12 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
     private TcpListener? _listener;
     private IDataBufferPool? _iDataBufferPool;
     private readonly List<IGetBufferData> _getBufferDataImplList=[];
-    private Task? _readTask;
     private readonly ConcurrentDictionary<string, IChildCommunication> _dictionary=[];
     private bool _start;
     private CancellationTokenSource? _ctsServer;
     private Task? _acceptLoopTask;
+    private Task? _readTask;
+
     #endregion
     
     public bool Start()
@@ -45,9 +47,9 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
                 _getBufferDataImplList.Add(new GetBufferDataImpl(_iDataBufferPool));
             }
             // 后台接受客户端循环
-            _acceptLoopTask = AcceptClientLoopAsync(_ctsServer.Token);
+            _acceptLoopTask = Task.Run(() => AcceptClient(_ctsServer.Token), _ctsServer.Token);
             //启动1个线程，进行数据包的拆分或合并；
-            _readTask = Task.Run(() => ParseData(_ctsServer.Token));
+            _readTask = Task.Run(() => ParseClient(_ctsServer.Token), _ctsServer.Token);
             _start = true;
             return true;
         }
@@ -58,6 +60,26 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
             return false;
         }
     }
+    private async Task AcceptClient(CancellationToken token)
+    {
+        try
+        {
+            await AcceptClientLoopAsync(token);
+        }
+        catch (OperationCanceledException)
+        {
+            //主动取消监听，正常优雅关闭，不打错误日志
+        }
+        catch (Exception ex)
+        {
+            var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            ParaSetupModules.RaiseAscDataProdEvent($"TCP监听顶层异常：{ex.Message}【{currDateTime}】");
+        }
+        finally
+        {
+            CloseServer();
+        }
+    }
     #region 接收客户端连接事件；
     private async Task AcceptClientLoopAsync(CancellationToken token)
     {
@@ -65,12 +87,13 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
         {
             try
             {
-                TcpClient tcpClient = await _listener.AcceptTcpClientAsync(token);
+                var tcpClient = await _listener.AcceptTcpClientAsync(token);
                 if (tcpClient.Client.RemoteEndPoint is not IPEndPoint endPoint)
                 {
+                    tcpClient.Close();
                     continue;
                 }
-                string key = endPoint.Address + "【" + hostInfo.Bh + "】";
+                var key = endPoint.Address + "【" + hostInfo.Bh + "】";
                 IChildCommunication newChild = new TcpServerChatImpl(
                     tcpClient, 
                     hostInfo, 
@@ -78,47 +101,82 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
                     _dictionary,
                     key,
                     token);
-                _dictionary.TryRemove(key, out IChildCommunication? oldChild);
+                _dictionary.TryRemove(key, out var oldChild);
                 _dictionary.TryAdd(key, newChild);
                 oldChild?.CloseClient();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                hostInfo.RaiseAscDataProdEvent("接收客户端异常！");
+                var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                ParaSetupModules.RaiseAscDataProdEvent($"接收客户端异常：{ex.Message}【{currDateTime}】");
             }
         }
     }
     #endregion
+    private async Task ParseClient(CancellationToken token)
+    {
+        try
+        {
+            await ParseData(token);
+        }
+        catch (OperationCanceledException)
+        {
+            //正常关闭；
+        }
+        catch (Exception ex)
+        {
+            var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            ParaSetupModules.RaiseAscDataProdEvent($"解析循环顶层异常：{ex.Message}【{currDateTime}】");
+        }
+    }
     #region 解析tcp数据；
     private async Task ParseData(CancellationToken token)
     {
         while (!token.IsCancellationRequested)
         {
-            int execCount = 0;
-            // 复制一份集合快照，遍历副本，不在原字典上foreach
+            var execCount = 0;
             var childList = _dictionary.Values.ToList();
             foreach (var child in childList)
             {
-                if (child.ParseDatas())
+                if (!child.IsStart())
+                    continue;
+                try
                 {
-                    execCount++;
+                    var hasProcessData = child.ParseDatas();
+                    if (hasProcessData)
+                    {
+                        execCount++;
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    // 单个客户端解析异常隔离，不中断整体轮询
+                    var currentTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                    ParaSetupModules.RaiseAscDataProdEvent($"解析客户端数据异常：{ex.Message}【{currentTime}】");
                 }
             }
-            if (execCount == 0)
+            if (execCount > 0)
             {
-                await Task.Delay(100, token);
+                continue;
             }
+            await Task.Delay(100, token);
         }
     }
     #endregion
 
-    private void SendMessage(SocketDataBlock socketDataBlock)
+    public void SendMessage(SocketDataBlock socketDataBlock)
     {
         if (!_start)
             return;
         var snapshotList = _dictionary.Values.ToList();
         foreach(var child in snapshotList)
         {
+            if (!child.IsStart())
+                continue;
             try
             {
                 if (child.GetClientType() == PublicConst.IdentifyAll)
@@ -126,9 +184,14 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
                     child.SendMessage(socketDataBlock.Content!, socketDataBlock.Length);
                 }
             }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
             catch(Exception ex)
             {
-                hostInfo.RaiseAscDataProdEvent($"广播发送异常：{ex.Message}");
+                var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                ParaSetupModules.RaiseAscDataProdEvent($"广播发送异常：{ex.Message}【{currDateTime}】");
             }
         }
     }
@@ -136,7 +199,6 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
     {
         if (!_start)
             return;
-        //查找需要接收数据在客户端；
         IChildCommunication? tempComm = null;
         var hostBh = -1;
         var exist = false;
@@ -150,23 +212,22 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
         {
             return;
         }
-        if (hostBh != tcpDataBean.HostBh)
-        {
-            //强行下线，工控机编号无效！
-            tempComm.CloseClient();
-            hostInfo.RaiseAscDataProdEvent(socketDataBlock.Key + "，工控机编号无效，强制下线！");
-        }
-        else
+        if (hostBh == tcpDataBean.HostBh)
         {
             tempComm.SetClientType((byte)tcpDataBean.Type);
             SendMessage(socketDataBlock);
+        }
+        else
+        {
+            tempComm.CloseClient();
+            var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            hostInfo.RaiseClientConnEvent($"{socketDataBlock.Key}，工控机编号无效，强制下线！【{currDateTime}】");
         }
     }
     public void SendPhotoFile(SocketDataBlock socketDataBlock,TcpDataBean tcpDataBean, byte[] fileData)
     {
         if (!_start)
             return;
-        //查找需要接收数据在客户端；
         IChildCommunication? tempComm = null;
         var hostBh = -1;
         var exist = false;
@@ -180,13 +241,7 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
         {
             return;
         }
-        if (hostBh != tcpDataBean.HostBh)
-        {
-            //强行下线，工控机编号无效！
-            tempComm.CloseClient();
-            hostInfo.RaiseAscDataProdEvent(socketDataBlock.Key + "，工控机编号无效，强制下线！");
-        }
-        else
+        if (hostBh == tcpDataBean.HostBh)
         {
             //循环发送，每次8*1024字节；
             var data = new byte[fileData.Length + 10];
@@ -211,6 +266,12 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
             socketDataBlock.Length = data.Length;
             tempComm.SendMessage(socketDataBlock.Content, socketDataBlock.Length);
         }
+        else
+        {
+            tempComm.CloseClient();
+            var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            hostInfo.RaiseClientConnEvent($"{socketDataBlock.Key}，工控机编号无效，强制下线！【{currDateTime}】");
+        }
     }
     #region 关闭服务；
     public void CloseServer()
@@ -234,7 +295,6 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
                 //忽略；
             }
             _listener = null;
-
         }
         try
         {
@@ -268,11 +328,10 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
         {
             _readTask?.Wait(500);
         }
-        catch
+        catch (Exception)
         {
-            //忽略；
+            //忽略;
         }
-
         _readTask = null;
         try
         {

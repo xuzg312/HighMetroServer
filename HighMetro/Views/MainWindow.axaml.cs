@@ -11,14 +11,9 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
     }
-    private void InitializeComponent()
-    {
-        AvaloniaXamlLoader.Load(this);
-    }
     protected override void OnClosing(WindowClosingEventArgs e)
     {
         base.OnClosing(e);
-        // 获取ViewModel
         if (DataContext is MainViewModel vm)
         {
             vm.CleanResources();

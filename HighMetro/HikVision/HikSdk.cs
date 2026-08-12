@@ -36,4 +36,8 @@ public static partial class HikSdk
     
     [LibraryImport("HCNetSDK")]
     public static partial int NET_DVR_StopRealPlay(int lRealPlayHandle);
+    
+    [LibraryImport("HCNetSDK")]
+    public static partial int NET_DVR_RemoteControl(int lUserId, int dwCommand, IntPtr lpInBuffer, int dwInBufferSize);
+
 }

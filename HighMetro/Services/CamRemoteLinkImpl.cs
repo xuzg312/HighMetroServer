@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Runtime.InteropServices;
 using HighMetro.BaseModel;
 using HighMetro.ClassLib;
@@ -6,9 +7,10 @@ using HighMetro.HikVision;
 
 namespace HighMetro.Services;
 
-public static class CamRemoteLinkImpl
+public class CamRemoteLinkImpl
 {
-    public static LoadCamResult Init()
+    private readonly object _dirLockObj = new();
+    public LoadCamResult Init()
     {
         var value = HikSdk.NET_DVR_Init();
         var loadCamResult = new LoadCamResult
@@ -17,7 +19,7 @@ public static class CamRemoteLinkImpl
         };
         return loadCamResult;
     }
-    public static LoadCamResult Login(HardInfo hardInfo)
+    public LoadCamResult Login(HardInfo hardInfo)
     {
         //登录设备；
         var loginInfo = new CHCNetSDK.NET_DVR_USER_LOGIN_INFO();
@@ -58,7 +60,7 @@ public static class CamRemoteLinkImpl
             return GetLastError();
         }
     }
-    public static LoadCamResult Logout(int iUserId)
+    public LoadCamResult Logout(int iUserId)
     {
         var value = HikSdk.NET_DVR_Logout(iUserId);
         var loadCamResult = new LoadCamResult
@@ -67,38 +69,45 @@ public static class CamRemoteLinkImpl
         };
         return loadCamResult;
     }
-    public static LoadCamResult CaptureJpegPicture(int iUserId,CameraBean cameraBean)
+    public LoadCamResult CaptureJpegPicture(int iUserId,CameraBean cameraBean)
     {
-        //图片保存路径和文件名 the path and file name to save
-        var directory = SystemInfo.PhotoDir;
-        directory = Path.Combine(directory,System.DateTime.Now.ToString("yyyy-MM-dd"));
-        if (!Directory.Exists(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-        directory = Path.Combine(directory,cameraBean.Id.ToString());
-        if (!Directory.Exists(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-        var now = System.DateTime.Now;
-        // 提取时、分、秒
-        var hour = now.Hour;       // 小时（0-23）
-        var minute = now.Minute;   // 分钟（0-59）
-        var second = now.Second;
-        var timeStr = $"{hour:D2}-{minute:D2}-{second:D2}";
-        var sJpegPicFileName = directory + cameraBean.Serial+"-"+timeStr + ".jpg";
-        cameraBean.FilePath = sJpegPicFileName;
-        var lChannel = 1; //通道号 Channel number
-        var lpJpegPara = new CHCNetSDK.NET_DVR_JPEGPARA
-        {
-            wPicQuality = 0, 
-            wPicSize = 0xff
-        };
-        var bufferPtr = Marshal.AllocHGlobal(PublicConst.MaxBufferSize);
+        var bufferPtr = IntPtr.Zero;
+        var fullSavePath = string.Empty;
+        // 静态锁防止多线程并发创建目录冲突
         try
         {
+            var baseDir = SystemInfo.PhotoDir;
+            var dateFolder = DateTime.Now.ToString("yyyy-MM-dd");
+            var camIdFolder = cameraBean.Id.ToString();
+            var dayDir = Path.Combine(baseDir, dateFolder);
+            lock (_dirLockObj)
+            {
+                if (!Directory.Exists(dayDir))
+                    Directory.CreateDirectory(dayDir);
+
+                var targetDir = Path.Combine(dayDir, camIdFolder);
+                if (!Directory.Exists(targetDir))
+                    Directory.CreateDirectory(targetDir);
+            }
+            #region 3. 生成带毫秒唯一文件名，避免同秒覆盖
+            var now = DateTime.Now;
+            var timeStr = $"{now.Hour:D2}-{now.Minute:D2}-{now.Second:D2}-{now.Millisecond:D3}";
+            var fileName = $"{cameraBean.Serial}-{timeStr}.jpg";
+            fullSavePath = Path.Combine(dayDir, camIdFolder, fileName);
+            cameraBean.FilePath = fullSavePath;
+            #endregion
+
+            #region 4. SDK抓拍逻辑
+            var lChannel = 1;
+            var lpJpegPara = new CHCNetSDK.NET_DVR_JPEGPARA
+            {
+                wPicQuality = 0,
+                wPicSize = 0xff
+            };
+
+            bufferPtr = Marshal.AllocHGlobal(PublicConst.MaxBufferSize);
             uint actualSize = 0;
+
             var nativeRet = HikSdk.NET_DVR_CaptureJPEGPicture_NEW(
                 iUserId,
                 lChannel,
@@ -106,24 +115,83 @@ public static class CamRemoteLinkImpl
                 bufferPtr,
                 PublicConst.MaxBufferSize,
                 ref actualSize);
-            // nativeRet !=0 代表SDK调用成功
+
+            // SDK调用失败校验
             if (nativeRet == 0 || actualSize <= 0)
             {
                 return GetLastError();
             }
-            // 从非托管内存拷贝到托管字节数组
+            // 拷贝非托管内存
             byte[] jpegBytes = new byte[actualSize];
             Marshal.Copy(bufferPtr, jpegBytes, 0, (int)actualSize);
-            // 写入磁盘
-            File.WriteAllBytes(sJpegPicFileName, jpegBytes);
-            return new LoadCamResult{ Code = PublicConst.FlagYes};
+
+            // 写入文件，单独捕获IO异常
+            SafeWriteFile(fullSavePath, jpegBytes);
+            
+            return new LoadCamResult
+            {
+                Code = PublicConst.FlagYes,
+            };
+            #endregion
+        }
+        catch (IOException ioEx)
+        {
+            return new LoadCamResult
+            {
+                Code = PublicConst.FlagNo,
+                Message = $"文件IO异常：{ioEx.Message}，路径：{fullSavePath}"
+            };
+        }
+        catch (UnauthorizedAccessException authEx)
+        {
+            return new LoadCamResult
+            {
+                Code = PublicConst.FlagNo,
+                Message = $"目录无读写权限：{authEx.Message}，路径：{fullSavePath}"
+            };
+        }
+        catch (OutOfMemoryException memEx)
+        {
+            return new LoadCamResult
+            {
+                Code = PublicConst.FlagNo,
+                Message = $"内存不足无法抓拍：{memEx.Message}"
+            };
+        }
+        catch (ArgumentException argEx)
+        {
+            return new LoadCamResult
+            {
+                Code = PublicConst.FlagNo,
+                Message = $"路径参数非法：{argEx.Message}"
+            };
+        }
+        catch (Exception ex)
+        {
+            // 兜底所有未知异常
+            return new LoadCamResult
+            {
+                Code = PublicConst.FlagNo,
+                Message = $"抓拍未知异常：{ex.Message}"
+            };
         }
         finally
         {
-            Marshal.FreeHGlobal(bufferPtr);
+            // 强制释放非托管堆内存，防止内存泄漏
+            if (bufferPtr != IntPtr.Zero)
+            {
+                Marshal.FreeHGlobal(bufferPtr);
+            }
         }
     }
-    public static LoadCamResult Clear()
+    private void SafeWriteFile(string filePath, byte[] data)
+    {
+        // FileOptions.None 常规写入；可加 FileOptions.WriteThrough 强制落盘
+        using var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
+        fs.Write(data, 0, data.Length);
+        fs.Flush(true);
+    }
+    public LoadCamResult Clear()
     {
         var value = HikSdk.NET_DVR_Cleanup();
         var loadCamResult = new LoadCamResult
@@ -132,7 +200,20 @@ public static class CamRemoteLinkImpl
         };
         return loadCamResult;
     }
-    private static LoadCamResult GetLastError()
+    public bool CheckOnLine(int iUserId)
+    {
+        if (iUserId >= 0)
+        {
+            // 检测在线
+            var value= HikSdk.NET_DVR_RemoteControl(iUserId,20005,IntPtr.Zero,0);
+            return value != 0;
+        }
+        else
+        {
+            return false;
+        }
+    }
+    private LoadCamResult GetLastError()
     {
         var iLastErr = HikSdk.NET_DVR_GetLastError();
         var loadCamResult = new LoadCamResult

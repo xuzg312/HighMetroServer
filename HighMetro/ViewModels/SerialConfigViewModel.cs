@@ -2,28 +2,36 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Text;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
+using HighMetro.BaseModel;
+using HighMetro.ClassLib;
+using HighMetro.Event;
+using HighMetro.Message;
 using HighMetro.Models;
 using HighMetro.Parameters;
+using HighMetro.Services;
 using HighMetro.Views.Controls;
 
 namespace HighMetro.ViewModels;
 
-public partial class SerialConfigViewModel : ObservableObject
+public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppCleanupMessage>
 {
-    // 1. 接收外部传入的配置数据
     [ObservableProperty]
     private SerialPortOptions? _config;
     
-    // 2. 接收外部传入的只读状态
     [ObservableProperty] 
     private bool _isReadOnly;
 
-    // 3. 控件内部自己的数据（比如波特率下拉列表）
+    [ObservableProperty] 
+    private string _commState;
+    
     [ObservableProperty] 
     private ObservableCollection<CodeNameModals> _portNameList= new ([]);
 
@@ -57,13 +65,32 @@ public partial class SerialConfigViewModel : ObservableObject
     [ObservableProperty] 
     private string? _messageText;
 
-    private readonly bool _start;
+    [ObservableProperty] 
+    private string? _messageText1;
+    
+    [ObservableProperty] 
+    private string? _messageText2;
+    
+    [ObservableProperty] 
+    private string? _messageText3;
+    
+    [ObservableProperty] 
+    private string? _messageText4;
+    
+    private bool _start;
     private int _serial;
+    private CommSerialImpl? _commSerialImpl;
     public SerialConfigViewModel(bool isReadOnly,int serial)
     {
         IsReadOnly = isReadOnly;
         _serial = serial;
         _start = false;
+        foreach (var item in ParaSetupModules.SerialCommList!)
+        {
+            item.BufferDataProdEvent += OnBufferDataProdEvent;
+        }
+        CommState = "【 串口连接状态：❌ 】";
+        WeakReferenceMessenger.Default.RegisterAll(this);
     }
     public void UpdateParams(bool isReadOnly, int serial, SerialPortOptions? options)
     {
@@ -71,7 +98,7 @@ public partial class SerialConfigViewModel : ObservableObject
         _serial = serial;
         InitComboSource(options);
     }
-    private CodeNameModals? BuildSingleItem(
+    private static CodeNameModals? BuildSingleItem(
         IEnumerable<CodeNameModals> sourcePool,
         Func<CodeNameModals, bool> matchRule,
         ObservableCollection<CodeNameModals> targetCollection)
@@ -79,7 +106,6 @@ public partial class SerialConfigViewModel : ObservableObject
         var matched = sourcePool.FirstOrDefault(matchRule);
         if (matched == null)
             return null;
-
         var newItem = new CodeNameModals(matched.Value, matched.DisplayName);
         targetCollection.Add(newItem);
         return newItem;
@@ -98,9 +124,168 @@ public partial class SerialConfigViewModel : ObservableObject
         SelectedStopBits = BuildSingleItem(CommParameter.StopBitsList, x => x.Value == value.StopBits, StopBitsList);
         SelectedParity = BuildSingleItem(CommParameter.ParityList, x => x.Value == value.Parity, ParityList);
     }
+    //收到串口数据；
+    private void OnBufferDataProdEvent(object? obj, EventArgs arg)
+    {
+        if (arg is not SocketDataEventArgs socketDataEventArgs)
+        {
+            return;
+        }
+        var socketDataBlock = socketDataEventArgs.Data;
+        var valid = false;
+        if (socketDataBlock.Length >= 11)
+        {
+            if (socketDataBlock.Content![0] == 0XEB &&
+                    socketDataBlock.Content[1] == 0XAA)
+            {
+                if (socketDataBlock.Content[5] == 0X80 && socketDataBlock.Content[6] == 0X0F)
+                {
+                    //心跳；
+                    if (socketDataBlock.Length >= 62)
+                    {
+                        //转发到TcpClient;
+                        var tcpServer = ParaSetupModules.HostInfo!.TcpServer;
+                        tcpServer?.SendMessage(socketDataBlock);
+                        //保存心跳;
+                        ReplyHeartInfo(socketDataBlock);
+                        valid = true;
+                    }
+                }
+                else if (socketDataBlock.Content[5] == 0X84)
+                {
+                    //拍照；                         
+                    var cameraBean = new CameraBean();
+                    byte iPosition = 6;
+                    var dire = socketDataBlock.Content[iPosition];
+                    if (dire == 0X0F)
+                    {
+                        cameraBean.Door = PublicConst.DireDoor;
+                        //动作；拍照；
+                        iPosition = 10;
+                        byte state = socketDataBlock.Content[iPosition];
+                        if (state == 0X00)
+                        {
+                            //转发到TcpClient;
+                            var tcpServer = ParaSetupModules.HostInfo!.TcpServer;
+                            tcpServer?.SendMessage(socketDataBlock);
+                            cameraBean.Type = PublicConst.DoorStateCapture;
+                            //拍照，并保存到数据库；
+                            ReplyCameraInfo(socketDataBlock, cameraBean);
+                            valid = true;
+                        }
+                    }
+                }
+            }
+        }
+        if (!valid)
+        {
+            //协议数据无效；
+            ParaSetupModules.RaiseHexDataProdEvent(socketDataBlock);
+        }
+    }
+    //心跳；
+    private void ReplyHeartInfo(SocketDataBlock socketDataBlock)
+    {
+        var mainInfoBean = ParseMainBordData.ReplyHeartInfo(socketDataBlock);
+        if (mainInfoBean != null)
+        {
+            mainInfoBean.HostBh = ParaSetupModules.CamInfo!.HostBh;
+            var data = ParseMainBordData.ParsePack(mainInfoBean);
+            ResultInfo resultInfo;
+            if (mainInfoBean.A1gzm > 0 || mainInfoBean.A2gzm > 0 || mainInfoBean.B1gzm > 0 || mainInfoBean.B2gzm > 0)
+            {
+                //异常的心跳，保存到数据库;
+                resultInfo = ParaSetupModules.DbService!.AddHeart(mainInfoBean);
+            }
+            else
+            {
+                //正常心跳，数据库更新次数，每天一条记录；
+                mainInfoBean.Datetime = DateTime.Now.Date.ToString("yyyy-MM-dd HH:mm:ss");
+                resultInfo = ParaSetupModules.DbService!.SavePersonDay(mainInfoBean);
+            }
+            if (!resultInfo.Code.Equals(PublicConst.FlagNo))
+            {
+                ParaSetupModules.RaiseAscDataProdEvent(resultInfo.Message);
+                return;
+            }
+            Dispatcher.UIThread.Post(() =>
+            {
+                MessageText1 = data[0];
+                MessageText2 = data[1];
+                MessageText3 = data[2];
+                MessageText4 = data[3];
+                MessageText = "收到主板【"+_serial+"】的心跳数据！"+
+                              DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            });
+        }
+        else
+        {
+            ParaSetupModules.RaiseAscDataProdEvent("心跳协议长度无效, 长度为【"+ socketDataBlock.Length+"】");
+        }
+    }
+    //拍照
+    private void ReplyCameraInfo(SocketDataBlock socketDataBlock, CameraBean cameraBean)
+    {
+        cameraBean.HostBh = ParaSetupModules.HostInfo!.Bh;
+        var publicUntil = new PublicUntil();
+        byte iPosition = 3;
+        //设备id
+        cameraBean.Id = publicUntil.GetUshort(socketDataBlock.Content!, iPosition);
+        cameraBean.DateTime = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        //次数；
+        iPosition = 8;
+        cameraBean.Serial = publicUntil.GetUshort(socketDataBlock.Content!, iPosition);
+        var camInfo = ParaSetupModules.CamInfo;
+        if (camInfo is { UserId: > 0 })
+        {
+            //动作：拍照；
+            var value = camInfo.CamRemoteLinkImpl!.CaptureJpegPicture(camInfo.UserId,cameraBean); 
+            if (value.Code.Equals(PublicConst.FlagYes))
+            {
+                cameraBean.Message = "拍照执行成功!";
+                Dispatcher.UIThread.Post(() => { MessageText = cameraBean.Message + cameraBean.DateTime;});
+                var resultInfo = ParaSetupModules.DbService!.AddAlarm(cameraBean);
+                if (resultInfo.Code.Equals(PublicConst.FlagNo))
+                {
+                    ParaSetupModules.RaiseAscDataProdEvent(resultInfo.Message);
+                }
+            }
+            else
+            {
+                cameraBean.Message = value.Message;
+                ParaSetupModules.RaiseAscDataProdEvent(value.Message);
+                var resultInfo = ParaSetupModules.DbService!.AddError(cameraBean);
+                if (resultInfo.Code.Equals(PublicConst.FlagNo))
+                {
+                    ParaSetupModules.RaiseAscDataProdEvent(resultInfo.Message);
+                }
+            }
+        }
+        else
+        {
+            cameraBean.Message = "触发拍照，但未连接摄像头！";
+            ParaSetupModules.RaiseAscDataProdEvent(cameraBean.Message);
+            var resultInfo = ParaSetupModules.DbService!.AddError(cameraBean);
+            if (resultInfo.Code.Equals(PublicConst.FlagNo))
+            {
+                ParaSetupModules.RaiseAscDataProdEvent(resultInfo.Message);
+            }
+        }
+    }
     [RelayCommand(CanExecute = nameof(CanOpen))]
     private void Open()
     {
+        if (_serial == 0)
+        {
+            MessageText = "主板参数未配置，请点击菜单【设备管理--主板维护】进行设置，设置后需要重新启动程序！";
+            return;
+        }
+        if (SelectPortName is null || SelectedBaudRate is null || SelectedDataBits is null ||
+            SelectedStopBits is null || SelectedParity is null)
+        {
+            MessageText = "主板参数处理逻辑有误，请联系开发人员检查！";
+            return;                
+        }
         var serialCommList = ParaSetupModules.SerialCommList;
         if (serialCommList!.Count < _serial)
         {
@@ -114,20 +299,53 @@ public partial class SerialConfigViewModel : ObservableObject
             return;            
         }
         //连接尝试串口
-        
+        _commSerialImpl = new CommSerialImpl(2,serialCommInfo);
+        if (_commSerialImpl.Open())
+        {
+            CommState = "【 串口连接状态：✅ 】";
+            _start = true;
+            serialCommInfo.CommSerialImpl = _commSerialImpl;
+        }
+        else
+        {
+            CommState = "【 串口连接状态：❌ 】";
+        }
+        OpenCommand.NotifyCanExecuteChanged();
+        CloseCommand.NotifyCanExecuteChanged();    
     }
-
     [RelayCommand(CanExecute = nameof(CanClose))]
     private void Close()
     {
+        if(!_start)
+            return;
+        _commSerialImpl!.Close();
+        _start = false;
+        CommState = "【 串口连接状态：❌ 】";
+        OpenCommand.NotifyCanExecuteChanged();
+        CloseCommand.NotifyCanExecuteChanged();    
     }
-
     private bool CanOpen()
     {
-        return !_start && _serial is > 0 and < 2; 
+        return !_start; 
     }
     private bool CanClose()
     {
         return _start; 
+    }
+    private void ClearResource()
+    {
+        Console.WriteLine("释放串口资源！");
+        if(!_start)
+            return;
+        _commSerialImpl!.Close();
+        _start = false;
+    }
+    public void Receive(AppCleanupMessage message)
+    {
+        ClearResource();
+    }
+    public void Unsubscribe()
+    {
+        WeakReferenceMessenger.Default.UnregisterAll(this);
     }
 }

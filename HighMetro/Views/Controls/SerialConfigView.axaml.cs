@@ -33,11 +33,6 @@ public partial class SerialConfigView : UserControl
     private readonly SerialConfigViewModel? _viewModel;
     public SerialConfigView()
     {
-        if (!Dispatcher.UIThread.CheckAccess())
-        {
-            Console.WriteLine("⚠️ 严重警告：SerialConfigView 正在后台线程被创建！");
-        }
-
         InitializeComponent();
         _viewModel = new SerialConfigViewModel(false,0);
         Console.WriteLine("SerialConfigView:------"+SerialNo+"-----"+IsReadOnly);
@@ -60,9 +55,5 @@ public partial class SerialConfigView : UserControl
         }
         _viewModel.UpdateParams(IsReadOnly, SerialNo, Config);
         Console.WriteLine($"SerialConfigView 更新：No={SerialNo} ReadOnly={IsReadOnly}");
-        if (prop == ConfigProperty)
-        {
-            var newCfg = change.NewValue as SerialPortOptions;
-            Console.WriteLine($"【外部传入Config更新】端口：{newCfg?.PortName} 波特率：{newCfg?.BaudRate}");        }
     }
 }

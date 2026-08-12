@@ -1,5 +1,6 @@
 ﻿using System;
 using HighMetro.Event;
+using HighMetro.Services;
 
 namespace HighMetro.BaseModel;
 
@@ -27,28 +28,6 @@ public class HostInfo
     {
         _bufferDataProdEvent?.Invoke(null, new SocketDataEventArgs(socketDataBlock));
     }
-    //展示ASC消息；
-    private EventHandler? _ascDataProdEvent;
-    public event EventHandler? AscDataProdEvent
-    {
-        add => _ascDataProdEvent ??= value;
-        remove => _ascDataProdEvent -= value;
-    }
-    public void RaiseAscDataProdEvent(string message)
-    {
-        _ascDataProdEvent?.Invoke(null, new StringEventArgs(message));
-    }
-    //展示十六进制消息；
-    private EventHandler? _hexDataProdEvent;
-    public event EventHandler? HexDataProdEvent
-    {
-        add => _hexDataProdEvent ??= value;
-        remove => _hexDataProdEvent -= value;
-    }
-    public void RaiseHexDataProdEvent(SocketDataBlock socketDataBlock)
-    {
-        _hexDataProdEvent?.Invoke(null, new SocketDataEventArgs(socketDataBlock));
-    }
     //展示客户端连接消息;
     private EventHandler? _clientConnEvent;
     public event EventHandler? ClientConnEvent
@@ -60,4 +39,5 @@ public class HostInfo
     {
         _clientConnEvent?.Invoke(null, new StringEventArgs(message));
     }
+    public TcpServerListenerImpl? TcpServer { get; set; }
 }

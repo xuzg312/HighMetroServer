@@ -38,6 +38,8 @@ public partial class EditCamConfigViewModel : ObservableValidator
     private string _messageText = "";
 
     private readonly HardInfo _hardInfo;
+    private readonly CamRemoteLinkImpl _camRemoteLinkImpl;
+
     public EditCamConfigViewModel(IDbService dbService,HardInfo hardInfo,ResultInfo resultInfo)
     {
         _dbService = dbService;
@@ -50,6 +52,7 @@ public partial class EditCamConfigViewModel : ObservableValidator
         UserName = hardInfo.UserName;
         Password = hardInfo.PassWord;
         _hardInfo = hardInfo;
+        _camRemoteLinkImpl = new CamRemoteLinkImpl();
     }
 
     [RelayCommand]
@@ -69,7 +72,7 @@ public partial class EditCamConfigViewModel : ObservableValidator
         if (!InitDrive.InitSign)
         {
             //初始化；
-            var loadCamResult00 = CamRemoteLinkImpl.Init();
+            var loadCamResult00 = _camRemoteLinkImpl.Init();
             if (!loadCamResult00.Code.Equals(PublicConst.FlagYes))
             {
                 MessageText = "摄像头初始化失败！";
@@ -79,20 +82,20 @@ public partial class EditCamConfigViewModel : ObservableValidator
         }
         var setting = BuildSetting();
         //尝试登录;
-        var loadCamResult = CamRemoteLinkImpl.Login(setting);
+        var loadCamResult = _camRemoteLinkImpl.Login(setting);
         if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
         {
             MessageText = loadCamResult.Message;
             return;
         }
         //连接成功，退出登录；
-        loadCamResult = CamRemoteLinkImpl.Logout(loadCamResult.Value);
+        loadCamResult = _camRemoteLinkImpl.Logout(loadCamResult.Value);
         if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
         {
-            MessageText = "退出登录失败！";
+            MessageText = "断开摄像头失败！";
             return;
         }
-        MessageText = "登录摄像机正常 ✅ ！";
+        MessageText = "连接摄像头正常 ✅ ！";
     }
     [RelayCommand]
     private void Confirm()

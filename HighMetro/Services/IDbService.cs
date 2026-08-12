@@ -15,4 +15,8 @@ public interface IDbService
     ResultSerialCommInfo GetCommInfoList(HostInfo hostInfo, string commType);
     ResultInfo AddHardCamera(HardInfo hardInfo);
     ResultInfo EditHardCamera(HardInfo hardInfo);
+    ResultInfo AddHeart(MainInfoBean mainInfoBean);
+    ResultInfo SavePersonDay(MainInfoBean mainInfoBean);
+    ResultInfo AddError(CameraBean cameraBean);
+    ResultInfo AddAlarm(CameraBean cameraBean);
 }

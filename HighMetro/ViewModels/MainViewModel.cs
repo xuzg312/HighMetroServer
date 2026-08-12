@@ -23,7 +23,7 @@ public partial class MainViewModel : ViewModelBase
     private DbSetting? _dbSetting;
     // 弹窗遮罩是否显示
     [ObservableProperty]
-    private bool _showOverlay = false;
+    private bool _showOverlay;
 
     // 当前激活弹窗VM
     [ObservableProperty]
@@ -63,22 +63,22 @@ public partial class MainViewModel : ViewModelBase
                 Message = ""
             };
         }
-        if (!resultInfo.Code.Equals(PublicConst.FlagYes))
+        if (resultInfo.Code.Equals(PublicConst.FlagYes))
+        {
+            var loginSetting = _configService.LoadLoginConfig();
+            var vm = new LoginViewModel(_configService,_dbService,loginSetting,_dbSetting);
+            vm.OnLoginSuccess += OnLoginSuccess;
+            vm.OnLoginCancel += ExitApplication;            
+            ShowOverlay = true;
+            ActivePopupVm = vm;
+        }
+        else
         {
             //未设置，或者异常，需要重新配置数据库参数；
             var vm = new DbConfigViewModel(_configService, _dbService,_dbSetting,resultInfo);
             // 注册回调：数据库配置确认成功后打开登录窗口
             vm.OnDbConfigSuccess += OnDbConfigSuccess;
             vm.OnDbConfigCancel += ExitApplication;
-            ShowOverlay = true;
-            ActivePopupVm = vm;
-        }
-        else
-        {
-            var loginSetting = _configService.LoadLoginConfig();
-            var vm = new LoginViewModel(_configService,_dbService,loginSetting,_dbSetting);
-            vm.OnLoginSuccess += OnLoginSuccess;
-            vm.OnLoginCancel += ExitApplication;            
             ShowOverlay = true;
             ActivePopupVm = vm;
         }
@@ -104,6 +104,12 @@ public partial class MainViewModel : ViewModelBase
 
     private void OnLoginSuccess(LoginSetting setting)
     {
+        var userInfo = new UserInfo
+        {
+            Username = setting.LoginUser,
+            Password = setting.LoginPassword
+        };
+        ParaSetupModules.UserInfo = userInfo;
         var hostSetting = _configService.LoadHostConfig();
         ResultInfo resultInfo;
         if (hostSetting.IsValid())
@@ -120,10 +126,14 @@ public partial class MainViewModel : ViewModelBase
                 Message = ""
             };
         }
-        if (!resultInfo.Code.Equals(PublicConst.FlagYes))
+        if (resultInfo.Code.Equals(PublicConst.FlagYes))
+        {
+            OnHostSuccess(hostSetting);
+        }
+        else
         {
             //未设置，或者异常，需要重新选择工控机；
-            var resultHostInfo = _dbService.GetHostList(_dbSetting);
+            var resultHostInfo = _dbService.GetHostList(_dbSetting!);
             Dispatcher.UIThread.Post(() =>
             {
                 var vm = new HostSelectViewModel(_configService, resultHostInfo);
@@ -137,12 +147,7 @@ public partial class MainViewModel : ViewModelBase
                 ActivePopupVm = vm;
             });
         }
-        else
-        {
-            OnHostSuccess(hostSetting);
-        }
     }
-    
     private void OnHostSuccess(HostSetting setting)
     {
         Dispatcher.UIThread.Post(() =>
@@ -230,19 +235,21 @@ public partial class MainViewModel : ViewModelBase
         ActivePopupVm = vm;
         ShowOverlay = true;
     }
-
     private void OnHardEnd()
     {
-        if (ActivePopupVm is EditCamConfigViewModel oldHardVm)
+        Dispatcher.UIThread.Post(() =>
         {
-            oldHardVm.OnHardConfigSuccess -= OnHardEnd;
-            oldHardVm.OnHardConfigCancel -= OnHardEnd;
-        }
-        ActivePopupVm = null;
-        ShowOverlay = false;
-        IsMenuEnabled = true;
-    }
+            if (ActivePopupVm is EditCamConfigViewModel oldHardVm)
+            {
+                oldHardVm.OnHardConfigSuccess -= OnHardEnd;
+                oldHardVm.OnHardConfigCancel -= OnHardEnd;
+            }
 
+            ActivePopupVm = null;
+            ShowOverlay = false;
+            IsMenuEnabled = true;
+        });
+    }
     private void BoardMaintain()
     {
         // ActivePopupVm = new BoardMaintainViewModel();

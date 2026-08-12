@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Avalonia.Controls;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -17,17 +14,15 @@ namespace HighMetro.ViewModels;
 
 public partial class HostConfigViewModel : ObservableObject, IRecipient<AppCleanupMessage>
 {
-    // 1. 接收外部传入的配置数据
     [ObservableProperty]
     private HostOptions? _config;
     
-    // 2. 接收外部传入的只读状态
     [ObservableProperty] 
     private bool _isReadOnly;
 
     [ObservableProperty] 
     private string _hostState;
-    // UI绑定字段
+    
     [ObservableProperty]
     private string _ip = string.Empty;
 
@@ -39,9 +34,6 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
 
     [ObservableProperty]
     private string _name = string.Empty;
-
-    [ObservableProperty]
-    private bool _isInfoHit;
     
     [ObservableProperty]
     private string _messageText = string.Empty;
@@ -49,11 +41,9 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
     private bool _start;
     private readonly HostInfo _hostInfo;
     private TcpServerListenerImpl? _tcpServer;
-    private List<SerialComm>? _serialList;
     private bool _buildServer;
     public HostConfigViewModel()
     {
-        _isInfoHit = true;
         _start = false;
         _buildServer = false;
         _hostInfo = ParaSetupModules.HostInfo!;
@@ -64,7 +54,6 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
     {
         if (value is null)
             return;
-        // 将外部HostOptions模型映射拷贝到UI属性
         Ip = value.Ip;
         Port = value.Port;
         Code = value.Code;
@@ -79,6 +68,7 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
             _hostInfo.ClientConnEvent += OnClientConnEvent;
             _tcpServer = new TcpServerListenerImpl(_hostInfo, 2); //建立2个消费者线程；
             _buildServer = true;
+            _hostInfo.TcpServer= _tcpServer;
         }
         if (_tcpServer!.Start())
         {
@@ -92,7 +82,7 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
             _start = false;
             OpenCommand.NotifyCanExecuteChanged();
             CloseCommand.NotifyCanExecuteChanged();
-            ParaSetupModules.HostInfo!.RaiseAscDataProdEvent("启动Tcp-Server失败！");
+            ParaSetupModules.RaiseAscDataProdEvent("启动Tcp-Server失败！");
         }
     }
     [RelayCommand(CanExecute= nameof(CanClose))]
@@ -115,16 +105,6 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
         return _start; 
     }
     //收到客户端连接；
-    private void OnClientConnEvent(object? obj, EventArgs arg)
-    {
-        if (arg is not StringEventArgs stringEventArgs)
-        {
-            return;
-        }
-        var message = stringEventArgs.Message;
-        // 将更新操作提交到 UI 线程队列
-        Dispatcher.UIThread.Post(() => { MessageText = message; });
-    }
     private void OnShowTcpServerDataProdEvent(object? obj, EventArgs arg)
     {
         if (arg is not SocketDataEventArgs socketDataEventArgs)
@@ -134,12 +114,10 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
         var socketDataBlock = socketDataEventArgs.Data;
         //解析tcp-client消息，转发到对应的串口；
         var tcpDataBean = ParseClientData.ParseTcpClientData(socketDataBlock);
-        var bFind = false;
-        var bSend = false;
         if (tcpDataBean == null)
         {
             //数据无效，显示到错误日志框；
-            _hostInfo.RaiseHexDataProdEvent(socketDataBlock);
+            ParaSetupModules.RaiseHexDataProdEvent(socketDataBlock);
             return;
         }
         if (!tcpDataBean.TurnComm)
@@ -149,7 +127,12 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
                 case PublicConst.IdentifyAll:
                 case PublicConst.IdentifyHeart:
                     //检测摄像机是否在线？
-                    var onLine = false;////////hardUserControl1.checkOnLine();
+                    var camInfo = ParaSetupModules.CamInfo!;
+                    var onLine = false;
+                    if (camInfo.UserId >= 0)
+                    {
+                        onLine=camInfo.CamRemoteLinkImpl!.CheckOnLine(camInfo.UserId);
+                    }
                     //转发到TcpClient;
                     var iPosition = 7;
                     socketDataBlock.Content![iPosition] = (byte)(onLine ? 0XCE : 0XDE);
@@ -165,13 +148,12 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
                     else
                     {
                         var value01 = "文件【" + tcpDataBean.FileName + "】不存在！\r\n";
-                        ShowError(socketDataBlock, value01);
+                        ParaSetupModules.RaiseAscDataProdEvent(value01);
                     }
-
                     return;
                 default:
-                    var value00 = "工控机Hostbh【" + tcpDataBean.HostBh + "】,请求功能码无效！\r\n";
-                    ShowError(socketDataBlock, value00);
+                    var value00 = "工控机HostBh【" + tcpDataBean.HostBh + "】,请求功能码无效！\r\n";
+                    ParaSetupModules.RaiseAscDataProdEvent(value00);
                     return;
             }
         }
@@ -180,53 +162,36 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
             //需要发送到串口；
             //协议中去掉hostid
             //接收到有效信息，转发到串口；
-            if (_serialList != null)
+            var bFind = false;
+            foreach (var item in ParaSetupModules.SerialCommList!)
             {
-                SerialComm iserialComm;
-                if (_serialList.Count >= 1)
+                if (item.CommSerialImpl == null)
                 {
-                    iserialComm = _serialList[0];
-                    if (iserialComm.Hostbh == tcpDataBean.HostBh && iserialComm.Id == tcpDataBean.Id)
-                    {
-                        //找到主板，向对应的串口发送数据；
-                        ////////bSend = commUserControl1.sendClientToComm(socketDataBlock);
-                        bFind = true;
-                    }
+                    continue;
                 }
-
-                if (!bFind && _serialList.Count >= 2)
+                if (item.HostBh == tcpDataBean.HostBh && item.Id == tcpDataBean.Id)
                 {
-                    iserialComm = _serialList[1];
-                    if (iserialComm.Hostbh == tcpDataBean.HostBh && iserialComm.Id == tcpDataBean.Id)
-                    {
-                        //找到主板，向对应的串口发送数据；
-                        ////////bSend = commUserControl2.sendClientToComm(socketDataBlock);
-                        bFind = true;
-                    }
-                }
+                    //找到主板，向对应的串口发送数据；
+                    item.CommSerialImpl.SendMessage(socketDataBlock.Content!,0,socketDataBlock.Length);
+                    bFind = true;
+                }                
             }
-
             if (!bFind)
             {
                 //主板未找到，说明客户端关联的主板有误！
-                String value00 = "工控机Hostbh【" + tcpDataBean.HostBh + "】,主板ID【" + tcpDataBean.Id + "】未找到！\r\n";
-                ShowError(socketDataBlock, value00);
-            }
-            else
-            {
-                if (!bSend)
-                {
-                    //找到主板，向对应的串口发送数据失败；
-                    String value00 = "工控机Hostbh【" + tcpDataBean.HostBh + "】,主板ID【" + tcpDataBean.Id +
-                                     "】发送失败！\r\n";
-                    ShowError(socketDataBlock, value00);
-                }
+                var value00 = "工控机HostBh【" + tcpDataBean.HostBh + "】,主板ID【" + tcpDataBean.Id + "】未找到！\r\n";
+                ParaSetupModules.RaiseAscDataProdEvent(value00);
             }
         }
     }
-    private void ShowError(SocketDataBlock socketDataBlock, string errorMessage)
+    private void OnClientConnEvent(object? obj, EventArgs arg)
     {
-        _hostInfo.RaiseAscDataProdEvent(errorMessage);
+        if (arg is not StringEventArgs stringEventArgs)
+        {
+            return;
+        }
+        var message = stringEventArgs.Message;
+        Dispatcher.UIThread.Post(() => { MessageText = message; });
     }
     private void ClearResource()
     {

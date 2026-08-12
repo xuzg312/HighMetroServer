@@ -1,5 +1,6 @@
 ﻿using System;
 using HighMetro.Event;
+using HighMetro.Services;
 
 namespace HighMetro.BaseModel;
 
@@ -42,15 +43,5 @@ public class SerialCommInfo
     {
         _bufferDataProdEvent?.Invoke(null, new SocketDataEventArgs(socketDataBlock));
     }
-    //展示ASC消息；
-    private EventHandler? _ascDataProdEvent;
-    public event EventHandler? AscDataProdEvent
-    {
-        add => _ascDataProdEvent ??= value;
-        remove => _ascDataProdEvent -= value;
-    }
-    public void RaiseAscDataProdEvent(string message)
-    {
-        _ascDataProdEvent?.Invoke(null, new StringEventArgs(message));
-    }
+    public CommSerialImpl? CommSerialImpl{ get; set; }
 }

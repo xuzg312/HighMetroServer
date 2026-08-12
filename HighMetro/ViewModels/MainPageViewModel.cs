@@ -33,10 +33,10 @@ public partial class MainPageViewModel : ViewModelBase
     
     public MainPageViewModel()
     {
-        ParaSetupModules.HostInfo!.AscDataProdEvent += OnShowAscDataProdEvent;
-        ParaSetupModules.HostInfo.HexDataProdEvent += OnShowHexDataProdEvent;
+        ParaSetupModules.AscDataProdEvent += OnShowAscDataProdEvent;
+        ParaSetupModules.HexDataProdEvent += OnShowHexDataProdEvent;
         HostConfig = new HostOptions(
-            ParaSetupModules.HostInfo.Ip, 
+            ParaSetupModules.HostInfo!.Ip, 
             ParaSetupModules.HostInfo.Port, 
             ParaSetupModules.HostInfo.Code, 
             ParaSetupModules.HostInfo.Name);
@@ -49,14 +49,9 @@ public partial class MainPageViewModel : ViewModelBase
     {
         if (ParaSetupModules.SerialCommList!.Count == 0)
         {
-            Console.WriteLine("初始化：SerialPortOptions");
-            SerialConfig1 = new SerialPortOptions(
-                "COM1",19200,0,0,0
-            );
             return;
         }
         var serialCommInfo = ParaSetupModules.SerialCommList[0];
-        serialCommInfo.AscDataProdEvent += OnShowAscDataProdEvent;
         SerialConfig1 = new SerialPortOptions(
             serialCommInfo.CommName,
             serialCommInfo.BaudRate,
@@ -69,7 +64,6 @@ public partial class MainPageViewModel : ViewModelBase
             return;
         }
         serialCommInfo = ParaSetupModules.SerialCommList[1];
-        serialCommInfo.AscDataProdEvent += OnShowAscDataProdEvent;
         SerialConfig2 = new SerialPortOptions(
             serialCommInfo.CommName,
             serialCommInfo.BaudRate,
@@ -101,14 +95,5 @@ public partial class MainPageViewModel : ViewModelBase
         var message = parseMessage.ParseHexMessage(socketDataBlock);
         // 将更新操作提交到 UI 线程队列
         Dispatcher.UIThread.Post(() => { HexMessageText = message; }); 
-    }
-    private void PostRefreshBindings()
-    {
-        Dispatcher.UIThread.Post(() =>
-        {
-            OnPropertyChanged(nameof(SerialConfig1));
-            OnPropertyChanged(nameof(SerialConfig2));
-            Console.WriteLine("-----PostRefreshBindings------");
-        }, DispatcherPriority.ApplicationIdle);
     }
 }

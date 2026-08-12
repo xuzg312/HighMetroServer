@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using HighMetro.BaseModel;
+using HighMetro.Models;
 
 namespace HighMetro.Services;
 
@@ -68,7 +69,7 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
         {
             _start = false;
             ClearResource();
-            serialCommInfo.RaiseAscDataProdEvent("启动串口失败！");
+            ParaSetupModules.RaiseAscDataProdEvent("启动串口失败！");
             return false;
         }
     }
@@ -81,16 +82,17 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
                 return;
             var data = new byte[readBytesCount];
             var actualRead = _serialPort.Read(data, 0, readBytesCount);
-            if (actualRead > 0)
+            if (actualRead == 0)
             {
-                Interlocked.Increment(ref _receiveTotalCount);
-                Interlocked.Add(ref _receiveTotalBytes, actualRead);
-                _receiveQueue.Enqueue(data);
+                return;
             }
+            Interlocked.Increment(ref _receiveTotalCount);
+            Interlocked.Add(ref _receiveTotalBytes, actualRead);
+            _receiveQueue.Enqueue(data);
         }
         catch (Exception ex)
         {
-            serialCommInfo.RaiseAscDataProdEvent("接收串口数据异常!"+ex.Message);
+            ParaSetupModules.RaiseAscDataProdEvent("接收串口数据异常!"+ex.Message);
         }
     }
     #region 解析串口数据；
@@ -195,7 +197,7 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
         }
         catch (Exception ex)
         {
-            serialCommInfo.RaiseAscDataProdEvent("发送串口数据异常!"+ex.Message);
+            ParaSetupModules.RaiseAscDataProdEvent("发送串口数据异常!"+ex.Message);
         }
     }
     private int FindPacketHeaderIndex()
@@ -223,7 +225,7 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
             return;
         ClearResource();
     }
-    public void ClearResource()
+    private void ClearResource()
     {
         _serialPort.DataReceived -= OnSerialDataReceived;
         try
@@ -242,10 +244,9 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
         {
             //忽略异常；
         }
-        var length = _getBufferDataImplList.Count;
-        for (var i = 0; i < length; i++)
+        foreach (var item in _getBufferDataImplList)
         {
-            _getBufferDataImplList[i].DisConnect();
+            item.DisConnect();
         }
         try
         {

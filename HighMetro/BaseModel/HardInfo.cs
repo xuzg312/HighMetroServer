@@ -1,4 +1,6 @@
-﻿namespace HighMetro.BaseModel;
+﻿using HighMetro.Services;
+
+namespace HighMetro.BaseModel;
 
 public class HardInfo
 {
@@ -21,4 +23,5 @@ public class HardInfo
                !string.IsNullOrWhiteSpace(UserName) && 
                !string.IsNullOrWhiteSpace(PassWord);
     }
+    public CamRemoteLinkImpl? CamRemoteLinkImpl{ get; set; }
 }

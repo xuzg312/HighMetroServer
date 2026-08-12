@@ -49,4 +49,6 @@ public class PublicConst
     public const byte IdentifyHeart = 1;//验证,仅发送心跳；
     public const byte IdentifyAll = 2;//验证,实时监控数据；
     public const byte IdentifyPhoto = 3;//获取拍照的图片文件；
+    
+    public const string DoorStateCapture = "拍照";
 }

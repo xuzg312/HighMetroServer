@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using HighMetro.BaseModel;
 using HighMetro.ClassLib;
 using HighMetro.Event;
+using HighMetro.Models;
 
 namespace HighMetro.Services;
 
@@ -42,14 +43,11 @@ public class GetBufferDataImpl : IGetBufferData
                 {
                     await Task.Delay(100, token);
                 }
-            }catch (OperationCanceledException)
-            {
-                // 正常取消，直接退出循环
-                break;
             }
             catch (Exception ex)
             {
-                WriteErrorToLog.WriteToErrorLog(ex, "解析消息异常，错误原因:GetBufferDataImpl.GetBufferSocketData");
+                var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                ParaSetupModules.RaiseAscDataProdEvent($"接收客户端异常：{ex.Message}【{currDateTime}】");
             }
         }
     }
@@ -60,22 +58,21 @@ public class GetBufferDataImpl : IGetBufferData
     {
         if (_disposed)
             return;
-        _disposed = true;
         try
         {
             _cts?.Cancel();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            WriteErrorToLog.WriteToErrorLog(ex, "GetBufferDataImpl.DisConnect");
+            //忽略;
         }
         try
         {
             _workerTask?.Wait(500);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            WriteErrorToLog.WriteToErrorLog(ex, "GetBufferDataImpl.DisConnect");
+            //忽略;
         }
         try
         {
@@ -83,11 +80,11 @@ public class GetBufferDataImpl : IGetBufferData
         }
         catch (Exception ex)
         {
-            WriteErrorToLog.WriteToErrorLog(ex, "GetBufferDataImpl.DisConnect");
+            //忽略;
         }
         _cts = null;
         _workerTask = null;
+        _disposed = true;
     }
     #endregion
-    
 }
