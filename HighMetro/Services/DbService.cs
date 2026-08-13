@@ -73,7 +73,6 @@ public class DbService : IDbService
                     }
                 }
             }
-
             return resultInfo;
         }
         catch (Exception ex)
@@ -102,13 +101,11 @@ public class DbService : IDbService
                         if (reader.Read())
                         {
                             resultInfo.Code = PublicConst.FlagYes;
-                            resultInfo.Message = "";
                             return resultInfo;
                         }
                     }
                 }
             }
-
             resultInfo.Code = PublicConst.FlagNo;
             resultInfo.Message = "工控机编号无效！";
             return resultInfo;
@@ -132,6 +129,7 @@ public class DbService : IDbService
 
     public ResultHostInfo GetHostList(DbSetting dbSetting)
     {
+        var resultHostInfo = new ResultHostInfo();
         try
         {
             using (var conn = new MySqlConnection(dbSetting.GetConnectionString()))
@@ -143,7 +141,7 @@ public class DbService : IDbService
                     conn.Open();
                     using (var reader = cmd.ExecuteReader())
                     {
-                        var hostInfoList = new List<HostInfo>();
+                        List<HostInfo> hostInfoList = [];
                         while (reader.Read())
                         {
                             var hostInfo = new HostInfo
@@ -156,28 +154,24 @@ public class DbService : IDbService
                             };
                             hostInfoList.Add(hostInfo);
                         }
-                        var resultInfo = new ResultInfo();
-                        resultInfo.Code = PublicConst.FlagYes;
-                        resultInfo.Message = "";
-                        var resultHostInfo = new ResultHostInfo
-                        {
-                            HostList = hostInfoList,
-                            ReturnInfo = resultInfo
-                        };
-                        return resultHostInfo;
+                        resultHostInfo.HostList = hostInfoList;
                     }
                 }
             }
+            var resultInfo = new ResultInfo{
+                Code = PublicConst.FlagYes
+            };
+            resultHostInfo.ReturnInfo = resultInfo;
+            return resultHostInfo;
         }
         catch (Exception ex)
         {
-            var resultInfo = new ResultInfo();
-            resultInfo.Code = PublicConst.FlagNo;
-            resultInfo.Message = "获取工控机信息异常，错误原因:" + ex.Message;
-            var resultHostInfo = new ResultHostInfo
+            var resultInfo = new ResultInfo
             {
-                ReturnInfo = resultInfo
+                Code = PublicConst.FlagNo,
+                Message = "获取工控机信息异常，错误原因:" + ex.Message
             };
+            resultHostInfo.ReturnInfo = resultInfo;
             return resultHostInfo;
         }
     }
@@ -204,11 +198,8 @@ public class DbService : IDbService
                             hostInfo.Ip = reader["ip"].ToString()??string.Empty;
                             hostInfo.Port = Convert.ToInt32(reader["port"]);
                             resultInfo.Code = PublicConst.FlagYes;
-                            resultInfo.Message = "";
                             return resultInfo;
                         }
-
-                        ;
                     }
                 }
             }
@@ -247,12 +238,12 @@ public class DbService : IDbService
                             hardInfo.Port = Convert.ToInt32(reader["port"]);
                             hardInfo.Bh = Convert.ToInt32(reader["bh"]);
                             hardInfo.Type = reader["type"].ToString()??string.Empty;
+                            resultInfo.Tag = 1;
                         }
                     }
                 }
             }
             resultInfo.Code = PublicConst.FlagYes;
-            resultInfo.Message = "";
             return resultInfo;
         }
         catch (Exception ex)
@@ -262,7 +253,6 @@ public class DbService : IDbService
             return resultInfo;
         }
     }
-
     public ResultSerialCommInfo GetCommInfoList(HostInfo hostInfo, string commType)
     {
         var resultSerialCommInfo=new ResultSerialCommInfo();
@@ -276,7 +266,6 @@ public class DbService : IDbService
                     cmd.Parameters.AddWithValue("@hostbh", hostInfo.Bh);
                     cmd.Parameters.AddWithValue("@commType", commType);
                     conn.Open();
-
                     using (var reader = cmd.ExecuteReader())
                     {
                         var serialList = new List<SerialCommInfo>();
@@ -328,7 +317,7 @@ public class DbService : IDbService
             {
                 conn.Open();
                 var sql = "INSERT INTO t_hardcamera (hostbh,type,ip, port,username,password) " +
-                             "VALUES (@hostbh,@type,@ip, @port,@username,@password);SELECT LAST_INSERT_ID();";
+                             "VALUES (@hostbh,@type,@ip, @port,@username,@password);";
                 using (var cmd = new MySqlCommand(sql, conn))
                 {
                     // 添加参数（避免拼接字符串导致SQL注入）
@@ -338,11 +327,18 @@ public class DbService : IDbService
                     cmd.Parameters.AddWithValue("@port", hardInfo.Port);
                     cmd.Parameters.AddWithValue("@username", hardInfo.UserName);
                     cmd.Parameters.AddWithValue("@password", hardInfo.PassWord);
-                    var row = cmd.ExecuteNonQuery();
+                    resultInfo.Tag = cmd.ExecuteNonQuery();
                 }
             }
-            resultInfo.Code = PublicConst.FlagYes;
-            resultInfo.Message = "";
+            if (resultInfo.Tag == 1)
+            {
+                resultInfo.Code = PublicConst.FlagYes;
+            }
+            else
+            {
+                resultInfo.Code = PublicConst.FlagNo;
+                resultInfo.Message = "保存摄像头参数失败！";
+            }
             return resultInfo;
         }
         catch (Exception ex)
@@ -370,11 +366,18 @@ public class DbService : IDbService
                     cmd.Parameters.AddWithValue("@username", hardInfo.UserName);
                     cmd.Parameters.AddWithValue("@password", hardInfo.PassWord);
                     cmd.Parameters.AddWithValue("@bh", hardInfo.Bh);
-                    cmd.ExecuteNonQuery();
+                    resultInfo.Tag = cmd.ExecuteNonQuery();
                 }
             }
-            resultInfo.Code = PublicConst.FlagYes;
-            resultInfo.Message = "";
+            if (resultInfo.Tag == 1)
+            {
+                resultInfo.Code = PublicConst.FlagYes;
+            }
+            else
+            {
+                resultInfo.Code = PublicConst.FlagNo;
+                resultInfo.Message = "更新摄像头参数失败！";
+            }
             return resultInfo;
         }
         catch (Exception ex)
@@ -396,7 +399,7 @@ public class DbService : IDbService
                     "a1dl,a2dl,a1wz,a2wz,bstate,b1gzm,b2gzm,b1zs,b2zs,b1dl,b2dl,b1wz,b2wz,dlcgqzt,dostate,kzdldo,total,datetime) " +
                     "VALUES (@hostbh,@id, @length,@txzs,@kmcs,@yxms,@agzms,@astate,@a1gzm,@a2gzm,@a1zs,@a2zs," +
                     "@a1dl,@a2dl,@a1wz,@a2wz,@bstate,@b1gzm,@b2gzm,@b1zs,@b2zs,@b1dl,@b2dl,@b1wz,@b2wz,@dlcgqzt,@dostate,@kzdldo,@total,@datetime);";
-                using (MySqlCommand cmd = new MySqlCommand(sql, conn))
+                using (var cmd = new MySqlCommand(sql, conn))
                 {
                     // 添加参数（避免拼接字符串导致SQL注入）
                     cmd.Parameters.AddWithValue("@hostbh", mainInfoBean.HostBh);
@@ -429,11 +432,18 @@ public class DbService : IDbService
                     cmd.Parameters.AddWithValue("@kzdldo", mainInfoBean.Kzdldo);
                     cmd.Parameters.AddWithValue("@total", mainInfoBean.Total);
                     cmd.Parameters.AddWithValue("@datetime", mainInfoBean.Datetime);
-                    cmd.ExecuteNonQuery();
+                    resultInfo.Tag = cmd.ExecuteNonQuery();
                 }
             }
-            resultInfo.Code = PublicConst.FlagYes;
-            resultInfo.Message = "";
+            if (resultInfo.Tag == 1)
+            {
+                resultInfo.Code = PublicConst.FlagYes;
+            }
+            else
+            {
+                resultInfo.Code = PublicConst.FlagNo;
+                resultInfo.Message = "保存心跳数据失败！";
+            }
             return resultInfo;
         }
         catch (Exception ex)
@@ -455,7 +465,7 @@ public class DbService : IDbService
                 Datetime = mainInfoBean.Datetime
             };
             var returnValue = GetPersonDay(mainInfoBean00);
-            if (returnValue.Code.Equals(PublicConst.FlagNo))
+            if (!returnValue.Code.Equals(PublicConst.FlagYes))
             {
                 return returnValue;
             }
@@ -469,10 +479,7 @@ public class DbService : IDbService
         {
             return UpdatePersonDay(mainInfoBean);
         }
-        else
-        {
-            return AddPersonDay(mainInfoBean);
-        }
+        return AddPersonDay(mainInfoBean);
     }
     private ResultInfo GetPersonDay(MainInfoBean mainInfoBean)
     {
@@ -530,9 +537,12 @@ public class DbService : IDbService
                     cmd.Parameters.AddWithValue("@personcount", mainInfoBean.Kmcs);
                     cmd.Parameters.AddWithValue("@date", mainInfoBean.Datetime);
                     // 执行并返回自增ID
-                    object result = cmd.ExecuteScalar();
-                    _bh = Convert.ToInt32(result);
-                    _currDate = mainInfoBean.Datetime;
+                    var scalarResult = cmd.ExecuteScalar();
+                    if (scalarResult != null && scalarResult != DBNull.Value)
+                    {
+                        _bh = Convert.ToInt32(scalarResult);
+                        _currDate = mainInfoBean.Datetime;
+                    }
                 }
             }
             resultInfo.Code = PublicConst.FlagYes;
@@ -561,10 +571,18 @@ public class DbService : IDbService
                     cmd.Parameters.AddWithValue("@bh", _bh);
                     cmd.ExecuteNonQuery();
                     // 执行并返回行数
-                    cmd.ExecuteNonQuery();
+                    resultInfo.Tag = cmd.ExecuteNonQuery();
                 }
             }
-            resultInfo.Code = PublicConst.FlagYes;
+            if (resultInfo.Tag == 1)
+            {
+                resultInfo.Code = PublicConst.FlagYes;
+            }
+            else
+            {
+                resultInfo.Code = PublicConst.FlagNo;
+                resultInfo.Message = "更新每日通过人数失败！";
+            }
             return resultInfo;   
         }
         catch (Exception ex)
@@ -594,10 +612,18 @@ public class DbService : IDbService
                     cmd.Parameters.AddWithValue("@id", cameraBean.Id);
                     cmd.Parameters.AddWithValue("@message", cameraBean.Message);
                     cmd.Parameters.AddWithValue("@serial", cameraBean.Serial);
-                    cmd.ExecuteNonQuery();
+                    resultInfo.Tag = cmd.ExecuteNonQuery();
                 }
             }
-            resultInfo.Code = PublicConst.FlagYes;
+            if (resultInfo.Tag == 1)
+            {
+                resultInfo.Code = PublicConst.FlagYes;
+            }
+            else
+            {
+                resultInfo.Code = PublicConst.FlagNo;
+                resultInfo.Message = "更新日志信息失败！";
+            }
             return resultInfo;   
         }
         catch (Exception ex)
@@ -628,11 +654,18 @@ public class DbService : IDbService
                     cmd.Parameters.AddWithValue("@filepath", cameraBean.FilePath);
                     cmd.Parameters.AddWithValue("@serial", cameraBean.Serial);
                     cmd.Parameters.AddWithValue("@hostbh", cameraBean.HostBh);
-                    cmd.ExecuteNonQuery();
+                    resultInfo.Tag = cmd.ExecuteNonQuery();
                 }
             }
-            resultInfo.Code = PublicConst.FlagYes;
-            return resultInfo;   
+            if (resultInfo.Tag == 1)
+            {
+                resultInfo.Code = PublicConst.FlagYes;
+            }
+            else
+            {
+                resultInfo.Code = PublicConst.FlagNo;
+                resultInfo.Message = "更新拍照信息失败！";
+            }            return resultInfo;   
         }
         catch (Exception ex)
         {

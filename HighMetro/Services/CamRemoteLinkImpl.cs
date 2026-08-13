@@ -55,10 +55,7 @@ public class CamRemoteLinkImpl
             };
             return loadCamResult;
         }
-        else
-        {
-            return GetLastError();
-        }
+        return GetLastError();
     }
     public LoadCamResult Logout(int iUserId)
     {
@@ -71,9 +68,18 @@ public class CamRemoteLinkImpl
     }
     public LoadCamResult CaptureJpegPicture(int iUserId,CameraBean cameraBean)
     {
+        if (iUserId < 0)
+        {
+            return new LoadCamResult()
+            {
+                Code = PublicConst.FlagNo,
+                Message = "UserId无效！"
+            };
+        }
         var bufferPtr = IntPtr.Zero;
         var fullSavePath = string.Empty;
         // 静态锁防止多线程并发创建目录冲突
+        var dateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
         try
         {
             var baseDir = SystemInfo.PhotoDir;
@@ -104,10 +110,8 @@ public class CamRemoteLinkImpl
                 wPicQuality = 0,
                 wPicSize = 0xff
             };
-
             bufferPtr = Marshal.AllocHGlobal(PublicConst.MaxBufferSize);
             uint actualSize = 0;
-
             var nativeRet = HikSdk.NET_DVR_CaptureJPEGPicture_NEW(
                 iUserId,
                 lChannel,
@@ -122,7 +126,7 @@ public class CamRemoteLinkImpl
                 return GetLastError();
             }
             // 拷贝非托管内存
-            byte[] jpegBytes = new byte[actualSize];
+            var jpegBytes = new byte[actualSize];
             Marshal.Copy(bufferPtr, jpegBytes, 0, (int)actualSize);
 
             // 写入文件，单独捕获IO异常
@@ -139,7 +143,7 @@ public class CamRemoteLinkImpl
             return new LoadCamResult
             {
                 Code = PublicConst.FlagNo,
-                Message = $"文件IO异常：{ioEx.Message}，路径：{fullSavePath}"
+                Message = $"文件IO异常：{ioEx.Message}，路径：{fullSavePath}【{dateTime}】"
             };
         }
         catch (UnauthorizedAccessException authEx)
@@ -147,7 +151,7 @@ public class CamRemoteLinkImpl
             return new LoadCamResult
             {
                 Code = PublicConst.FlagNo,
-                Message = $"目录无读写权限：{authEx.Message}，路径：{fullSavePath}"
+                Message = $"目录无读写权限：{authEx.Message}，路径：{fullSavePath}【{dateTime}】"
             };
         }
         catch (OutOfMemoryException memEx)
@@ -155,7 +159,7 @@ public class CamRemoteLinkImpl
             return new LoadCamResult
             {
                 Code = PublicConst.FlagNo,
-                Message = $"内存不足无法抓拍：{memEx.Message}"
+                Message = $"内存不足无法抓拍：{memEx.Message}【{dateTime}】"
             };
         }
         catch (ArgumentException argEx)
@@ -163,7 +167,7 @@ public class CamRemoteLinkImpl
             return new LoadCamResult
             {
                 Code = PublicConst.FlagNo,
-                Message = $"路径参数非法：{argEx.Message}"
+                Message = $"路径参数非法：{argEx.Message}【{dateTime}】"
             };
         }
         catch (Exception ex)
@@ -172,7 +176,7 @@ public class CamRemoteLinkImpl
             return new LoadCamResult
             {
                 Code = PublicConst.FlagNo,
-                Message = $"抓拍未知异常：{ex.Message}"
+                Message = $"抓拍未知异常：{ex.Message}【{dateTime}】"
             };
         }
         finally
@@ -208,10 +212,7 @@ public class CamRemoteLinkImpl
             var value= HikSdk.NET_DVR_RemoteControl(iUserId,20005,IntPtr.Zero,0);
             return value != 0;
         }
-        else
-        {
-            return false;
-        }
+        return false;
     }
     private LoadCamResult GetLastError()
     {

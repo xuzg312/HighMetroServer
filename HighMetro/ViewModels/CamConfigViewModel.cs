@@ -12,17 +12,15 @@ namespace HighMetro.ViewModels;
 
 public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanupMessage>
 {
-    // 1. 接收外部传入的配置数据
     [ObservableProperty]
     private CamOptions? _config;
     
-    // 2. 接收外部传入的只读状态
     [ObservableProperty] 
     private bool _isReadOnly;
 
     [ObservableProperty] 
     private string _camState;
-    // UI绑定字段
+    
     [ObservableProperty]
     private string _ip = string.Empty;
 
@@ -31,9 +29,6 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
     
     [ObservableProperty]
     private string _userName = string.Empty;
-
-    [ObservableProperty]
-    private bool _isInfoHit;
     
     [ObservableProperty]
     private string _messageText = string.Empty;
@@ -42,7 +37,6 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
     private CamRemoteLinkImpl? _camRemoteLinkImpl;
     public CamConfigViewModel(bool isReadOnly)
     {
-        _isInfoHit = true;
         IsReadOnly = isReadOnly;
         _start = false;
         CamState = "【 摄像头连接状态：❌ 】";
@@ -52,7 +46,6 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
     {
         if (value is null)
             return;
-        // 将外部HostOptions模型映射拷贝到UI属性
         Ip = value.Ip;
         Port = value.Port;
         UserName = value.UserName;
@@ -71,11 +64,11 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
             MessageText = "MAC环境，不支持此操作，请切换到：Windows/Linux环境测试！";
             return;        
         }
-        _camRemoteLinkImpl = new CamRemoteLinkImpl();
-        camInfo.CamRemoteLinkImpl = _camRemoteLinkImpl;
         if (!InitDrive.InitSign)
         {
             //初始化；
+            _camRemoteLinkImpl = new CamRemoteLinkImpl();
+            camInfo.CamRemoteLinkImpl = _camRemoteLinkImpl;
             var loadCamResult00 = _camRemoteLinkImpl.Init();
             if (!loadCamResult00.Code.Equals(PublicConst.FlagYes))
             {
@@ -85,7 +78,7 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
             InitDrive.InitSign = true;
         }
         //尝试登录;
-        var loadCamResult = _camRemoteLinkImpl.Login(camInfo);
+        var loadCamResult = _camRemoteLinkImpl!.Login(camInfo);
         if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
         {
             MessageText = loadCamResult.Message;

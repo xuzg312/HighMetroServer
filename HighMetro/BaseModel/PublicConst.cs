@@ -17,7 +17,7 @@ public class PublicConst
     public const int SockDataMinLength = 1;
     public const int SockDataMaxLength = 4096;
     public const int PerSockDataMaxLength = 128;
-    public const int ClientMaxLength = 255;
+    public const int ClientMaxLength = 254;
     public const int MaxBufferSize = 1024 * 1024;
         
     public const byte OnLine = 0xF0;          //上线命令；

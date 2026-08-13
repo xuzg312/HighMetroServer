@@ -46,10 +46,10 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
             {
                 _getBufferDataImplList.Add(new GetBufferDataImpl(_iDataBufferPool));
             }
-            // 后台接受客户端循环
-            _acceptLoopTask = Task.Run(() => AcceptClient(_ctsServer.Token), _ctsServer.Token);
+            // 后台循环接受客户端
+            _acceptLoopTask = Task.Run(() => AcceptClientLoop(_ctsServer.Token), _ctsServer.Token);
             //启动1个线程，进行数据包的拆分或合并；
-            _readTask = Task.Run(() => ParseClient(_ctsServer.Token), _ctsServer.Token);
+            _readTask = Task.Run(() => ParseClientDataLoop(_ctsServer.Token), _ctsServer.Token);
             _start = true;
             return true;
         }
@@ -60,7 +60,7 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
             return false;
         }
     }
-    private async Task AcceptClient(CancellationToken token)
+    private async Task AcceptClientLoop(CancellationToken token)
     {
         try
         {
@@ -113,7 +113,7 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
         }
     }
     #endregion
-    private async Task ParseClient(CancellationToken token)
+    private async Task ParseClientDataLoop(CancellationToken token)
     {
         try
         {
@@ -126,7 +126,7 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
         catch (Exception ex)
         {
             var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-            ParaSetupModules.RaiseAscDataProdEvent($"解析循环顶层异常：{ex.Message}【{currDateTime}】");
+            ParaSetupModules.RaiseAscDataProdEvent($"TCP解析循环顶层异常：{ex.Message}【{currDateTime}】");
         }
     }
     #region 解析tcp数据；
@@ -138,10 +138,10 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
             var childList = _dictionary.Values.ToList();
             foreach (var child in childList)
             {
-                if (!child.IsStart())
-                    continue;
                 try
                 {
+                    if (!child.IsStart())
+                        continue;
                     var hasProcessData = child.ParseDatas();
                     if (hasProcessData)
                     {
@@ -175,10 +175,10 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
         var snapshotList = _dictionary.Values.ToList();
         foreach(var child in snapshotList)
         {
-            if (!child.IsStart())
-                continue;
             try
             {
+                if (!child.IsStart())
+                    continue;
                 if (child.GetClientType() == PublicConst.IdentifyAll)
                 {
                     child.SendMessage(socketDataBlock.Content!, socketDataBlock.Length);
@@ -199,78 +199,82 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
     {
         if (!_start)
             return;
-        IChildCommunication? tempComm = null;
-        var hostBh = -1;
-        var exist = false;
-        if (_dictionary.TryGetValue(socketDataBlock.Key!, out var comm))
-        {
-            exist = true;
-            tempComm = comm;
-            hostBh = comm.GetHostBh();
-        }
-        if (!exist || tempComm == null)
-        {
+        var key = socketDataBlock.Key;
+        if (string.IsNullOrEmpty(key))
             return;
-        }
-        if (hostBh == tcpDataBean.HostBh)
+        try
         {
-            tempComm.SetClientType((byte)tcpDataBean.Type);
-            SendMessage(socketDataBlock);
+            var exist = _dictionary.TryGetValue(key, out var comm);
+            if (!exist || comm == null)
+                return;
+            var hostBh = comm.GetHostBh();
+            if (hostBh == tcpDataBean.HostBh)
+            {
+                comm.SetClientType((byte)tcpDataBean.Type);
+                SendMessage(socketDataBlock);
+            }
+            else
+            {
+                comm.CloseClient();
+                var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                hostInfo.RaiseClientConnEvent($"{socketDataBlock.Key}，工控机编号无效，强制下线！【{currDateTime}】");
+            }
         }
-        else
+        catch (Exception ex)
         {
-            tempComm.CloseClient();
             var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-            hostInfo.RaiseClientConnEvent($"{socketDataBlock.Key}，工控机编号无效，强制下线！【{currDateTime}】");
+            ParaSetupModules.RaiseAscDataProdEvent($"发送通知异常：{ex.Message}【{currDateTime}】");
         }
     }
     public void SendPhotoFile(SocketDataBlock socketDataBlock,TcpDataBean tcpDataBean, byte[] fileData)
     {
         if (!_start)
             return;
-        IChildCommunication? tempComm = null;
-        var hostBh = -1;
-        var exist = false;
-        if (_dictionary.TryGetValue(socketDataBlock.Key!, out var comm))
-        {
-            exist = true;
-            tempComm = comm;
-            hostBh = comm.GetHostBh();
-        }
-        if (!exist || tempComm == null)
-        {
+        var key = socketDataBlock.Key;
+        if (string.IsNullOrEmpty(key))
             return;
-        }
-        if (hostBh == tcpDataBean.HostBh)
+        try
         {
-            //循环发送，每次8*1024字节；
-            var data = new byte[fileData.Length + 10];
-            var iPosition = 0;
-            data[iPosition++] = 0XEC;
-            data[iPosition++] = 0XAB;
-            //文件大小，占用4表字节；
-            PublicUntil publicUntil = new PublicUntil();
-            publicUntil.GetInt(fileData.Length + 3, data, iPosition);
-            iPosition += 4;
-            //设备id
-            publicUntil.GetShort((ushort)tcpDataBean.Id, data, iPosition);
-            iPosition += 2;
-            //功能码；
-            data[iPosition++] = 0XAC;
-            //文件内容；
-            Array.Copy(fileData, 0, data, iPosition, fileData.Length);
-            iPosition += fileData.Length;
-            //结尾；
-            data[iPosition] = 0XED;
-            socketDataBlock.Content = data;
-            socketDataBlock.Length = data.Length;
-            tempComm.SendMessage(socketDataBlock.Content, socketDataBlock.Length);
+            var exist = _dictionary.TryGetValue(key, out var comm);
+            if (!exist || comm == null)
+                return;
+            var hostBh = comm.GetHostBh();
+            if (hostBh == tcpDataBean.HostBh)
+            {
+                //循环发送，每次8*1024字节；
+                var data = new byte[fileData.Length + 10];
+                var iPosition = 0;
+                data[iPosition++] = 0XEC;
+                data[iPosition++] = 0XAB;
+                //文件大小，占用4表字节；
+                PublicUntil publicUntil = new PublicUntil();
+                publicUntil.GetInt(fileData.Length + 3, data, iPosition);
+                iPosition += 4;
+                //设备id
+                publicUntil.GetShort((ushort)tcpDataBean.Id, data, iPosition);
+                iPosition += 2;
+                //功能码；
+                data[iPosition++] = 0XAC;
+                //文件内容；
+                Array.Copy(fileData, 0, data, iPosition, fileData.Length);
+                iPosition += fileData.Length;
+                //结尾；
+                data[iPosition] = 0XED;
+                socketDataBlock.Content = data;
+                socketDataBlock.Length = data.Length;
+                comm.SendMessage(socketDataBlock.Content, socketDataBlock.Length);
+            }
+            else
+            {
+                comm.CloseClient();
+                var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                hostInfo.RaiseClientConnEvent($"{socketDataBlock.Key}，工控机编号无效，强制下线！【{currDateTime}】");
+            }
         }
-        else
+        catch (Exception ex)
         {
-            tempComm.CloseClient();
             var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-            hostInfo.RaiseClientConnEvent($"{socketDataBlock.Key}，工控机编号无效，强制下线！【{currDateTime}】");
+            ParaSetupModules.RaiseAscDataProdEvent($"发送拍照文件异常：{ex.Message}【{currDateTime}】");
         }
     }
     #region 关闭服务；
@@ -305,11 +309,12 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
             //忽略；
         }
         //断开与客户端的连接；
-        foreach (var kv in _dictionary)
+        var snapshotList = _dictionary.Values.ToList();
+        foreach (var kv in snapshotList)
         {
             try
             {
-                kv.Value.CloseClient();
+                kv.CloseClient();
             }
             catch (Exception)
             {

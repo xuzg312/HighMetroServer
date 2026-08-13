@@ -2,10 +2,6 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Text;
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Interactivity;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -17,7 +13,6 @@ using HighMetro.Message;
 using HighMetro.Models;
 using HighMetro.Parameters;
 using HighMetro.Services;
-using HighMetro.Views.Controls;
 
 namespace HighMetro.ViewModels;
 
@@ -162,7 +157,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
                         cameraBean.Door = PublicConst.DireDoor;
                         //动作；拍照；
                         iPosition = 10;
-                        byte state = socketDataBlock.Content[iPosition];
+                        var state = socketDataBlock.Content[iPosition];
                         if (state == 0X00)
                         {
                             //转发到TcpClient;
@@ -203,10 +198,10 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
                 mainInfoBean.Datetime = DateTime.Now.Date.ToString("yyyy-MM-dd HH:mm:ss");
                 resultInfo = ParaSetupModules.DbService!.SavePersonDay(mainInfoBean);
             }
-            if (!resultInfo.Code.Equals(PublicConst.FlagNo))
+            if (!resultInfo.Code.Equals(PublicConst.FlagYes))
             {
-                ParaSetupModules.RaiseAscDataProdEvent(resultInfo.Message);
-                return;
+                var currDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                ParaSetupModules.RaiseAscDataProdEvent($"{resultInfo.Message}【{currDate}】");
             }
             Dispatcher.UIThread.Post(() =>
             {
@@ -214,13 +209,13 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
                 MessageText2 = data[1];
                 MessageText3 = data[2];
                 MessageText4 = data[3];
-                MessageText = "收到主板【"+_serial+"】的心跳数据！"+
-                              DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                var currDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                MessageText = $"收到主板【{_serial}】的心跳数据！【{currDate}】";
             });
         }
         else
         {
-            ParaSetupModules.RaiseAscDataProdEvent("心跳协议长度无效, 长度为【"+ socketDataBlock.Length+"】");
+            ParaSetupModules.RaiseHexDataProdEvent(socketDataBlock);
         }
     }
     //拍照
@@ -231,7 +226,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         byte iPosition = 3;
         //设备id
         cameraBean.Id = publicUntil.GetUshort(socketDataBlock.Content!, iPosition);
-        cameraBean.DateTime = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        cameraBean.DateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
         //次数；
         iPosition = 8;
         cameraBean.Serial = publicUntil.GetUshort(socketDataBlock.Content!, iPosition);
@@ -242,31 +237,31 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
             var value = camInfo.CamRemoteLinkImpl!.CaptureJpegPicture(camInfo.UserId,cameraBean); 
             if (value.Code.Equals(PublicConst.FlagYes))
             {
-                cameraBean.Message = "拍照执行成功!";
-                Dispatcher.UIThread.Post(() => { MessageText = cameraBean.Message + cameraBean.DateTime;});
+                cameraBean.Message = "拍照执行成功！";
+                Dispatcher.UIThread.Post(() => { MessageText = $"{cameraBean.Message}【{cameraBean.DateTime}】";});
                 var resultInfo = ParaSetupModules.DbService!.AddAlarm(cameraBean);
-                if (resultInfo.Code.Equals(PublicConst.FlagNo))
+                if (!resultInfo.Code.Equals(PublicConst.FlagYes))
                 {
-                    ParaSetupModules.RaiseAscDataProdEvent(resultInfo.Message);
+                    ParaSetupModules.RaiseAscDataProdEvent($"{resultInfo.Message}【{cameraBean.DateTime}】");
                 }
             }
             else
             {
                 cameraBean.Message = value.Message;
-                ParaSetupModules.RaiseAscDataProdEvent(value.Message);
+                ParaSetupModules.RaiseAscDataProdEvent($"{value.Message}【{cameraBean.DateTime}】");
                 var resultInfo = ParaSetupModules.DbService!.AddError(cameraBean);
-                if (resultInfo.Code.Equals(PublicConst.FlagNo))
+                if (!resultInfo.Code.Equals(PublicConst.FlagYes))
                 {
-                    ParaSetupModules.RaiseAscDataProdEvent(resultInfo.Message);
+                    ParaSetupModules.RaiseAscDataProdEvent($"{resultInfo.Message}【{cameraBean.DateTime}】");
                 }
             }
         }
         else
         {
             cameraBean.Message = "触发拍照，但未连接摄像头！";
-            ParaSetupModules.RaiseAscDataProdEvent(cameraBean.Message);
+            Dispatcher.UIThread.Post(() => { MessageText = $"{cameraBean.Message}【{cameraBean.DateTime}】";});
             var resultInfo = ParaSetupModules.DbService!.AddError(cameraBean);
-            if (resultInfo.Code.Equals(PublicConst.FlagNo))
+            if (!resultInfo.Code.Equals(PublicConst.FlagYes))
             {
                 ParaSetupModules.RaiseAscDataProdEvent(resultInfo.Message);
             }
@@ -299,7 +294,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
             return;            
         }
         //连接尝试串口
-        _commSerialImpl = new CommSerialImpl(2,serialCommInfo);
+        _commSerialImpl = new CommSerialImpl(3,serialCommInfo);
         if (_commSerialImpl.Open())
         {
             CommState = "【 串口连接状态：✅ 】";
