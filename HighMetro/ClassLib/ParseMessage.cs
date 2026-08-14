@@ -10,10 +10,9 @@ public class ParseMessage
     {
         StringBuilder stringBuilder = new StringBuilder("");
         //16进制；每个字节对应一个16进制数； 
-        string value;
         for (int i = 0; i < socketDataBlock.Length; i++)
         {
-            value = Convert.ToString(socketDataBlock.Content[i], 16).ToUpper();
+            var value = Convert.ToString(socketDataBlock.Content![i], 16).ToUpper();
             if (value.Length < 2)
             {
                 value = "0" + value;

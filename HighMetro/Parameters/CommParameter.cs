@@ -22,32 +22,28 @@ public static class CommParameter
     }
 
     public static ObservableCollection<CodeNameModals> PortNameList { get; } = [];
-    public static readonly ObservableCollection<CodeNameModals> BaudRateList = 
-        new ObservableCollection<CodeNameModals>(
-    [
+    public static readonly ObservableCollection<CodeNameModals> BaudRateList =
+        [
             new CodeNameModals(9600, "9600"),
             new CodeNameModals(19200, "19200"),
             new CodeNameModals(38400, "38400"),
             new CodeNameModals(57600, "57600"),
             new CodeNameModals(115200, "115200")
-        ]);
+        ];
     public static readonly ObservableCollection<CodeNameModals> DataBitsList = 
-        new ObservableCollection<CodeNameModals>(
-    [
+        [
             new CodeNameModals(7, "7:位数据"),
             new CodeNameModals(8, "8:位数据")
-        ]);
+        ];
     public static readonly ObservableCollection<CodeNameModals> ParityList = 
-        new ObservableCollection<CodeNameModals>(
-    [
+        [
             new CodeNameModals(0, "0:无校验"),
             new CodeNameModals(1, "1:奇校验"),
             new CodeNameModals(2, "2:偶校验")
-        ]);
+        ];
     public static readonly ObservableCollection<CodeNameModals> StopBitsList = 
-        new ObservableCollection<CodeNameModals>(
-    [
+        [
             new CodeNameModals(1, "1:停止位"),
             new CodeNameModals(2, "2:停止位")
-        ]);
+        ];
 }

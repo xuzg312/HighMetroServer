@@ -1,6 +1,4 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Windows.Input;
 using Avalonia.Controls;
 using Avalonia.Threading;
@@ -244,7 +242,6 @@ public partial class MainViewModel : ViewModelBase
                 oldHardVm.OnHardConfigSuccess -= OnHardEnd;
                 oldHardVm.OnHardConfigCancel -= OnHardEnd;
             }
-
             ActivePopupVm = null;
             ShowOverlay = false;
             IsMenuEnabled = true;
@@ -252,9 +249,32 @@ public partial class MainViewModel : ViewModelBase
     }
     private void BoardMaintain()
     {
-        // ActivePopupVm = new BoardMaintainViewModel();
-        // ShowOverlay = true;
+        //主板维护;
+        var hostInfo = new HostInfo
+        {
+            Bh = ParaSetupModules.HostInfo!.Bh
+        };
+        var resultSerialCommInfo = _dbService.GetCommInfoList(hostInfo,PublicConst.Mainboard);
+        var vm = new EditSerialConfigViewModel(_dbService, resultSerialCommInfo);
+        vm.OnExit += OnBoardCancel;
+        IsMenuEnabled = false;
+        ActivePopupVm = vm;
+        ShowOverlay = true;
     }
+    private void OnBoardCancel()
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (ActivePopupVm is EditSerialConfigViewModel oldBoardVm)
+            {
+                oldBoardVm.OnExit -= OnBoardCancel;
+            }
+            ActivePopupVm = null;
+            ShowOverlay = false;
+            IsMenuEnabled = true;
+        });
+    }
+
     private void OpenPhotoQuery()
     {
         // ActivePopupVm = new PhotoQueryViewModel();

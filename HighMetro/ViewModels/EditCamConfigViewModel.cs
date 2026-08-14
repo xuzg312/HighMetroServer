@@ -122,7 +122,7 @@ public partial class EditCamConfigViewModel : ObservableValidator
         OnHardConfigSuccess?.Invoke();
     }
     [RelayCommand]
-    private void Cancel(MainViewModel rootVm)
+    private void Cancel()
     {
         OnHardConfigCancel?.Invoke();
     }

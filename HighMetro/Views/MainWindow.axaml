@@ -39,7 +39,7 @@
             <!-- 上层遮罩弹窗层 -->
             <Grid IsVisible="{Binding ShowOverlay}">
                 <Border Background="#80000000"/>
-                <Grid HorizontalAlignment="Center" VerticalAlignment="Center" Width="480">
+                <Grid HorizontalAlignment="Center" VerticalAlignment="Center" >
                     <ContentControl Content="{Binding ActivePopupVm}" />
                 </Grid>
             </Grid>

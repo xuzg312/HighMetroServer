@@ -1,8 +1,5 @@
-﻿using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Interactivity;
-using Avalonia.Markup.Xaml;
-using HighMetro.Models;
+﻿using Avalonia.Controls;
+
 using HighMetro.ViewModels;
 
 namespace HighMetro.Views.Controls;
@@ -12,10 +9,6 @@ public partial class EditCamConfigView : UserControl
     public EditCamConfigView()
     {
         InitializeComponent();
-    }
-    private void InitializeComponent()
-    {
-        AvaloniaXamlLoader.Load(this);
     }
     private void OnTextChanged(object? sender, TextChangedEventArgs e)
     {

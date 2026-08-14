@@ -292,7 +292,6 @@ public class DbService : IDbService
             var resultInfo = new ResultInfo
             {
                 Code = PublicConst.FlagYes,
-                Message = ""
             };
             resultSerialCommInfo.ReturnInfo = resultInfo;
             return resultSerialCommInfo;

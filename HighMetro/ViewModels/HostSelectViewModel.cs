@@ -94,7 +94,7 @@ public partial class HostSelectViewModel : ObservableValidator
     {
         return new HostSetting
         {
-            Bh = SelectedHost.Bh
+            Bh = SelectedHost!.Bh
         };
     }
 }
