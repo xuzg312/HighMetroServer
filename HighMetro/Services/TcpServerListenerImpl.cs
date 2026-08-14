@@ -199,9 +199,13 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
     {
         if (!_start)
             return;
+        var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
         var key = socketDataBlock.Key;
         if (string.IsNullOrEmpty(key))
+        {
+            hostInfo.RaiseClientConnEvent($"{key}，消息中的工控机编号为空！【{currDateTime}】");
             return;
+        }
         try
         {
             var exist = _dictionary.TryGetValue(key, out var comm);
@@ -216,13 +220,11 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
             else
             {
                 comm.CloseClient();
-                var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                 hostInfo.RaiseClientConnEvent($"{socketDataBlock.Key}，工控机编号无效，强制下线！【{currDateTime}】");
             }
         }
         catch (Exception ex)
         {
-            var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             ParaSetupModules.RaiseAscDataProdEvent($"发送通知异常：{ex.Message}【{currDateTime}】");
         }
     }

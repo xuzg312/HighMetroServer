@@ -206,13 +206,13 @@ public class CamRemoteLinkImpl
     }
     public bool CheckOnLine(int iUserId)
     {
-        if (iUserId >= 0)
+        if (iUserId < 0)
         {
-            // 检测在线
-            var value= HikSdk.NET_DVR_RemoteControl(iUserId,20005,IntPtr.Zero,0);
-            return value != 0;
+            return false;
         }
-        return false;
+        // 检测在线
+        var value= HikSdk.NET_DVR_RemoteControl(iUserId,20005,IntPtr.Zero,0);
+        return value != 0;
     }
     private LoadCamResult GetLastError()
     {

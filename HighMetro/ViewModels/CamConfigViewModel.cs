@@ -94,8 +94,6 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
     private void Close()
     {
         //退出登录；
-        if (!_start)
-            return;
         var camInfo = ParaSetupModules.CamInfo!;
         var loadCamResult = _camRemoteLinkImpl!.Logout(camInfo.UserId);
         if (!loadCamResult.Code.Equals(PublicConst.FlagYes))

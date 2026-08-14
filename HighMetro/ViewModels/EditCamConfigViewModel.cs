@@ -106,7 +106,6 @@ public partial class EditCamConfigViewModel : ObservableValidator
         {
             return; 
         }
-        var setting = BuildSetting();
         //保存到数据库；
         _hardInfo.Ip = Ip;
         _hardInfo.Port = Port;
@@ -122,13 +121,11 @@ public partial class EditCamConfigViewModel : ObservableValidator
         }
         OnHardConfigSuccess?.Invoke();
     }
-
     [RelayCommand]
     private void Cancel(MainViewModel rootVm)
     {
         OnHardConfigCancel?.Invoke();
     }
-
     private HardInfo BuildSetting()
     {
         return new HardInfo

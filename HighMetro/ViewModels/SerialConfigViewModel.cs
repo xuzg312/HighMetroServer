@@ -75,11 +75,14 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     private bool _start;
     private int _serial;
     private CommSerialImpl? _commSerialImpl;
+    private bool _buildServer;
+
     public SerialConfigViewModel(bool isReadOnly,int serial)
     {
         IsReadOnly = isReadOnly;
         _serial = serial;
         _start = false;
+        _buildServer = false;
         foreach (var item in ParaSetupModules.SerialCommList!)
         {
             item.BufferDataProdEvent += OnBufferDataProdEvent;
@@ -231,7 +234,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         iPosition = 8;
         cameraBean.Serial = publicUntil.GetUshort(socketDataBlock.Content!, iPosition);
         var camInfo = ParaSetupModules.CamInfo;
-        if (camInfo is { UserId: > 0 })
+        if (camInfo is { UserId: >= 0 })
         {
             //动作：拍照；
             var value = camInfo.CamRemoteLinkImpl!.CaptureJpegPicture(camInfo.UserId,cameraBean); 
@@ -270,36 +273,44 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     [RelayCommand(CanExecute = nameof(CanOpen))]
     private void Open()
     {
-        if (_serial == 0)
+        if (!_buildServer)
         {
-            MessageText = "主板参数未配置，请点击菜单【设备管理--主板维护】进行设置，设置后需要重新启动程序！";
-            return;
+            if (_serial == 0)
+            {
+                MessageText = "主板参数处理逻辑有误，请联系开发人员检查！";
+                return;
+            }
+
+            if (SelectPortName is null || SelectedBaudRate is null || SelectedDataBits is null ||
+                SelectedStopBits is null || SelectedParity is null)
+            {
+                MessageText = "主板参数未配置，请点击菜单【设备管理--主板维护】进行设置，设置后需要重新启动程序！";
+                return;
+            }
+
+            var serialCommList = ParaSetupModules.SerialCommList;
+            if (serialCommList!.Count < _serial)
+            {
+                MessageText = "主板内部处理逻辑有误，serial与主板列表不一致！";
+                return;
+            }
+
+            var serialCommInfo = serialCommList[_serial - 1];
+            if (!serialCommInfo.IsValid())
+            {
+                MessageText = "主板参数无效，如果已经配置过，请重新启动程序加载！";
+                return;
+            }
+
+            //连接尝试串口
+            _commSerialImpl = new CommSerialImpl(3, serialCommInfo);
+            serialCommInfo.CommSerialImpl = _commSerialImpl;
+            _buildServer = true;
         }
-        if (SelectPortName is null || SelectedBaudRate is null || SelectedDataBits is null ||
-            SelectedStopBits is null || SelectedParity is null)
-        {
-            MessageText = "主板参数处理逻辑有误，请联系开发人员检查！";
-            return;                
-        }
-        var serialCommList = ParaSetupModules.SerialCommList;
-        if (serialCommList!.Count < _serial)
-        {
-            MessageText = "主板内部处理逻辑有误，serial与主板列表不一致！";
-            return;            
-        }
-        var serialCommInfo = serialCommList[_serial-1];
-        if (!serialCommInfo.IsValid())
-        {
-            MessageText = "主板参数无效，如果已经配置过，请重新启动程序加载！";
-            return;            
-        }
-        //连接尝试串口
-        _commSerialImpl = new CommSerialImpl(3,serialCommInfo);
-        if (_commSerialImpl.Open())
+        if (_commSerialImpl!.Open())
         {
             CommState = "【 串口连接状态：✅ 】";
             _start = true;
-            serialCommInfo.CommSerialImpl = _commSerialImpl;
         }
         else
         {
@@ -311,8 +322,6 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     [RelayCommand(CanExecute = nameof(CanClose))]
     private void Close()
     {
-        if(!_start)
-            return;
         _commSerialImpl!.Close();
         _start = false;
         CommState = "【 串口连接状态：❌ 】";
