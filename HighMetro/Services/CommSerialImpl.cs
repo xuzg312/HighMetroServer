@@ -39,6 +39,7 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
     private int _parseTotalBytes;
     private Task? _parseBackgroundTask;
     private CancellationTokenSource? _parseCts;
+    private readonly object _serialLock = new();
     public bool Open()
     {
         if (_start)
@@ -78,7 +79,7 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
     }
     private void OnSerialDataReceived(object sender, SerialDataReceivedEventArgs e)
     {
-        lock (_serialPort)
+        lock (_serialLock)
         {
             if (sender is not SerialPort sp || !sp.IsOpen)
                 return;
@@ -268,6 +269,33 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
         }
     }
     public bool IsOpen { get; private set; }
+
+    public bool TestComm()
+    {
+        try
+        {
+            _serialPort.Open();
+            try
+            {
+                _serialPort.Close();
+            }catch(Exception)
+            {
+                //忽略；
+            }
+            try
+            {
+                _serialPort.Dispose();
+            }catch(Exception)
+            {
+                //忽略；
+            }
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
     public void Close()
     {
         if (!_start)
@@ -303,21 +331,24 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
             //忽略；
         }
         _parseCts = null;
-        try
+        lock (_serialLock)
         {
-            _serialPort.Close();
-        }
-        catch (Exception)
-        {
-            //忽略异常；
-        }
-        try
-        {
-            _serialPort.Dispose();
-        }
-        catch (Exception)
-        {
-            //忽略异常；
+            try
+            {
+                _serialPort.Close();
+            }
+            catch (Exception)
+            {
+                //忽略异常；
+            }
+            try
+            {
+                _serialPort.Dispose();
+            }
+            catch (Exception)
+            {
+                //忽略异常；
+            }
         }
         foreach (var item in _getBufferDataImplList)
         {

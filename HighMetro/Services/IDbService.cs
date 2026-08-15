@@ -19,4 +19,6 @@ public interface IDbService
     ResultInfo SavePersonDay(MainInfoBean mainInfoBean);
     ResultInfo AddError(CameraBean cameraBean);
     ResultInfo AddAlarm(CameraBean cameraBean);
+    ResultInfo EditCommInfo(SerialComm serialComm);
+    ResultInfo AddCommInfo(SerialComm serialComm);
 }

@@ -63,10 +63,13 @@ public class GetBufferDataImpl : IGetBufferData
                     await Task.Delay(100, token);
                 }
             }
+            catch (OperationCanceledException)
+            {
+            }
             catch (Exception ex)
             {
                 var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                ParaSetupModules.RaiseAscDataProdEvent($"接收客户端异常：{ex.Message}【{currDateTime}】");
+                ParaSetupModules.RaiseAscDataProdEvent($"消息池中监听消息异常：{ex.Message}【{currDateTime}】");
             }
         }
     }

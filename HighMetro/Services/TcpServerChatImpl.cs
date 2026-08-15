@@ -25,7 +25,6 @@ public class TcpServerChatImpl : IChildCommunication
     private readonly CancellationTokenSource _clientCts;
     private bool _start;
     private Task? _readTask;
-    private readonly SemaphoreSlim _streamSemaphore = new SemaphoreSlim(1, 1);
     private const byte PacketHead1 = 0xEB;
     private const byte PacketHead2 = 0xAA;
     private const byte PacketTail = 0xED;
@@ -68,10 +67,6 @@ public class TcpServerChatImpl : IChildCommunication
             var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             ParaSetupModules.RaiseAscDataProdEvent($"{_key}：接收循环顶层异常：{ex.Message}【{currDateTime}】");
         }
-        finally
-        {
-            CloseClient();
-        }
     }
     #region 单个客户端接收数据
 
@@ -95,6 +90,10 @@ public class TcpServerChatImpl : IChildCommunication
                 Array.Copy(data, data00, bytesRead);
                 _receiveQueue.Enqueue(data00);
                 _hostInfo.RaiseClientConnEvent($"{_key}：收到客户端数据！【{currDateTime}】");
+            }
+            catch (OperationCanceledException)
+            {
+                break;
             }
             catch (IOException)
             {
@@ -123,7 +122,7 @@ public class TcpServerChatImpl : IChildCommunication
     {
         if (length <= 0 || length > content.Length) return false;
         // 防御：TcpClient已经关闭
-        if (_client is not { Connected: true } || !_start)
+        if (_client is not { Connected: true })
         {
             CloseClient();
             var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
@@ -132,17 +131,8 @@ public class TcpServerChatImpl : IChildCommunication
         }
         // 异步锁，保证同一时刻只有一处进入写逻辑，解决并发WriteAsync错乱
         var currTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-        const int waitTimeoutMs = 3000; // 信号量等待3秒超时
-        var semaphoreAcquired = false;
         try
         {
-            semaphoreAcquired = await _streamSemaphore.WaitAsync(waitTimeoutMs, _clientCts.Token);
-            if (!semaphoreAcquired)
-            {
-                CloseClient();
-                _hostInfo.RaiseClientConnEvent($"{_key}：发送消息获取写入锁超时，强制下线！【{currTime}】");
-                return false;
-            }
             var ns = _client.GetStream();
             var offset = 0;
             var remaining = length;
@@ -183,12 +173,7 @@ public class TcpServerChatImpl : IChildCommunication
             CloseClient();
             ParaSetupModules.RaiseAscDataProdEvent($"{_key}：发送消息异常，强制下线：{ex.Message}！【{currTime}】");                
             return false;
-        }finally
-        {
-            if (semaphoreAcquired)
-            {
-                _streamSemaphore.Release();
-            }        }
+        }
     }
     #endregion
 
@@ -324,14 +309,6 @@ public class TcpServerChatImpl : IChildCommunication
         _dictionary.TryRemove(_key, out var _);
         try
         {
-            _client.Close();
-        }
-        catch (Exception)
-        {
-            //忽略；
-        }
-        try
-        {
             _client.Dispose();
         }
         catch (Exception)
@@ -339,14 +316,6 @@ public class TcpServerChatImpl : IChildCommunication
             //忽略；
         }
         _client = null!;
-        try
-        {
-            _streamSemaphore.Dispose();
-        }
-        catch
-        {
-            //忽略；
-        }
         _start = false;
     }
     #endregion

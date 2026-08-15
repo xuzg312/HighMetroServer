@@ -2,152 +2,164 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
              x:Class="HighMetro.Views.Controls.EditSerialConfigView"
-             Width="1300">
-    <Border Background="White" Padding="24" CornerRadius="8">
-        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="2" >
-            <!-- 第一行：同一行横向排列：标题｜红色提示框｜消息栏 -->
-            <Grid Grid.Row="0" Height="30"
-                  ColumnDefinitions="Auto" 
-                  VerticalAlignment="Center">
-            
-                <!-- 消息栏：接收消息提示 -->
-                <TextBlock Grid.Column="0" Text="{Binding MessageText1}" 
-                           Foreground="ForestGreen" VerticalAlignment="Center" 
-                           TextAlignment="Left" TextWrapping="NoWrap"/>
+             Width="800" Height="650">
+        <Border Background="White" Padding="30" CornerRadius="8">
+        <Grid RowDefinitions="30,450,40" RowSpacing="20">
+            <!--标题-->
+            <TextBlock Grid.Row="0"
+                       Text="主板参数维护"
+                       FontSize="20"
+                       FontWeight="Bold"/>
+            <!--左右两列布局-->
+            <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="20">
+                <!--左侧串口配置-->
+                <Border Grid.Column="0" 
+                        BorderBrush="#cccccc" 
+                        BorderThickness="1" 
+                        Padding="10">
+                <StackPanel Orientation="Vertical" Spacing="16" 
+                            VerticalAlignment="Top" >
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <TextBlock Text="ID：" Width="80" VerticalAlignment="Center" TextAlignment="Right"/>
+                        <TextBox Watermark="ID" Width="120"  
+                                 Text="{Binding Id1}" TextChanged="OnTextChanged1"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <TextBlock Text="名称：" Width="80" VerticalAlignment="Center" TextAlignment="Right"/>
+                        <TextBox Watermark="输入名称" Width="180"
+                                 Text="{Binding Name1}" TextChanged="OnTextChanged1"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <TextBlock Text="串口号：" Width="80" VerticalAlignment="Center" TextAlignment="Right"/>
+                        <ComboBox Width="240"
+                                  ItemsSource="{Binding PortNameList1}"
+                                  SelectedItem="{Binding SelectPortName1}"
+                                  DisplayMemberBinding="{Binding DisplayName}"
+                                  SelectionChanged="SelectionChanged1"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <TextBlock Text="波特率：" Width="80" VerticalAlignment="Center" TextAlignment="Right"/>
+                        <ComboBox Width="240"
+                                  ItemsSource="{Binding BaudRateList1}"
+                                  SelectedItem="{Binding SelectedBaudRate1}"
+                                  DisplayMemberBinding="{Binding DisplayName}"
+                                  SelectionChanged="SelectionChanged1"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <TextBlock Text="数据位：" Width="80" VerticalAlignment="Center" TextAlignment="Right"/>
+                        <ComboBox Width="240"
+                                  ItemsSource="{Binding DataBitsList1}"
+                                  SelectedItem="{Binding SelectedDataBits1}"
+                                  DisplayMemberBinding="{Binding DisplayName}"
+                                  SelectionChanged="SelectionChanged1"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <TextBlock Text="奇偶校验：" Width="80" VerticalAlignment="Center" TextAlignment="Right"/>
+                        <ComboBox Width="240"
+                                  ItemsSource="{Binding ParityList1}"
+                                  SelectedItem="{Binding SelectedParity1}"
+                                  DisplayMemberBinding="{Binding DisplayName}"
+                                  SelectionChanged="SelectionChanged1"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <TextBlock Text="停止位：" Width="80" VerticalAlignment="Center" TextAlignment="Right"/>
+                        <ComboBox Width="240"
+                                  ItemsSource="{Binding StopBitsList1}"
+                                  SelectedItem="{Binding SelectedStopBits1}"
+                                  DisplayMemberBinding="{Binding DisplayName}"
+                                  SelectionChanged="SelectionChanged1"/>
+                    </StackPanel>
+
+                    <!--消息提示-->
+                    <TextBlock Text="{Binding MessageText1}"
+                               Foreground="ForestGreen"
+                               Margin="0,6,0,10"/>
+
+                    <!--操作按钮组-->
+                    <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
+                        <Button Content="打开" Command="{Binding Open1Command}" Width="60"/>
+                        <Button Content="保存" Command="{Binding Save1Command}" Width="60"/>
+                    </StackPanel>
+                </StackPanel>
+                </Border>
+
+                <!--右侧串口配置-->
+                <Border Grid.Column="1" 
+                        BorderBrush="#cccccc" 
+                        BorderThickness="1" 
+                        Padding="10">
+                <StackPanel Grid.Column="1" Orientation="Vertical" Spacing="16" VerticalAlignment="Top">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <TextBlock Text="ID：" Width="80" VerticalAlignment="Center" TextAlignment="Right"/>
+                        <TextBox Watermark="ID" Width="120" 
+                                 Text="{Binding Id2}" TextChanged="OnTextChanged2"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <TextBlock Text="名称：" Width="80" VerticalAlignment="Center" TextAlignment="Right"/>
+                        <TextBox Watermark="输入名称" Width="180"
+                                 Text="{Binding Name2}" TextChanged="OnTextChanged2"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <TextBlock Text="串口号：" Width="80" VerticalAlignment="Center" TextAlignment="Right"/>
+                        <ComboBox Width="240"
+                                  ItemsSource="{Binding PortNameList2}"
+                                  SelectedItem="{Binding SelectPortName2}"
+                                  DisplayMemberBinding="{Binding DisplayName}"
+                                  SelectionChanged="SelectionChanged2"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <TextBlock Text="波特率：" Width="80" VerticalAlignment="Center" TextAlignment="Right"/>
+                        <ComboBox Width="240"
+                                  ItemsSource="{Binding BaudRateList2}"
+                                  SelectedItem="{Binding SelectedBaudRate2}"
+                                  DisplayMemberBinding="{Binding DisplayName}"
+                                  SelectionChanged="SelectionChanged2"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <TextBlock Text="数据位：" Width="80" VerticalAlignment="Center" TextAlignment="Right"/>
+                        <ComboBox Width="240"
+                                  ItemsSource="{Binding DataBitsList2}"
+                                  SelectedItem="{Binding SelectedDataBits2}"
+                                  DisplayMemberBinding="{Binding DisplayName}"
+                                  SelectionChanged="SelectionChanged2"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <TextBlock Text="奇偶校验：" Width="80" VerticalAlignment="Center" TextAlignment="Right"/>
+                        <ComboBox Width="240"
+                                  ItemsSource="{Binding ParityList2}"
+                                  SelectedItem="{Binding SelectedParity2}"
+                                  DisplayMemberBinding="{Binding DisplayName}"
+                                  SelectionChanged="SelectionChanged2"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <TextBlock Text="停止位：" Width="80" VerticalAlignment="Center" TextAlignment="Right"/>
+                        <ComboBox Width="240"
+                                  ItemsSource="{Binding StopBitsList2}"
+                                  SelectedItem="{Binding SelectedStopBits2}"
+                                  DisplayMemberBinding="{Binding DisplayName}"
+                                  SelectionChanged="SelectionChanged2"/>
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding MessageText2}"
+                               Foreground="ForestGreen"
+                               Margin="0,6,0,10"/>
+
+                    <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
+                        <Button Content="打开" Command="{Binding Open2Command}" Width="60"/>
+                        <Button Content="保存" Command="{Binding Save2Command}" Width="60"/>
+                    </StackPanel>
+                </StackPanel>
+                </Border>
             </Grid>
-            <Grid Grid.Row="1" ColumnSpacing="4"
-                  ColumnDefinitions="180,180,180,180,180,120">
-                
-                <!-- 串口号 -->
-                <StackPanel Grid.Column="0"  Orientation="Horizontal" Spacing="4">
-                    <TextBlock Text="串口号："/>
-                    <ComboBox MinWidth="100"
-                              ItemsSource="{Binding PortNameList1}"
-                              SelectedItem="{Binding SelectPortName1}"
-                              DisplayMemberBinding="{Binding DisplayName}"/>
-                </StackPanel>
 
-                <!-- 波特率 -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
-                    <TextBlock Text="波特率："/>
-                    <ComboBox MinWidth="100"
-                              ItemsSource="{Binding BaudRateList1}"
-                              SelectedItem="{Binding SelectedBaudRate1}"
-                              DisplayMemberBinding="{Binding DisplayName}"/>
-                </StackPanel>
-
-                <!-- 数据位 -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
-                    <TextBlock Text="数据位："/>
-                    <ComboBox MinWidth="100"
-                              ItemsSource="{Binding DataBitsList1}"
-                              SelectedItem="{Binding SelectedDataBits1}"
-                              DisplayMemberBinding="{Binding DisplayName}"/>
-                </StackPanel>
-
-                <!-- 奇偶校验 -->
-                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4">
-                    <TextBlock Text="奇偶校验："/>
-                    <ComboBox MinWidth="100"
-                              ItemsSource="{Binding ParityList1}"
-                              SelectedItem="{Binding SelectedParity1}"
-                              DisplayMemberBinding="{Binding DisplayName}"/>
-                </StackPanel>
-
-                <!-- 停止位 -->
-                <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="4">
-                    <TextBlock Text="停止位："/>
-                    <ComboBox MinWidth="100"
-                              ItemsSource="{Binding StopBitsList1}"
-                              SelectedItem="{Binding SelectedStopBits1}"
-                              DisplayMemberBinding="{Binding DisplayName}"/>
-                </StackPanel>
-                <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="4">
-                    <Button Content="打开" Command="{Binding Open1Command}"
-                            Width="60" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    <Button Content="关闭" Command="{Binding Close1Command}"
-                            Width="60" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    <Button Content="保存" Command="{Binding Save1Command}"
-                            Width="60" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    <Button Content="删除" Command="{Binding Del1Command}"
-                            Width="60" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </StackPanel>
-            </Grid>
-            <Grid Grid.Row="2" Height="30"
-                  ColumnDefinitions="Auto" 
-                  VerticalAlignment="Center">
-                
-                <!-- 消息栏：接收消息提示 -->
-                <TextBlock Grid.Column="0" Text="{Binding MessageText2}" 
-                           Foreground="ForestGreen" VerticalAlignment="Center" 
-                           TextAlignment="Left" TextWrapping="NoWrap"/>
-            </Grid>
-            <Grid Grid.Row="3" ColumnSpacing="4"
-                  ColumnDefinitions="180,180,180,180,180,120">
-                
-                <!-- 串口号 -->
-                <StackPanel Grid.Column="0"  Orientation="Horizontal" Spacing="4">
-                    <TextBlock Text="串口号："/>
-                    <ComboBox MinWidth="100"
-                              ItemsSource="{Binding PortNameList2}"
-                              SelectedItem="{Binding SelectPortName2}"
-                              DisplayMemberBinding="{Binding DisplayName}"/>
-                </StackPanel>
-
-                <!-- 波特率 -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
-                    <TextBlock Text="波特率："/>
-                    <ComboBox MinWidth="100"
-                              ItemsSource="{Binding BaudRateList2}"
-                              SelectedItem="{Binding SelectedBaudRate2}"
-                              DisplayMemberBinding="{Binding DisplayName}"/>
-                </StackPanel>
-
-                <!-- 数据位 -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
-                    <TextBlock Text="数据位："/>
-                    <ComboBox MinWidth="100"
-                              ItemsSource="{Binding DataBitsList2}"
-                              SelectedItem="{Binding SelectedDataBits2}"
-                              DisplayMemberBinding="{Binding DisplayName}"/>
-                </StackPanel>
-
-                <!-- 奇偶校验 -->
-                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4">
-                    <TextBlock Text="奇偶校验："/>
-                    <ComboBox MinWidth="100"
-                              ItemsSource="{Binding ParityList2}"
-                              SelectedItem="{Binding SelectedParity2}"
-                              DisplayMemberBinding="{Binding DisplayName}"/>
-                </StackPanel>
-
-                <!-- 停止位 -->
-                <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="4">
-                    <TextBlock Text="停止位："/>
-                    <ComboBox MinWidth="100"
-                              ItemsSource="{Binding StopBitsList2}"
-                              SelectedItem="{Binding SelectedStopBits2}"
-                              DisplayMemberBinding="{Binding DisplayName}"/>
-                </StackPanel>
-                <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="4">
-                    <Button Content="打开" Command="{Binding Open2Command}"
-                            Width="60" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    <Button Content="关闭" Command="{Binding Close2Command}"
-                            Width="60" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    <Button Content="保存" Command="{Binding Save2Command}"
-                            Width="60" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    <Button Content="删除" Command="{Binding Del2Command}"
-                            Width="60" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </StackPanel>
-            </Grid>
-            <Grid Grid.Row="4" Height="80" Grid.ColumnSpan="7" HorizontalAlignment="Center"
-                  VerticalAlignment="Center">
-                
-                <Button Grid.Column="0" Content="退出" Command="{Binding ExitCommand}"
-                        Width="60" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-            </Grid>
+            <!--底部居中退出按钮-->
+            <Button Grid.Row="2" 
+                    Content="退出"
+                    Command="{Binding ExitCommand}"
+                    Width="80" VerticalAlignment="Center"
+                    HorizontalAlignment="Center"/>
         </Grid>
     </Border>
 </UserControl>

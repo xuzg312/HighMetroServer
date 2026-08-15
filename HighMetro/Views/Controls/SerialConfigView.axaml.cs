@@ -15,13 +15,6 @@ public partial class SerialConfigView : UserControl
         get => GetValue(SerialNoProperty);
         set => SetValue(SerialNoProperty, value);
     }
-    public static readonly StyledProperty<bool> IsReadOnlyProperty =
-        AvaloniaProperty.Register<SerialConfigView, bool>(nameof(IsReadOnly), defaultValue: false);
-    public bool IsReadOnly
-    {
-        get => GetValue(IsReadOnlyProperty);
-        set => SetValue(IsReadOnlyProperty, value);
-    }
     public static readonly StyledProperty<SerialPortOptions> ConfigProperty =
         AvaloniaProperty.Register<SerialConfigView, SerialPortOptions>(nameof(Config));
 
@@ -34,8 +27,8 @@ public partial class SerialConfigView : UserControl
     public SerialConfigView()
     {
         InitializeComponent();
-        _viewModel = new SerialConfigViewModel(false,0);
-        Console.WriteLine("SerialConfigView:------"+SerialNo+"-----"+IsReadOnly);
+        _viewModel = new SerialConfigViewModel(0);
+        Console.WriteLine("SerialConfigView:------"+SerialNo+"-----");
         Dispatcher.UIThread.Post(() => { DataContext = _viewModel; });
     }
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
@@ -47,13 +40,12 @@ public partial class SerialConfigView : UserControl
             return;
         // 只监听三个外部传入的依赖属性
         var prop = change.Property;
-        if (prop != IsReadOnlyProperty
-            && prop != SerialNoProperty
+        if (prop != SerialNoProperty
             && prop != ConfigProperty)
         {
             return;
         }
-        _viewModel.UpdateParams(IsReadOnly, SerialNo, Config);
-        Console.WriteLine($"SerialConfigView 更新：No={SerialNo} ReadOnly={IsReadOnly}");
+        _viewModel.UpdateParams(SerialNo, Config);
+        Console.WriteLine($"SerialConfigView 更新：No={SerialNo}");
     }
 }

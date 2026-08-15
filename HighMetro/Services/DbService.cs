@@ -10,8 +10,9 @@ namespace HighMetro.Services;
 public class DbService : IDbService
 {
     private string _connectionString = string.Empty;
-    private string _currDate=string.Empty; 
+    private string _currDate = string.Empty;
     private int _bh;
+
     public ResultInfo TestConnection(DbSetting setting)
     {
         var resultInfo = new ResultInfo();
@@ -73,6 +74,7 @@ public class DbService : IDbService
                     }
                 }
             }
+
             return resultInfo;
         }
         catch (Exception ex)
@@ -106,6 +108,7 @@ public class DbService : IDbService
                     }
                 }
             }
+
             resultInfo.Code = PublicConst.FlagNo;
             resultInfo.Message = "工控机编号无效！";
             return resultInfo;
@@ -124,6 +127,7 @@ public class DbService : IDbService
         {
             _connectionString = DataBaseConnect.Instance.GetConnectionString();
         }
+
         return _connectionString;
     }
 
@@ -147,18 +151,21 @@ public class DbService : IDbService
                             var hostInfo = new HostInfo
                             {
                                 Bh = Convert.ToInt32(reader["bh"]),
-                                Code = reader["code"].ToString()??string.Empty,
-                                Name = reader["name"].ToString()??string.Empty,
-                                Ip = reader["ip"].ToString()??string.Empty,
+                                Code = reader["code"].ToString() ?? string.Empty,
+                                Name = reader["name"].ToString() ?? string.Empty,
+                                Ip = reader["ip"].ToString() ?? string.Empty,
                                 Port = Convert.ToInt32(reader["port"])
                             };
                             hostInfoList.Add(hostInfo);
                         }
+
                         resultHostInfo.HostList = hostInfoList;
                     }
                 }
             }
-            var resultInfo = new ResultInfo{
+
+            var resultInfo = new ResultInfo
+            {
                 Code = PublicConst.FlagYes
             };
             resultHostInfo.ReturnInfo = resultInfo;
@@ -193,9 +200,9 @@ public class DbService : IDbService
                     {
                         if (reader.Read())
                         {
-                            hostInfo.Code = reader["code"].ToString()??string.Empty;
-                            hostInfo.Name = reader["name"].ToString()??string.Empty;
-                            hostInfo.Ip = reader["ip"].ToString()??string.Empty;
+                            hostInfo.Code = reader["code"].ToString() ?? string.Empty;
+                            hostInfo.Name = reader["name"].ToString() ?? string.Empty;
+                            hostInfo.Ip = reader["ip"].ToString() ?? string.Empty;
                             hostInfo.Port = Convert.ToInt32(reader["port"]);
                             resultInfo.Code = PublicConst.FlagYes;
                             return resultInfo;
@@ -203,6 +210,7 @@ public class DbService : IDbService
                     }
                 }
             }
+
             resultInfo.Code = PublicConst.FlagNo;
             resultInfo.Message = "工控机编号无效！";
             return resultInfo;
@@ -222,7 +230,8 @@ public class DbService : IDbService
         {
             using (var conn = new MySqlConnection(GetConnectionString()))
             {
-                var sql = "select bh,ip,port,username,password,type from t_hardcamera where hostbh=@hostBh and type=@type;";
+                var sql =
+                    "select bh,ip,port,username,password,type from t_hardcamera where hostbh=@hostBh and type=@type;";
                 using (var cmd = new MySqlCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue("@hostBh", hardInfo.HostBh);
@@ -232,17 +241,18 @@ public class DbService : IDbService
                     {
                         if (reader.Read())
                         {
-                            hardInfo.UserName = reader["username"].ToString()??string.Empty;
-                            hardInfo.PassWord = reader["password"]?.ToString()??string.Empty;
-                            hardInfo.Ip = reader["ip"].ToString()??string.Empty;
+                            hardInfo.UserName = reader["username"].ToString() ?? string.Empty;
+                            hardInfo.PassWord = reader["password"]?.ToString() ?? string.Empty;
+                            hardInfo.Ip = reader["ip"].ToString() ?? string.Empty;
                             hardInfo.Port = Convert.ToInt32(reader["port"]);
                             hardInfo.Bh = Convert.ToInt32(reader["bh"]);
-                            hardInfo.Type = reader["type"].ToString()??string.Empty;
+                            hardInfo.Type = reader["type"].ToString() ?? string.Empty;
                             resultInfo.Tag = 1;
                         }
                     }
                 }
             }
+
             resultInfo.Code = PublicConst.FlagYes;
             return resultInfo;
         }
@@ -253,9 +263,10 @@ public class DbService : IDbService
             return resultInfo;
         }
     }
+
     public ResultSerialCommInfo GetCommInfoList(HostInfo hostInfo, string commType)
     {
-        var resultSerialCommInfo=new ResultSerialCommInfo();
+        var resultSerialCommInfo = new ResultSerialCommInfo();
         try
         {
             using (var conn = new MySqlConnection(GetConnectionString()))
@@ -276,13 +287,13 @@ public class DbService : IDbService
                             serialComm00.HostBh = Convert.ToInt32(reader["hostbh"]);
                             serialComm00.Bh = Convert.ToInt32(reader["bh"]);
                             serialComm00.Id = Convert.ToInt32(reader["id"]);
-                            serialComm00.Name = reader["name"].ToString()??string.Empty;
-                            serialComm00.CommName = reader["commname"].ToString()??string.Empty;
+                            serialComm00.Name = reader["name"].ToString() ?? string.Empty;
+                            serialComm00.CommName = reader["commname"].ToString() ?? string.Empty;
                             serialComm00.BaudRate = Convert.ToInt32(reader["baudRate"]);
                             serialComm00.Parity = Convert.ToInt32(reader["parity"]);
                             serialComm00.DataBits = Convert.ToInt32(reader["dataBits"]);
                             serialComm00.StopBits = Convert.ToInt32(reader["stopBits"]);
-                            serialComm00.CommType = reader["CommType"].ToString()??string.Empty;
+                            serialComm00.CommType = reader["CommType"].ToString() ?? string.Empty;
                             serialList.Add(serialComm00);
                         }
                         resultSerialCommInfo.SerialCommList = serialList;
@@ -307,6 +318,7 @@ public class DbService : IDbService
             return resultSerialCommInfo;
         }
     }
+
     public ResultInfo AddHardCamera(HardInfo hardInfo)
     {
         var resultInfo = new ResultInfo();
@@ -316,7 +328,7 @@ public class DbService : IDbService
             {
                 conn.Open();
                 var sql = "INSERT INTO t_hardcamera (hostbh,type,ip, port,username,password) " +
-                             "VALUES (@hostbh,@type,@ip, @port,@username,@password);";
+                          "VALUES (@hostbh,@type,@ip, @port,@username,@password);";
                 using (var cmd = new MySqlCommand(sql, conn))
                 {
                     // 添加参数（避免拼接字符串导致SQL注入）
@@ -343,10 +355,11 @@ public class DbService : IDbService
         catch (Exception ex)
         {
             resultInfo.Code = PublicConst.FlagNo;
-            resultInfo.Message = "保存摄像机信息异常："+ ex.Message;
+            resultInfo.Message = "保存摄像机信息异常：" + ex.Message;
             return resultInfo;
         }
     }
+
     public ResultInfo EditHardCamera(HardInfo hardInfo)
     {
         var resultInfo = new ResultInfo();
@@ -355,7 +368,8 @@ public class DbService : IDbService
             using (var conn = new MySqlConnection(GetConnectionString()))
             {
                 conn.Open();
-                var sql = "update t_hardcamera set hostbh=@hostbh,ip=@ip,port=@port,username=@username,password=@password where bh=@bh";
+                var sql =
+                    "update t_hardcamera set hostbh=@hostbh,ip=@ip,port=@port,username=@username,password=@password where bh=@bh";
                 using (var cmd = new MySqlCommand(sql, conn))
                 {
                     // 添加参数（避免拼接字符串导致SQL注入）
@@ -382,10 +396,11 @@ public class DbService : IDbService
         catch (Exception ex)
         {
             resultInfo.Code = PublicConst.FlagNo;
-            resultInfo.Message = "保存摄像机信息异常："+ ex.Message;
+            resultInfo.Message = "保存摄像机信息异常：" + ex.Message;
             return resultInfo;
         }
     }
+
     public ResultInfo AddHeart(MainInfoBean mainInfoBean)
     {
         var resultInfo = new ResultInfo();
@@ -395,9 +410,9 @@ public class DbService : IDbService
             {
                 conn.Open();
                 var sql = "INSERT INTO t_heart (hostbh,id, length,txzs,kmcs,yxms,agzms,astate,a1gzm,a2gzm,a1zs,a2zs," +
-                    "a1dl,a2dl,a1wz,a2wz,bstate,b1gzm,b2gzm,b1zs,b2zs,b1dl,b2dl,b1wz,b2wz,dlcgqzt,dostate,kzdldo,total,datetime) " +
-                    "VALUES (@hostbh,@id, @length,@txzs,@kmcs,@yxms,@agzms,@astate,@a1gzm,@a2gzm,@a1zs,@a2zs," +
-                    "@a1dl,@a2dl,@a1wz,@a2wz,@bstate,@b1gzm,@b2gzm,@b1zs,@b2zs,@b1dl,@b2dl,@b1wz,@b2wz,@dlcgqzt,@dostate,@kzdldo,@total,@datetime);";
+                          "a1dl,a2dl,a1wz,a2wz,bstate,b1gzm,b2gzm,b1zs,b2zs,b1dl,b2dl,b1wz,b2wz,dlcgqzt,dostate,kzdldo,total,datetime) " +
+                          "VALUES (@hostbh,@id, @length,@txzs,@kmcs,@yxms,@agzms,@astate,@a1gzm,@a2gzm,@a1zs,@a2zs," +
+                          "@a1dl,@a2dl,@a1wz,@a2wz,@bstate,@b1gzm,@b2gzm,@b1zs,@b2zs,@b1dl,@b2dl,@b1wz,@b2wz,@dlcgqzt,@dostate,@kzdldo,@total,@datetime);";
                 using (var cmd = new MySqlCommand(sql, conn))
                 {
                     // 添加参数（避免拼接字符串导致SQL注入）
@@ -448,10 +463,11 @@ public class DbService : IDbService
         catch (Exception ex)
         {
             resultInfo.Code = PublicConst.FlagNo;
-            resultInfo.Message = "保存心跳信息异常："+ ex.Message;
+            resultInfo.Message = "保存心跳信息异常：" + ex.Message;
             return resultInfo;
         }
     }
+
     public ResultInfo SavePersonDay(MainInfoBean mainInfoBean)
     {
         if (_currDate.Equals(""))
@@ -480,6 +496,7 @@ public class DbService : IDbService
         }
         return AddPersonDay(mainInfoBean);
     }
+
     private ResultInfo GetPersonDay(MainInfoBean mainInfoBean)
     {
         var resultInfo = new ResultInfo();
@@ -510,15 +527,16 @@ public class DbService : IDbService
                 }
             }
             resultInfo.Code = PublicConst.FlagYes;
-            return resultInfo;               
+            return resultInfo;
         }
         catch (Exception ex)
         {
             resultInfo.Code = PublicConst.FlagNo;
-            resultInfo.Message = "获取人数信息异常："+ ex.Message;
+            resultInfo.Message = "获取人数信息异常：" + ex.Message;
             return resultInfo;
         }
     }
+
     private ResultInfo AddPersonDay(MainInfoBean mainInfoBean)
     {
         var resultInfo = new ResultInfo();
@@ -527,7 +545,8 @@ public class DbService : IDbService
             using (var conn = new MySqlConnection(GetConnectionString()))
             {
                 conn.Open();
-                var sql = "INSERT INTO t_personday (hostbh,id,personcount,date) values(@hostbh,@id,@personcount,@date);SELECT LAST_INSERT_ID();";
+                var sql =
+                    "INSERT INTO t_personday (hostbh,id,personcount,date) values(@hostbh,@id,@personcount,@date);SELECT LAST_INSERT_ID();";
                 using (var cmd = new MySqlCommand(sql, conn))
                 {
                     // 添加参数（避免拼接字符串导致SQL注入）
@@ -545,15 +564,16 @@ public class DbService : IDbService
                 }
             }
             resultInfo.Code = PublicConst.FlagYes;
-            return resultInfo;    
+            return resultInfo;
         }
         catch (Exception ex)
         {
             resultInfo.Code = PublicConst.FlagNo;
-            resultInfo.Message = "保存心跳信息异常："+ ex.Message;
+            resultInfo.Message = "保存心跳信息异常：" + ex.Message;
             return resultInfo;
         }
     }
+
     private ResultInfo UpdatePersonDay(MainInfoBean mainInfoBean)
     {
         var resultInfo = new ResultInfo();
@@ -582,12 +602,12 @@ public class DbService : IDbService
                 resultInfo.Code = PublicConst.FlagNo;
                 resultInfo.Message = "更新每日通过人数失败！";
             }
-            return resultInfo;   
+            return resultInfo;
         }
         catch (Exception ex)
         {
             resultInfo.Code = PublicConst.FlagNo;
-            resultInfo.Message = "保存每天通过人数信息异常："+ ex.Message;
+            resultInfo.Message = "保存每天通过人数信息异常：" + ex.Message;
             return resultInfo;
         }
     }
@@ -600,7 +620,7 @@ public class DbService : IDbService
             {
                 conn.Open();
                 var sql = "INSERT INTO t_error (hostbh,door,type,datetime,id,message,serial) " +
-                             "VALUES (@hostbh, @door,@type,@datetime,@id,@message,@serial);";
+                          "VALUES (@hostbh, @door,@type,@datetime,@id,@message,@serial);";
                 using (var cmd = new MySqlCommand(sql, conn))
                 {
                     // 添加参数（避免拼接字符串导致SQL注入）
@@ -623,15 +643,16 @@ public class DbService : IDbService
                 resultInfo.Code = PublicConst.FlagNo;
                 resultInfo.Message = "更新日志信息失败！";
             }
-            return resultInfo;   
+            return resultInfo;
         }
         catch (Exception ex)
         {
             resultInfo.Code = PublicConst.FlagNo;
-            resultInfo.Message = "保存日志信息异常："+ ex.Message;
+            resultInfo.Message = "保存日志信息异常：" + ex.Message;
             return resultInfo;
         }
     }
+
     public ResultInfo AddAlarm(CameraBean cameraBean)
     {
         var resultInfo = new ResultInfo();
@@ -641,7 +662,7 @@ public class DbService : IDbService
             {
                 conn.Open();
                 var sql = "INSERT INTO t_alarm (id,door,type,datetime,upload,filepath,serial,hostbh) " +
-                             "VALUES (@id,@door,@type,@datetime,@upload,@filepath,@serial,@hostbh);";
+                          "VALUES (@id,@door,@type,@datetime,@upload,@filepath,@serial,@hostbh);";
                 using (var cmd = new MySqlCommand(sql, conn))
                 {
                     // 添加参数（避免拼接字符串导致SQL注入）
@@ -664,13 +685,103 @@ public class DbService : IDbService
             {
                 resultInfo.Code = PublicConst.FlagNo;
                 resultInfo.Message = "更新拍照信息失败！";
-            }            return resultInfo;   
+            }
+            return resultInfo;
         }
         catch (Exception ex)
         {
             resultInfo.Code = PublicConst.FlagNo;
-            resultInfo.Message = "保存拍照信息异常："+ ex.Message;
+            resultInfo.Message = "保存拍照信息异常：" + ex.Message;
             return resultInfo;
+        }
+    }
+    public ResultInfo AddCommInfo(SerialComm serialComm)
+    {
+        var resultInfo = new ResultInfo();
+        try
+        {
+            using (var conn = new MySqlConnection(GetConnectionString()))
+            {
+                conn.Open();
+                var sql =
+                    "INSERT INTO t_mainbord (hostbh,id, name,commname,baudRate,parity,dataBits,stopBits,commType) " +
+                    "VALUES (@hostbh,@id, @name,@commname,@baudRate,@parity,@dataBits,@stopBits,@commType);";
+                using (var cmd = new MySqlCommand(sql, conn))
+                {
+                    // 添加参数（避免拼接字符串导致SQL注入）
+                    cmd.Parameters.AddWithValue("@hostbh", serialComm.HostBh);
+                    cmd.Parameters.AddWithValue("@id", serialComm.Id);
+                    cmd.Parameters.AddWithValue("@name", serialComm.Name);
+                    cmd.Parameters.AddWithValue("@commname", serialComm.CommName);
+                    cmd.Parameters.AddWithValue("@baudRate", serialComm.BaudRate);
+                    cmd.Parameters.AddWithValue("@parity", serialComm.Parity);
+                    cmd.Parameters.AddWithValue("@dataBits", serialComm.DataBits);
+                    cmd.Parameters.AddWithValue("@stopBits", serialComm.StopBits);
+                    cmd.Parameters.AddWithValue("@commType", serialComm.CommType);
+                    resultInfo.Tag = cmd.ExecuteNonQuery();
+                }
+            }
+            if (resultInfo.Tag == 1)
+            {
+                resultInfo.Code = PublicConst.FlagYes;
+            }
+            else
+            {
+                resultInfo.Code = PublicConst.FlagNo;
+                resultInfo.Message = "保存主板信息失败！";
+            }
+            return resultInfo;
+        }
+        catch (Exception ex)
+        {
+            resultInfo.Code = PublicConst.FlagNo;
+            resultInfo.Message = "保存主板信息异常：" + ex.Message;
+            return resultInfo;
+        }
+    }
+    public ResultInfo EditCommInfo(SerialComm serialComm)
+    {
+        var resultInfo = new ResultInfo();
+        try
+        {
+            using (var conn = new MySqlConnection(GetConnectionString()))
+            {
+                conn.Open();
+                var sql = 
+                    "update t_mainbord set hostbh=@hostbh,id=@id,name=@name,commname=@commname,baudRate=@baudRate,"
+                    + "parity=@parity,dataBits=@dataBits,stopBits=@stopBits,commType=@commType where bh=@bh;";
+                using (var cmd = new MySqlCommand(sql, conn))
+                {
+                    // 添加参数（避免拼接字符串导致SQL注入）
+                    cmd.Parameters.AddWithValue("@hostbh", serialComm.HostBh);
+                    cmd.Parameters.AddWithValue("@id", serialComm.Id);
+                    cmd.Parameters.AddWithValue("@name", serialComm.Name);
+                    cmd.Parameters.AddWithValue("@commname", serialComm.CommName);
+                    cmd.Parameters.AddWithValue("@baudRate", serialComm.BaudRate);
+                    cmd.Parameters.AddWithValue("@parity", serialComm.Parity);
+                    cmd.Parameters.AddWithValue("@dataBits", serialComm.DataBits);
+                    cmd.Parameters.AddWithValue("@stopBits", serialComm.StopBits);
+                    cmd.Parameters.AddWithValue("@commType", serialComm.CommType);
+                    cmd.Parameters.AddWithValue("@bh", serialComm.Bh);
+                    resultInfo.Tag = cmd.ExecuteNonQuery();
+                }
+            }
+            if (resultInfo.Tag == 1)
+            {
+                resultInfo.Code = PublicConst.FlagYes;
+            }
+            else
+            {
+                resultInfo.Code = PublicConst.FlagNo;
+                resultInfo.Message = "更新主板信息失败！";
+            }
+            return resultInfo;
+        }
+        catch (Exception ex)
+        {
+            resultInfo.Code = PublicConst.FlagNo;
+            resultInfo.Message = "更新主板信息异常：" + ex.Message;
+            return resultInfo;        
         }
     }
 }

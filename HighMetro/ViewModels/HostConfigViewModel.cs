@@ -18,9 +18,6 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
     private HostOptions? _config;
     
     [ObservableProperty] 
-    private bool _isReadOnly;
-
-    [ObservableProperty] 
     private string _hostState;
     
     [ObservableProperty]

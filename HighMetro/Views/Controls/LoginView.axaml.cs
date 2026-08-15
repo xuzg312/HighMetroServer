@@ -11,11 +11,6 @@ public partial class LoginView : UserControl
     {
         InitializeComponent();
     }
-
-    private void InitializeComponent()
-    {
-        AvaloniaXamlLoader.Load(this);
-    }
     private void OnTextChanged(object? sender, TextChangedEventArgs e)
     {
         // 获取ViewModel

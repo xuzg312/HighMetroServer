@@ -14,9 +14,6 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
 {
     [ObservableProperty]
     private CamOptions? _config;
-    
-    [ObservableProperty] 
-    private bool _isReadOnly;
 
     [ObservableProperty] 
     private string _camState;
@@ -35,9 +32,8 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
 
     private bool _start;
     private CamRemoteLinkImpl? _camRemoteLinkImpl;
-    public CamConfigViewModel(bool isReadOnly)
+    public CamConfigViewModel()
     {
-        IsReadOnly = isReadOnly;
         _start = false;
         CamState = "【 摄像头连接状态：❌ 】";
         WeakReferenceMessenger.Default.RegisterAll(this);

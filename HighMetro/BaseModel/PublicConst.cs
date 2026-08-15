@@ -19,7 +19,8 @@ public class PublicConst
     public const int PerSockDataMaxLength = 128;
     public const int ClientMaxLength = 254;
     public const int MaxBufferSize = 1024 * 1024;
-        
+    public const int MaxLogLines = 100;
+    
     public const byte OnLine = 0xF0;          //上线命令；
     public const byte OffLine = 0xF1;          //下线命令；
     public const byte SendCount = 2;           //UDP发送次数；

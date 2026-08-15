@@ -20,9 +20,6 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
 {
     [ObservableProperty]
     private SerialPortOptions? _config;
-    
-    [ObservableProperty] 
-    private bool _isReadOnly;
 
     [ObservableProperty] 
     private string _commState;
@@ -77,9 +74,8 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     private CommSerialImpl? _commSerialImpl;
     private bool _buildServer;
 
-    public SerialConfigViewModel(bool isReadOnly,int serial)
+    public SerialConfigViewModel(int serial)
     {
-        IsReadOnly = isReadOnly;
         _serial = serial;
         _start = false;
         _buildServer = false;
@@ -90,9 +86,8 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         CommState = "【 串口连接状态：❌ 】";
         WeakReferenceMessenger.Default.RegisterAll(this);
     }
-    public void UpdateParams(bool isReadOnly, int serial, SerialPortOptions? options)
+    public void UpdateParams(int serial, SerialPortOptions? options)
     {
-        IsReadOnly = isReadOnly;
         _serial = serial;
         InitComboSource(options);
     }

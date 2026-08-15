@@ -23,7 +23,6 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
     private CancellationTokenSource? _ctsServer;
     private Task? _acceptLoopTask;
     private Task? _readTask;
-
     #endregion
     
     public bool Start()
@@ -55,7 +54,7 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
         }
         catch (Exception)
         {
-            ClearResource();
+            CloseServer();
             hostInfo.RaiseClientConnEvent("启动Server失败！");
             return false;
         }
@@ -68,16 +67,11 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
         }
         catch (OperationCanceledException)
         {
-            //主动取消监听，正常优雅关闭，不打错误日志
         }
         catch (Exception ex)
         {
             var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             ParaSetupModules.RaiseAscDataProdEvent($"TCP监听顶层异常：{ex.Message}【{currDateTime}】");
-        }
-        finally
-        {
-            CloseServer();
         }
     }
     #region 接收客户端连接事件；
@@ -90,7 +84,7 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
                 var tcpClient = await _listener.AcceptTcpClientAsync(token);
                 if (tcpClient.Client.RemoteEndPoint is not IPEndPoint endPoint)
                 {
-                    tcpClient.Close();
+                    tcpClient.Dispose();
                     continue;
                 }
                 var key = endPoint.Address + "【" + hostInfo.Bh + "】";
@@ -105,10 +99,15 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
                 _dictionary.TryAdd(key, newChild);
                 oldChild?.CloseClient();
             }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
             catch (Exception ex)
             {
                 var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                ParaSetupModules.RaiseAscDataProdEvent($"接收客户端异常：{ex.Message}【{currDateTime}】");
+                ParaSetupModules.RaiseAscDataProdEvent($"等待客户端连接异常：{ex.Message}【{currDateTime}】");
+                await Task.Delay(100, token);
             }
         }
     }
@@ -154,7 +153,6 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
                 }
                 catch (Exception ex)
                 {
-                    // 单个客户端解析异常隔离，不中断整体轮询
                     var currentTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                     ParaSetupModules.RaiseAscDataProdEvent($"解析客户端数据异常：{ex.Message}【{currentTime}】");
                 }
@@ -284,24 +282,15 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
     {
         if (!_start)
             return;
-        ClearResource();
-    }
-    #endregion
-
-    private void ClearResource()
-    {
-        if (_listener != null)
+        try
         {
-            try
-            {
-                _listener.Stop();
-            }
-            catch (Exception)
-            {
-                //忽略；
-            }
-            _listener = null;
+            _listener?.Stop();
         }
+        catch (Exception)
+        {
+            //忽略；
+        }
+        _listener = null;
         try
         {
             _ctsServer?.Cancel();
@@ -310,6 +299,15 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
         {
             //忽略；
         }
+        try
+        {
+            _ctsServer?.Dispose();
+        }
+        catch
+        {
+            //忽略；
+        }
+        _ctsServer = null;
         //断开与客户端的连接；
         var snapshotList = _dictionary.Values.ToList();
         foreach (var kv in snapshotList)
@@ -323,7 +321,7 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
                 //忽略；
             }
         }
-        _dictionary.Clear(); 
+        _dictionary.Clear();
         foreach (var item in _getBufferDataImplList)
         {
             try
@@ -354,15 +352,7 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
             //忽略;
         }
         _readTask = null;
-        try
-        {
-            _ctsServer?.Dispose();
-        }
-        catch
-        {
-            //忽略；
-        }
-        _ctsServer = null;
         _start = false;
     }
+    #endregion
 }

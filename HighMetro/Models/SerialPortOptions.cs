@@ -24,7 +24,7 @@ public partial class SerialPortOptions : ObservableObject
     {
         PortName = portName;
         BaudRate = baudRate;
-        DataBits = _dataBits;
+        DataBits = dataBits;
         Parity = parity;
         StopBits = stopBits;
     }

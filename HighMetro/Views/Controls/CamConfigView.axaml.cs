@@ -19,21 +19,13 @@ public partial class CamConfigView : UserControl
         get => GetValue(ConfigProperty);
         set => SetValue(ConfigProperty, value);
     }
-    // 2. 注册 IsReadOnly 属性
-    public static readonly StyledProperty<bool> IsReadOnlyProperty =
-        AvaloniaProperty.Register<CamConfigView, bool>(nameof(IsReadOnly));
 
-    public bool IsReadOnly
-    {
-        get => GetValue(IsReadOnlyProperty);
-        set => SetValue(IsReadOnlyProperty, value);
-    }
     // 2. 定义内部 ViewModel 属性
     // 这样 XAML 就可以通过 ElementName="Root" 访问到它
     public CamConfigViewModel CamConfigViewModelVm { get; }
     public CamConfigView()
     {
-        CamConfigViewModelVm = new CamConfigViewModel(false);
+        CamConfigViewModelVm = new CamConfigViewModel();
         InitializeComponent();
         Unloaded += OnViewUnloaded;
     }
@@ -50,12 +42,6 @@ public partial class CamConfigView : UserControl
         {
             var newVal = args.GetNewValue<CamOptions>();
             view.CamConfigViewModelVm.Config = newVal;
-        });
-
-        IsReadOnlyProperty.Changed.AddClassHandler<CamConfigView, bool>((view, args) =>
-        {
-            var newVal = args.GetNewValue<bool>();
-            view.CamConfigViewModelVm.IsReadOnly = newVal;
         });
     }
 }

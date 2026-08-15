@@ -9,7 +9,7 @@
             BorderThickness="1" 
             CornerRadius="1"
             Padding="2">
-    <Grid RowDefinitions="Auto,Auto" RowSpacing="5" 
+    <Grid RowDefinitions="Auto,Auto" RowSpacing="2" 
           DataContext="{Binding HostConfigViewModelVm, ElementName=Root}">
         <!-- 第一行：同一行横向排列：标题｜红色提示框｜消息栏 -->
         <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto" VerticalAlignment="Center">
@@ -23,33 +23,39 @@
                        TextAlignment="Left" TextWrapping="NoWrap"/>
         </Grid>
         <!-- 第二行：输入框 + 按钮 -->
-        <Grid Grid.Row="1"
-              ColumnDefinitions="Auto,6,120,
-                         12,Auto,6,100,
-                         12,Auto,6,120,
-                         12,Auto,6,180,
-                         12,Auto,6,Auto" 
+        <Grid Grid.Row="1" ColumnSpacing="4"
+              ColumnDefinitions="200,240,240,240,16,*" 
               VerticalAlignment="Center">
-            <TextBlock Grid.Column="0"  Text="IP：" VerticalAlignment="Center"/>
-            <TextBox Grid.Column="2"  Text="{Binding Ip}" 
-                     IsReadOnly="{Binding IsReadOnly}" Watermark="请输入IP地址"/>
-
-            <TextBlock Grid.Column="4"  Text="端口：" VerticalAlignment="Center"/>
-            <TextBox Grid.Column="6"  Text="{Binding Port}" 
-                     IsReadOnly="{Binding IsReadOnly}" Watermark="端口号"/>
-
-            <TextBlock Grid.Column="8"  Text="Code：" VerticalAlignment="Center"/>
-            <TextBox Grid.Column="10" Text="{Binding Code}" 
-                     IsReadOnly="{Binding IsReadOnly}" Watermark="设备编码"/>
-
-            <TextBlock Grid.Column="12" Text="名称：" VerticalAlignment="Center"/>
-            <TextBox Grid.Column="14" Text="{Binding Name}" 
-                     IsReadOnly="{Binding IsReadOnly}" Watermark="设备名称"/>
-
-            <Button Grid.Column="16" Content="监听" Command="{Binding OpenCommand}" 
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
+                <TextBlock Text="IP地址：" Width="60" VerticalAlignment="Center" 
+                           TextAlignment="Right"/>
+                <TextBox Text="{Binding Ip}" Width="140"
+                     IsReadOnly="True" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                <TextBlock Text="端口：" Width="80" VerticalAlignment="Center" 
+                           TextAlignment="Right"/>
+                <TextBox Text="{Binding Port}" Width="160"
+                     IsReadOnly="True" />
+            </StackPanel>
+            <StackPanel Grid.Column="2"  Orientation="Horizontal" Spacing="4">
+                <TextBlock Text="Code：" Width="80" VerticalAlignment="Center" 
+                           TextAlignment="Right"/>
+                <TextBox Text="{Binding Code}" Width="160"
+                     IsReadOnly="True" />
+            </StackPanel>
+            <StackPanel Grid.Column="3"  Orientation="Horizontal" Spacing="4">
+                <TextBlock Text="名称：" Width="80" VerticalAlignment="Center" 
+                           TextAlignment="Right"/>
+                <TextBox Text="{Binding Name}" Width="160" 
+                     IsReadOnly="True" />
+            </StackPanel>
+            <StackPanel Grid.Column="5"  Orientation="Horizontal" Spacing="4">
+                <Button Content="监听" Command="{Binding OpenCommand}" 
+                        Width="60" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <Button Content="关闭" Command="{Binding CloseCommand}" 
                     Width="60" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-            <Button Grid.Column="18" Content="关闭" Command="{Binding CloseCommand}" 
-                    Width="60" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </StackPanel>
         </Grid>
     </Grid>
     </Border>

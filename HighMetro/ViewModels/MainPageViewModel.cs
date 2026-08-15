@@ -1,13 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using HighMetro.BaseModel;
 using HighMetro.ClassLib;
 using HighMetro.Event;
 using HighMetro.Models;
-using HighMetro.Services;
 
 namespace HighMetro.ViewModels;
 
@@ -31,6 +29,7 @@ public partial class MainPageViewModel : ViewModelBase
     [ObservableProperty]
     private string? _hexMessageText;
     
+    private readonly Queue<string> _log4Queue = new();
     public MainPageViewModel()
     {
         ParaSetupModules.AscDataProdEvent += OnShowAscDataProdEvent;
@@ -80,8 +79,16 @@ public partial class MainPageViewModel : ViewModelBase
             return;
         }
         var message = stringEventArgs.Message;
-        // 将更新操作提交到 UI 线程队列
-        Dispatcher.UIThread.Post(() => { AscMessageText = message; }); 
+        lock (_log4Queue) 
+        {
+            _log4Queue.Enqueue(message);
+            // 超限就持续踢掉最早行
+            while (_log4Queue.Count > PublicConst.MaxLogLines)
+            {
+                _log4Queue.Dequeue();
+            }
+            Dispatcher.UIThread.Post(() => { AscMessageText = string.Join(Environment.NewLine, _log4Queue); }); 
+        }
     }
     //十六进制消息显示；
     private void OnShowHexDataProdEvent(object? obj, EventArgs arg)

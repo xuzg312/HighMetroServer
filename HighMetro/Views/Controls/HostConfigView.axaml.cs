@@ -19,15 +19,7 @@ public partial class HostConfigView : UserControl
         get => GetValue(ConfigProperty);
         set => SetValue(ConfigProperty, value);
     }
-    // 2. 注册 IsReadOnly 属性
-    public static readonly StyledProperty<bool> IsReadOnlyProperty =
-        AvaloniaProperty.Register<HostConfigView, bool>(nameof(IsReadOnly));
 
-    public bool IsReadOnly
-    {
-        get => GetValue(IsReadOnlyProperty);
-        set => SetValue(IsReadOnlyProperty, value);
-    }
     // 2. 定义内部 ViewModel 属性
     // 这样 XAML 就可以通过 ElementName="Root" 访问到它
     public HostConfigViewModel HostConfigViewModelVm { get; }
@@ -51,12 +43,6 @@ public partial class HostConfigView : UserControl
         {
             var newVal = args.GetNewValue<HostOptions>();
             view.HostConfigViewModelVm.Config = newVal;
-        });
-
-        IsReadOnlyProperty.Changed.AddClassHandler<HostConfigView, bool>((view, args) =>
-        {
-            var newVal = args.GetNewValue<bool>();
-            view.HostConfigViewModelVm.IsReadOnly = newVal;
         });
     }
 }
