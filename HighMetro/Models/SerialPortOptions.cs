@@ -6,6 +6,12 @@ namespace HighMetro.Models;
 public partial class SerialPortOptions : ObservableObject
 {
     [ObservableProperty] 
+    private int _id;
+    
+    [ObservableProperty] 
+    private string _name;
+    
+    [ObservableProperty] 
     private string _portName;
     
     [ObservableProperty] 
@@ -20,8 +26,17 @@ public partial class SerialPortOptions : ObservableObject
     [ObservableProperty] 
     private int _stopBits;
 
-    public SerialPortOptions(string portName,int baudRate,int dataBits, int parity,int stopBits)
+    public SerialPortOptions(
+        int id,
+        string name,
+        string portName,
+        int baudRate,
+        int dataBits, 
+        int parity,
+        int stopBits)
     {
+        Id = id;
+        Name = name;
         PortName = portName;
         BaudRate = baudRate;
         DataBits = dataBits;

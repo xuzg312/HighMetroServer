@@ -19,10 +19,16 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
     private string _camState;
     
     [ObservableProperty]
+    private int _id;
+
+    [ObservableProperty]
+    private string _name = string.Empty;
+
+    [ObservableProperty]
     private string _ip = string.Empty;
 
     [ObservableProperty]
-    private int _port = 3000;
+    private int _port;
     
     [ObservableProperty]
     private string _userName = string.Empty;

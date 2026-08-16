@@ -22,7 +22,7 @@ public class CamRemoteLinkImpl
     public LoadCamResult Login(HardInfo hardInfo)
     {
         //登录设备；
-        var loginInfo = new CHCNetSDK.NET_DVR_USER_LOGIN_INFO();
+        var loginInfo = new ChcNetSdk.NetDvrUserLoginInfo();
 
         //设备IP地址或者域名
         var byIp = System.Text.Encoding.Default.GetBytes(hardInfo.Ip);
@@ -42,7 +42,7 @@ public class CamRemoteLinkImpl
         loginInfo.wPort = (ushort)hardInfo.Port;//设备服务端口号
         loginInfo.bUseAsynLogin = false; //是否异步登录：0- 否，1- 是 
 
-        var deviceInfo = new CHCNetSDK.NET_DVR_DEVICEINFO_V40();
+        var deviceInfo = new ChcNetSdk.NetDvrDeviceinfoV40();
 
         //登录设备 Login the device
         var userId = HikSdk.NET_DVR_Login_V40(ref loginInfo, ref deviceInfo);
@@ -105,7 +105,7 @@ public class CamRemoteLinkImpl
 
             #region 4. SDK抓拍逻辑
             var lChannel = 1;
-            var lpJpegPara = new CHCNetSDK.NET_DVR_JPEGPARA
+            var lpJpegPara = new ChcNetSdk.NetDvrJpegpara
             {
                 wPicQuality = 0,
                 wPicSize = 0xff
@@ -187,6 +187,65 @@ public class CamRemoteLinkImpl
                 Marshal.FreeHGlobal(bufferPtr);
             }
         }
+    }
+    public LoadCamResult Preview(
+        int iUserId,RealDataCallBack realDataCb,PlayCtrl.DeccbFun decodeCallback)
+    {
+        var playPort=0;
+        if (PlayCtrl.PlayM4_GetPort(ref playPort)>=0)
+        {
+            return GetLastError();
+        }
+        var playInfo = new ChcNetSdk.NetDvrPreviewInfo
+        {
+            hPlayWnd = IntPtr.Zero,
+            lChannel = 1,          // 通道号，IPC一般1
+            dwStreamType = 1,      // 1-主码流，2-子码流
+            dwLinkMode = 0,        //0：TCP方式,1：UDP方式,2：多播方式,3 - RTP方式，4-RTP/RTSP,5-RSTP/HTTP
+            bBlocked = true,      //0-非阻塞取流, 1-阻塞取流, 如果阻塞SDK内部connect失败将会有5s的超时才能够返回,不适合于轮询取流操作
+            dwDisplayBufNum = 1,   //播放库播放缓冲区最大缓冲帧数，范围1-50，置0时默认为1 
+            byProtoType = 0,       //应用层取流协议，0-私有协议，1-RTSP协议
+            byPreviewMode = 0,     //预览模式，0-正常预览，1-延迟预览
+        };
+        // 开启预览，传入码流回调
+        var playHandle = HikSdk.NET_DVR_RealPlay_V40(iUserId, ref playInfo, realDataCb, nint.Zero);
+        if (playHandle <= 0)
+        {
+            return GetLastError();
+        }
+        var value = PlayCtrl.PlayM4_SetDecCallBackEx(playPort, decodeCallback, IntPtr.Zero,0);
+        if (value <= 0)
+        {
+            return GetLastError();
+        }
+        return new LoadCamResult
+        {
+            Code = PublicConst.FlagYes,
+            Value = playHandle,
+            Tag = value,
+        };
+    }
+    public LoadCamResult StopPreview(int iUserId, int iPort, int iRealHandle)
+    {
+        if (iPort >= 0)
+        {
+            PlayCtrl.PlayM4_Stop(iPort);
+            PlayCtrl.PlayM4_CloseStream(iPort);
+            PlayCtrl.PlayM4_FreePort(iPort);
+        }
+        if (iRealHandle >= 0)
+        {
+            HikSdk.NET_DVR_StopRealPlay(iRealHandle);
+        }
+        if (iUserId >= 0)
+        {
+            HikSdk.NET_DVR_Logout(iUserId);
+        }
+
+        return new LoadCamResult
+        {
+            Code = PublicConst.FlagNo,
+        };
     }
     private void SafeWriteFile(string filePath, byte[] data)
     {

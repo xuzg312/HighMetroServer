@@ -52,6 +52,8 @@ public partial class MainPageViewModel : ViewModelBase
         }
         var serialCommInfo = ParaSetupModules.SerialCommList[0];
         SerialConfig1 = new SerialPortOptions(
+            serialCommInfo.Id,
+            serialCommInfo.Name,
             serialCommInfo.CommName,
             serialCommInfo.BaudRate,
             serialCommInfo.DataBits,
@@ -64,6 +66,8 @@ public partial class MainPageViewModel : ViewModelBase
         }
         serialCommInfo = ParaSetupModules.SerialCommList[1];
         SerialConfig2 = new SerialPortOptions(
+            serialCommInfo.Id,
+            serialCommInfo.Name,
             serialCommInfo.CommName,
             serialCommInfo.BaudRate,
             serialCommInfo.DataBits,

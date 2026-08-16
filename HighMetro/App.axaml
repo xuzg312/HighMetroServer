@@ -25,5 +25,8 @@
         <DataTemplate DataType="viewModels:EditSerialConfigViewModel">
             <views:EditSerialConfigView /> <!-- 确保这里指向正确的 UserControl -->
         </DataTemplate>
+        <DataTemplate DataType="viewModels:CameraPreviewViewModel">
+            <views:CameraPreviewView /> <!-- 确保这里指向正确的 UserControl -->
+        </DataTemplate>
     </Application.DataTemplates>
 </Application>

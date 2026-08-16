@@ -39,6 +39,7 @@ public partial class MainViewModel : ViewModelBase
         BoardMaintainCmd = new RelayCommand(BoardMaintain);
         OpenPhotoQueryCmd = new RelayCommand(OpenPhotoQuery);
         OpenFaultQueryCmd = new RelayCommand(OpenFaultQuery);
+        CameraDebugCmd = new RelayCommand(CameraDebug);
         IsMenuEnabled = false;
         InitializeStartup();
     }
@@ -207,6 +208,7 @@ public partial class MainViewModel : ViewModelBase
     }
     public ICommand CameraMaintainCmd { get; }
     public ICommand BoardMaintainCmd { get; }
+    public ICommand CameraDebugCmd { get; }
     public ICommand OpenPhotoQueryCmd { get; }
     public ICommand OpenFaultQueryCmd { get; }
 
@@ -274,7 +276,33 @@ public partial class MainViewModel : ViewModelBase
             IsMenuEnabled = true;
         });
     }
-
+    private void CameraDebug()
+    {
+        var hardInfo = new HardInfo
+        {
+            HostBh = ParaSetupModules.HostInfo!.Bh,
+            Type = PublicConst.PhotoCamera
+        };
+        var resultInfo = _dbService.GetHardCamera(hardInfo);
+        var vm = new CameraPreviewViewModel(hardInfo,resultInfo);
+        vm.OnClose += OnCamDebugClose;
+        IsMenuEnabled = false;
+        ActivePopupVm = vm;
+        ShowOverlay = true;
+    }
+    private void OnCamDebugClose()
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (ActivePopupVm is CameraPreviewViewModel oldCamDebugVm)
+            {
+                oldCamDebugVm.OnClose -= OnCamDebugClose;
+            }
+            ActivePopupVm = null;
+            ShowOverlay = false;
+            IsMenuEnabled = true;
+        });
+    }
     private void OpenPhotoQuery()
     {
         // ActivePopupVm = new PhotoQueryViewModel();

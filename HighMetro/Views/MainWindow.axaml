@@ -17,8 +17,11 @@
         <Menu Grid.Row="0">
             <!-- 一级菜单：设备管理 -->
             <MenuItem Header="设备管理">
-                <MenuItem Header="摄像机维护" Command="{Binding CameraMaintainCmd}" IsEnabled="{Binding IsMenuEnabled}" />
+                <MenuItem Header="摄像头维护" Command="{Binding CameraMaintainCmd}" IsEnabled="{Binding IsMenuEnabled}" />
                 <MenuItem Header="主板维护" Command="{Binding BoardMaintainCmd}" IsEnabled="{Binding IsMenuEnabled}" />
+            </MenuItem>
+            <MenuItem Header="设备调试">
+                <MenuItem Header="摄像头调试" Command="{Binding CameraDebugCmd}" IsEnabled="{Binding IsMenuEnabled}" />
             </MenuItem>
             <!-- 一级菜单：日志管理 -->
             <MenuItem Header="日志管理">

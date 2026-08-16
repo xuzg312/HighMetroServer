@@ -3,12 +3,12 @@ using System.Runtime.InteropServices;
 
 namespace HighMetro.HikVision;
 
-public class CHCNetSDK
+public class ChcNetSdk
 {
-	public delegate void LOGINRESULTCALLBACK(int lUserID, int dwResult, IntPtr lpDeviceInfo, IntPtr pUser);
+	public delegate void Loginresultcallback(int lUserId, int dwResult, IntPtr lpDeviceInfo, IntPtr pUser);
 
 	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
-	public struct NET_DVR_USER_LOGIN_INFO
+	public struct NetDvrUserLoginInfo
 	{
 		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 129)]
 		public byte[] sDeviceAddress;
@@ -22,7 +22,7 @@ public class CHCNetSDK
 		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 64)]
 		public byte[] sPassword;
 
-		public LOGINRESULTCALLBACK cbLoginResult;
+		public Loginresultcallback cbLoginResult;
 		public IntPtr pUser;
 		public bool bUseAsynLogin;
 		public byte byProxyType; //0:不使用代理，1：使用标准代理，2：使用EHome代理
@@ -40,10 +40,10 @@ public class CHCNetSDK
 	}
 
 	//NET_DVR_Login_V30()参数结构
-	[StructLayoutAttribute(LayoutKind.Sequential)]
-	public struct NET_DVR_DEVICEINFO_V30
+	[StructLayout(LayoutKind.Sequential)]
+	public struct NetDvrDeviceinfoV30
 	{
-		[MarshalAsAttribute(UnmanagedType.ByValArray, SizeConst = 48)]
+		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 48)]
 		public byte[] sSerialNumber; //序列号
 
 		public byte byAlarmInPortNum; //报警输入个数
@@ -107,14 +107,14 @@ public class CHCNetSDK
 		//  byLanguageType 等于0 表示 老设备
 		//  byLanguageType & 0x1表示支持中文
 		//  byLanguageType & 0x2表示支持英文
-		[MarshalAsAttribute(UnmanagedType.ByValArray, SizeConst = 9)]
+		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 9)]
 		public byte[] byRes2; //保留
 	}
 
 	[StructLayout(LayoutKind.Sequential)]
-    public struct NET_DVR_DEVICEINFO_V40
+    public struct NetDvrDeviceinfoV40
     {
-        public NET_DVR_DEVICEINFO_V30 struDeviceV30;
+        public NetDvrDeviceinfoV30 struDeviceV30;
         public byte bySupportLock;        //设备支持锁定功能，该字段由SDK根据设备返回值来赋值的。bySupportLock为1时，dwSurplusLockTime和byRetryLoginTime有效
         public byte byRetryLoginTime;	    //剩余可尝试登陆的次数，用户名，密码错误时，此参数有效
         public byte byPasswordLevel;      //admin密码安全等级0-无效，1-默认密码，2-有效密码,3-风险较高的密码。当用户的密码为出厂默认密码（12345）或者风险较高的密码时，上层客户端需要提示用户更改密码。      
@@ -129,17 +129,40 @@ public class CHCNetSDK
         public int dwOEMCode;
         public int iResidualValidity;   //该用户密码剩余有效天数，单位：天，返回负值，表示密码已经超期使用，例如“-3表示密码已经超期使用3天”
         public byte byResidualValidity; // iResidualValidity字段是否有效，0-无效，1-有效
-        [MarshalAsAttribute(UnmanagedType.ByValArray, SizeConst = 243)]
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 243)]
         public byte[] byRes2;
     }
 	//图片质量
-	[StructLayoutAttribute(LayoutKind.Sequential)]
-	public struct NET_DVR_JPEGPARA
+	[StructLayout(LayoutKind.Sequential)]
+	public struct NetDvrJpegpara
 	{
 		/*注意：当图像压缩分辨率为VGA时，支持0=CIF, 1=QCIF, 2=D1抓图，
 		当分辨率为3=UXGA(1600x1200), 4=SVGA(800x600), 5=HD720p(1280x720),6=VGA,7=XVGA, 8=HD900p
 		仅支持当前分辨率的抓图*/
 		public ushort wPicSize;/* 0=CIF, 1=QCIF, 2=D1 3=UXGA(1600x1200), 4=SVGA(800x600), 5=HD720p(1280x720),6=VGA*/
 		public ushort wPicQuality;/* 图片质量系数 0-最好 1-较好 2-一般 */
+	}
+	//预览V40接口
+	[StructLayout(LayoutKind.Sequential)]
+	public struct NetDvrPreviewInfo
+	{
+		public Int32 lChannel;//通道号
+		public uint dwStreamType;	// 码流类型，0-主码流，1-子码流，2-码流3，3-码流4 等以此类推
+		public uint dwLinkMode;// 0：TCP方式,1：UDP方式,2：多播方式,3 - RTP方式，4-RTP/RTSP,5-RSTP/HTTP 
+		public IntPtr hPlayWnd;//播放窗口的句柄,为NULL表示不播放图象
+		[MarshalAs(UnmanagedType.Bool)]
+		public bool bBlocked;  //0-非阻塞取流, 1-阻塞取流, 如果阻塞SDK内部connect失败将会有5s的超时才能够返回,不适合于轮询取流操作.
+		[MarshalAs(UnmanagedType.Bool)]
+		public bool bPassbackRecord; //0-不启用录像回传,1启用录像回传
+		public byte byPreviewMode;//预览模式，0-正常预览，1-延迟预览
+		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)]
+		public byte[] byStreamID;//流ID，lChannel为0xffffffff时启用此参数
+		public byte byProtoType; //应用层取流协议，0-私有协议，1-RTSP协议
+		public byte byRes1;
+		public byte byVideoCodingType; //码流数据编解码类型 0-通用编码数据 1-热成像探测器产生的原始数据（温度数据的加密信息，通过去加密运算，将原始数据算出真实的温度值）
+		public uint dwDisplayBufNum; //播放库播放缓冲区最大缓冲帧数，范围1-50，置0时默认为1 
+		public byte byNPQMode;	//NPQ是直连模式，还是过流媒体 0-直连 1-过流媒体
+		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 215)]
+		public byte[] byRes;
 	}
 }

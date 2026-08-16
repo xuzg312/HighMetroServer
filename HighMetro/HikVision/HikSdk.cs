@@ -5,6 +5,7 @@ namespace HighMetro.HikVision;
 
 [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 public delegate void RealDataCallBackEx(int lRealHandle, uint dwDataType, IntPtr pBuffer, uint dwBufSize, IntPtr pUser);
+public delegate void RealDataCallBack(Int32 lRealHandle, UInt32 dwDataType, IntPtr pBuffer, UInt32 dwBufSize, IntPtr pUser);
 
 public static partial class HikSdk
 {
@@ -13,8 +14,8 @@ public static partial class HikSdk
     
     [DllImport("HCNetSDK", CallingConvention = CallingConvention.Cdecl)]
     public static extern int NET_DVR_Login_V40(
-        ref CHCNetSDK.NET_DVR_USER_LOGIN_INFO pLoginInfo, 
-        ref CHCNetSDK.NET_DVR_DEVICEINFO_V40 lpDeviceInfo);
+        ref ChcNetSdk.NetDvrUserLoginInfo pLoginInfo, 
+        ref ChcNetSdk.NetDvrDeviceinfoV40 lpDeviceInfo);
 
     [LibraryImport("HCNetSDK")]
     public static partial uint NET_DVR_GetLastError();
@@ -26,7 +27,7 @@ public static partial class HikSdk
     public static partial int NET_DVR_CaptureJPEGPicture_NEW(
         int lUserId, 
         int lChannel, 
-        ref CHCNetSDK.NET_DVR_JPEGPARA lpJpegPara, 
+        ref ChcNetSdk.NetDvrJpegpara lpJpegPara, 
         IntPtr sJpegPicBuffer, 
         uint dwPicSize, 
         ref uint lpSizeReturned);
@@ -39,5 +40,13 @@ public static partial class HikSdk
     
     [LibraryImport("HCNetSDK")]
     public static partial int NET_DVR_RemoteControl(int lUserId, int dwCommand, IntPtr lpInBuffer, int dwInBufferSize);
+
+    [DllImport("HCNetSDK", CallingConvention = CallingConvention.Cdecl)]
+    public static extern int NET_DVR_RealPlay_V40(
+        int iUserId, 
+        ref ChcNetSdk.NetDvrPreviewInfo lpPreviewInfo, 
+        RealDataCallBack fRealDataCallBack_V30, 
+        IntPtr pUser);
+    
 
 }

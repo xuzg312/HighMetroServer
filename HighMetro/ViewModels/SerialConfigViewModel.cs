@@ -25,6 +25,12 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     private string _commState;
     
     [ObservableProperty] 
+    private int? _id;
+    
+    [ObservableProperty] 
+    private string? _name;
+
+    [ObservableProperty] 
     private ObservableCollection<CodeNameModals> _portNameList= new ([]);
 
     [ObservableProperty] 
@@ -106,6 +112,8 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     private void InitComboSource(SerialPortOptions? value)
     {
         if (value is null) return;
+        Id = value.Id;
+        Name=value.Name;
         PortNameList.Clear();
         BaudRateList.Clear();
         DataBitsList.Clear();

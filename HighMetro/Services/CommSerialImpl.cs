@@ -39,7 +39,6 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
     private int _parseTotalBytes;
     private Task? _parseBackgroundTask;
     private CancellationTokenSource? _parseCts;
-    private readonly object _serialLock = new();
     public bool Open()
     {
         if (_start)
@@ -79,38 +78,39 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
     }
     private void OnSerialDataReceived(object sender, SerialDataReceivedEventArgs e)
     {
-        lock (_serialLock)
+        try
         {
             if (sender is not SerialPort sp || !sp.IsOpen)
                 return;
-            try
+            var readBytesCount = sp.BytesToRead;
+            if (readBytesCount <= 0)
+                return;
+            if (readBytesCount > PublicConst.SockDataMaxLength)
             {
-                var readBytesCount = sp.BytesToRead;
-                if (readBytesCount <= 0)
-                    return;
-                if (readBytesCount > PublicConst.SockDataMaxLength)
-                {
-                    var currTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                    ParaSetupModules.RaiseAscDataProdEvent($"串口接收数据包超长，长度{readBytesCount}已丢弃！【{currTime}】");
-                    return;
-                }
-                var buffer = new byte[readBytesCount];
-                var actualRead = _serialPort.Read(buffer, 0, readBytesCount);
-                if (actualRead <= 0)
-                {
-                    return;
-                }
-                var validData = new byte[actualRead];
-                Array.Copy(buffer, validData, actualRead);
-                Interlocked.Increment(ref _receiveTotalCount);
-                Interlocked.Add(ref _receiveTotalBytes, actualRead);
-                _receiveQueue.Enqueue(validData);
+                var currTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                ParaSetupModules.RaiseAscDataProdEvent($"串口接收数据包超长，长度{readBytesCount}已丢弃！【{currTime}】");
+                return;
             }
-            catch (Exception ex)
+            var validData = new byte[readBytesCount];
+            var actualRead = sp.Read(validData, 0, readBytesCount);
+            if (actualRead <= 0)
             {
-                var currentTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                ParaSetupModules.RaiseAscDataProdEvent($"接收串口数据异常！{ex.Message}【{currentTime}】");
+                return;
             }
+            if (actualRead != validData.Length)
+            {
+                var temp = new byte[actualRead];
+                Array.Copy(validData, temp, actualRead);
+                validData = temp;
+            }
+            Interlocked.Increment(ref _receiveTotalCount);
+            Interlocked.Add(ref _receiveTotalBytes, actualRead);
+            _receiveQueue.Enqueue(validData);
+        }
+        catch (Exception ex)
+        {
+            var currentTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            ParaSetupModules.RaiseAscDataProdEvent($"接收串口数据异常！{ex.Message}【{currentTime}】");
         }
     }
     private async Task ParseDataLoop(CancellationToken token)
@@ -134,34 +134,43 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
     {
         while (!token.IsCancellationRequested)
         {
-            var hasNewData = false;
-            // 1. 一次性把队列所有数据全部灌入缓冲区
-            while (_receiveQueue.TryDequeue(out var data) && data.Length > 0)
+            try
             {
-                hasNewData = true;
-                foreach (var b in data)
+                var hasNewData = false;
+                while (_receiveQueue.TryDequeue(out var data))
                 {
-                    _receiveBuffer.Enqueue(b);
+
+                    if (data.Length <= 0)
+                        continue;
+                    hasNewData = true;
+                    foreach (var b in data)
+                    {
+                        _receiveBuffer.Enqueue(b);
+                    }
+                }
+                var parsedCount = 0;
+                while (parsedCount < MaxSingleParseFrame
+                       && !token.IsCancellationRequested
+                       && TryParseOnePacket())
+                {
+                    parsedCount++;
+                }
+                if (!hasNewData && parsedCount == 0)
+                {
+                    await Task.Delay(ParseLoopDelayMs, token);
+                }
+                else
+                {
+                    await Task.Yield();
                 }
             }
-            // 2. 【核心】无论有没有新数据，本轮强制解析缓冲区
-            var parsedCount = 0;
-            while (parsedCount < MaxSingleParseFrame
-                   && !token.IsCancellationRequested
-                   && TryParseOnePacket())
+            catch (OperationCanceledException)
             {
-                parsedCount++;
             }
-            // 3. 休眠策略：
-            // 既无新数据、本轮也没解析出任何包 → 长Delay降CPU
-            // 有新数据 或 解析到包 → 仅Yield让出线程，低延迟继续循环
-            if (!hasNewData && parsedCount == 0)
+            catch (Exception ex)
             {
-                await Task.Delay(ParseLoopDelayMs, token);
-            }
-            else
-            {
-                await Task.Yield();
+                var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                ParaSetupModules.RaiseAscDataProdEvent($"解析串口数据异常：{ex.Message}【{currDateTime}】");
             }
         }
     }
@@ -331,24 +340,21 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
             //忽略；
         }
         _parseCts = null;
-        lock (_serialLock)
+        try
         {
-            try
-            {
-                _serialPort.Close();
-            }
-            catch (Exception)
-            {
-                //忽略异常；
-            }
-            try
-            {
-                _serialPort.Dispose();
-            }
-            catch (Exception)
-            {
-                //忽略异常；
-            }
+            _serialPort.Close();
+        }
+        catch (Exception)
+        {
+            //忽略异常；
+        }
+        try
+        {
+            _serialPort.Dispose();
+        }
+        catch (Exception)
+        {
+            //忽略异常；
         }
         foreach (var item in _getBufferDataImplList)
         {

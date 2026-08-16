@@ -7,7 +7,7 @@
              Width="400">
     <Border Background="White" Padding="24" CornerRadius="8">
         <StackPanel Spacing="12">
-            <TextBlock Text="摄像机参数配置" FontSize="18" FontWeight="Bold"/>
+            <TextBlock Text="摄像头参数配置" FontSize="18" FontWeight="Bold"/>
 
             <Grid ColumnDefinitions="80,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
                 <TextBlock Grid.Column="0" Grid.Row="0" Text="IP："/>
@@ -32,5 +32,4 @@
             </StackPanel>
         </StackPanel>
     </Border>
-
 </UserControl>
