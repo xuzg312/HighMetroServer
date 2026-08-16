@@ -161,7 +161,7 @@ public partial class EditSerialConfigViewModel : ObservableValidator
         var serialComm = GetValue1();
         if (_serialCommList.Count == 0)
         {
-            resultInfo = _dbService.AddCommInfo(serialComm);;
+            resultInfo = _dbService.AddCommInfo(serialComm);
         }
         else
         {
@@ -207,7 +207,7 @@ public partial class EditSerialConfigViewModel : ObservableValidator
         ResultInfo resultInfo;
         if (_serialCommList.Count <= 1)
         {
-            resultInfo = _dbService.AddCommInfo(serialComm);;
+            resultInfo = _dbService.AddCommInfo(serialComm);
         }
         else
         {

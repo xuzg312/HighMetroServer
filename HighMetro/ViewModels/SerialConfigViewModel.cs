@@ -283,28 +283,24 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
                 MessageText = "主板参数处理逻辑有误，请联系开发人员检查！";
                 return;
             }
-
             if (SelectPortName is null || SelectedBaudRate is null || SelectedDataBits is null ||
                 SelectedStopBits is null || SelectedParity is null)
             {
                 MessageText = "主板参数未配置，请点击菜单【设备管理--主板维护】进行设置，设置后需要重新启动程序！";
                 return;
             }
-
             var serialCommList = ParaSetupModules.SerialCommList;
             if (serialCommList!.Count < _serial)
             {
                 MessageText = "主板内部处理逻辑有误，serial与主板列表不一致！";
                 return;
             }
-
             var serialCommInfo = serialCommList[_serial - 1];
             if (!serialCommInfo.IsValid())
             {
                 MessageText = "主板参数无效，如果已经配置过，请重新启动程序加载！";
                 return;
             }
-
             //连接尝试串口
             _commSerialImpl = new CommSerialImpl(3, serialCommInfo);
             serialCommInfo.CommSerialImpl = _commSerialImpl;

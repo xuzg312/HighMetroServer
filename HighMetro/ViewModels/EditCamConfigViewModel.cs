@@ -54,7 +54,6 @@ public partial class EditCamConfigViewModel : ObservableValidator
         _hardInfo = hardInfo;
         _camRemoteLinkImpl = new CamRemoteLinkImpl();
     }
-
     [RelayCommand]
     private void TestConnection()
     {

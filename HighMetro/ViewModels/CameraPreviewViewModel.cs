@@ -7,14 +7,16 @@ using Avalonia.Platform;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using HighMetro.BaseModel;
 using HighMetro.HikVision;
+using HighMetro.Message;
 using HighMetro.Models;
 using HighMetro.Services;
 
 namespace HighMetro.ViewModels;
 
-public partial class CameraPreviewViewModel : ObservableObject
+public partial class CameraPreviewViewModel : ObservableObject,IRecipient<AppCleanupMessage>
 {
     public event Action? OnClose;
 
@@ -82,6 +84,7 @@ public partial class CameraPreviewViewModel : ObservableObject
         _decoderInited = false;
         _realDataCallback = OnRealDataReceived;
         _decodeCallback = OnDecodedFrameCallback;
+        WeakReferenceMessenger.Default.RegisterAll(this);
     }
     [RelayCommand(CanExecute = nameof(CanOpen))]
     private void Open()
@@ -114,7 +117,7 @@ public partial class CameraPreviewViewModel : ObservableObject
         }
         _lUserId = loadCamResult.Value;
         //打开实时预览；
-        loadCamResult = _camRemoteLinkImpl.Preview(_lUserId, _realDataCallback,_decodeCallback);
+        loadCamResult = _camRemoteLinkImpl.StartPreview(_lUserId, _realDataCallback,_decodeCallback);
         if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
         {
             MessageText = loadCamResult.Message;
@@ -127,27 +130,42 @@ public partial class CameraPreviewViewModel : ObservableObject
         OpenCommand.NotifyCanExecuteChanged();
         CloseCommand.NotifyCanExecuteChanged();
     }
-    private void OnRealDataReceived(int lRealHandle, uint dwDataType, nint pBuffer, uint dwBufSize, nint pUser)
+    private void OnRealDataReceived(
+        int lRealHandle, uint dwDataType, nint pBuffer, uint dwBufSize, nint pUser)
     {
         if (_playPort < 0 || dwBufSize == 0) return;
         if (dwDataType == 1U)
         {
-            //SYSHEAD=1：码流头信息，初始化PlayCtrl解码器
+            //1：码流头信息，初始化PlayCtrl解码器
             if(_decoderInited)
                 return;
-            if (PlayCtrl.PlayM4_OpenStream(_playPort, pBuffer, dwBufSize, 1024 * 1024)<=0)
+            var loadCamResult= _camRemoteLinkImpl.SetPreviewPara(_playPort, pBuffer, dwBufSize);
+            if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
+            {
+                Dispatcher.UIThread.Post(() => { MessageText = loadCamResult.Message; });
                 return;
-            PlayCtrl.PlayM4_Play(_playPort, nint.Zero);
+            }
             _decoderInited = true;
         }
-        else if (dwDataType == 2U)
+        else
         {
             // 送入H264/H265码流解码
-            PlayCtrl.PlayM4_InputData(_playPort, pBuffer, dwBufSize);
+            //送入其他数据 Input the other data
+            for (var i = 0; i < 999; i++)
+            {
+                var loadCamResult = _camRemoteLinkImpl.PreviewInputData(_playPort, pBuffer, dwBufSize);
+                if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
+                {
+                    Dispatcher.UIThread.Post(() => { MessageText = loadCamResult.Message; });
+                    continue;
+                }
+                break;
+            }
         }
     }
     private void OnDecodedFrameCallback(
-        int nPort, IntPtr pBuf, int nSize, ref PlayCtrl.FrameInfo pFrameInfo, int nReserved1, int nReserved2)
+        int nPort, IntPtr pBuf, int nSize, ref PlayCtrl.FrameInfo pFrameInfo, 
+        int nReserved1, int nReserved2)
     {
         var pixType = pFrameInfo.NType;
         var w = pFrameInfo.NWidth;
@@ -161,46 +179,54 @@ public partial class CameraPreviewViewModel : ObservableObject
                 WriteableBitmap wb;
                 var pixelSize = new PixelSize(w, h);
                 var dpiVec = new Vector(96, 96);
-                if (pixType == 1)
+                switch (pixType)
                 {
-                    // YV12 → BGRA（原有逻辑不变，托管数组中转，安全）
-                    byte[] yv12 = new byte[nSize];
-                    Marshal.Copy(pBuf, yv12, 0, nSize);
-                    byte[] bgra = Yv12ToBgra(yv12, w, h);
-                    wb = new WriteableBitmap(pixelSize, dpiVec, PixelFormats.Bgra8888, AlphaFormat.Opaque);
-                    using var fb = wb.Lock();
-                    Marshal.Copy(bgra, 0, fb.Address, bgra.Length);
-                }
-                else if (pixType == 2)
-                {
-                    // RGB24：非托管pBuf → WriteableBitmap内存
-                    wb = new WriteableBitmap(pixelSize, dpiVec, PixelFormats.Rgb24, AlphaFormat.Opaque);
-                    using var fb = wb.Lock();
-                    // 方案A：中转byte数组（最稳妥，不需要unsafe）
-                    byte[] rgb24 = new byte[nSize];
-                    Marshal.Copy(pBuf, rgb24, 0, nSize);
-                    Marshal.Copy(rgb24, 0, fb.Address, nSize);
-                }
-                else if (pixType == 3)
-                {
-                    // BGRA8888原生帧
-                    wb = new WriteableBitmap(pixelSize, dpiVec, PixelFormats.Bgra8888, AlphaFormat.Opaque);
-                    using var fb = wb.Lock();
-                    byte[] bgraRaw = new byte[nSize];
-                    Marshal.Copy(pBuf, bgraRaw, 0, nSize);
-                    Marshal.Copy(bgraRaw, 0, fb.Address, nSize);
-                }
-                else
-                {
-                    return;
+                    case 1:
+                    {
+                        // YV12 → BGRA（原有逻辑不变，托管数组中转，安全）
+                        var yv12 = new byte[nSize];
+                        Marshal.Copy(pBuf, yv12, 0, nSize);
+                        var bgra = Yv12ToBgra(yv12, w, h);
+                        wb = new WriteableBitmap(pixelSize, dpiVec, PixelFormats.Bgra8888, AlphaFormat.Opaque);
+                        using var fb = wb.Lock();
+                        Marshal.Copy(bgra, 0, fb.Address, bgra.Length);
+                        break;
+                    }
+                    case 2:
+                    {
+                        // RGB24：非托管pBuf → WriteableBitmap内存
+                        wb = new WriteableBitmap(pixelSize, dpiVec, PixelFormats.Rgb24, AlphaFormat.Opaque);
+                        using var fb = wb.Lock();
+                        // 方案A：中转byte数组（最稳妥，不需要unsafe）
+                        var rgb24 = new byte[nSize];
+                        Marshal.Copy(pBuf, rgb24, 0, nSize);
+                        Marshal.Copy(rgb24, 0, fb.Address, nSize);
+                        break;
+                    }
+                    case 3:
+                    {
+                        // BGRA8888原生帧
+                        wb = new WriteableBitmap(pixelSize, dpiVec, PixelFormats.Bgra8888, AlphaFormat.Opaque);
+                        using var fb = wb.Lock();
+                        var bgraRaw = new byte[nSize];
+                        Marshal.Copy(pBuf, bgraRaw, 0, nSize);
+                        Marshal.Copy(bgraRaw, 0, fb.Address, nSize);
+                        break;
+                    }
+                    default:
+                    {
+                        Dispatcher.UIThread.Post(() => { MessageText = $"pixType：【{pixType}】类型无效！"; });
+                        return;
+                    }
                 }
                 PreviewSource = wb;
                 IsNoVideo = false;
                 StatusText = string.Empty;
             }
-            catch
+            catch(Exception ex)
             {
                 // 异常静默丢弃坏帧，不中断预览
+                Dispatcher.UIThread.Post(() => { MessageText = $"视频解码异常：【{ex.Message}】"; });
             }
         });
     }
@@ -298,5 +324,20 @@ public partial class CameraPreviewViewModel : ObservableObject
             return false;
         }
         return true;
+    }
+    private void ClearResource()
+    {
+        if (_start)
+        {
+            _camRemoteLinkImpl.StopPreview(_lUserId, _playPort, _lRealPlayHandle);
+        }
+    }
+    public void Receive(AppCleanupMessage message)
+    {
+        ClearResource();
+    }
+    public void Unsubscribe()
+    {
+        WeakReferenceMessenger.Default.UnregisterAll(this);
     }
 }

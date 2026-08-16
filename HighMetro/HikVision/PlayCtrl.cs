@@ -49,5 +49,14 @@ public static partial class PlayCtrl
 
     [LibraryImport("PlayCtrl")]
     public static partial int PlayM4_FreePort(int nPort);
+    
+    [LibraryImport("PlayCtrl")]
+    public static partial int PlayM4_SetStreamOpenMode(int nPort, uint nMode);
+
+    [LibraryImport("PlayCtrl")]
+    public static partial int PlayM4_SetDisplayBuf(int nPort, uint nNum);
+
+    [LibraryImport("PlayCtrl")]
+    public static partial int PlayM4_SetOverlayMode(int nPort, int bOverlay, uint colorKey);
 
 }
