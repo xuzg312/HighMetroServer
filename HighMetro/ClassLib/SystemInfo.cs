@@ -11,6 +11,8 @@ public static class SystemInfo
     public static string SysConfigDir { get; private set; }//系统配置路径；
     public static string UpdateDir { get; private set; }//更新日志目录；
     public static string PhotoDir { get; private set; }//图像、录像目录；
+    
+    public static string TempDir { get; private set; }//临时目录；
     #endregion
 
     #region 构造函数；
@@ -23,6 +25,7 @@ public static class SystemInfo
         SysConfigDir = Path.Combine(currentDir,"Config");
         UpdateDir = Path.Combine(currentDir,"Update");
         PhotoDir = Path.Combine(currentDir,"PhotoLog");
+        TempDir = Path.Combine(currentDir,"Temp");
         #region 创建目录；
         if (!Directory.Exists(LogErrorDir))
         {
@@ -39,6 +42,10 @@ public static class SystemInfo
         if (!Directory.Exists(PhotoDir))
         {
             Directory.CreateDirectory(PhotoDir);
+        }
+        if (!Directory.Exists(TempDir))
+        {
+            Directory.CreateDirectory(TempDir);
         }
         #endregion
     }

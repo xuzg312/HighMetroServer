@@ -6,4 +6,5 @@ public class LoadCamResult
     public int Value{ get; set; }
     public string Message { get; set; } = string.Empty;
     public int Tag{ get; set; }
+    public byte[] ImageData { get; set; } = [];
 }

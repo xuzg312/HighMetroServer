@@ -8,6 +8,7 @@
 
     <Application.Styles>
         <FluentTheme />
+        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
     </Application.Styles>
     <Application.DataTemplates>
         <DataTemplate DataType="viewModels:DbConfigViewModel">
@@ -27,6 +28,9 @@
         </DataTemplate>
         <DataTemplate DataType="viewModels:CameraPreviewViewModel">
             <views:CameraPreviewView /> <!-- 确保这里指向正确的 UserControl -->
+        </DataTemplate>
+        <DataTemplate DataType="viewModels:CamAlarmRecordViewModel">
+            <views:CamAlarmRecordView /> <!-- 确保这里指向正确的 UserControl -->
         </DataTemplate>
     </Application.DataTemplates>
 </Application>

@@ -784,4 +784,58 @@ public class DbService : IDbService
             return resultInfo;        
         }
     }
+    public ResultCamAlarmInfo QueryCamAlarm(CameraBean cameraBean)
+    {
+        var resultInfo = new ResultCamAlarmInfo();
+        try
+        {
+            using (var conn = new MySqlConnection(GetConnectionString()))
+            {
+                var sql = "SELECT * FROM t_alarm WHERE hostbh=@hostbh and datetime >= @datetime order by datetime desc";
+                using (var cmd = new MySqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@hostbh", cameraBean.HostBh);
+                    cmd.Parameters.AddWithValue("@datetime", cameraBean.DateTime);
+                    conn.Open();
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        var cameraList = new List<CameraBean>();
+                        // 循环读取所有行
+                        while (reader.Read())
+                        {
+                            var cameraBean00 = new CameraBean
+                            {
+                                Bh = Convert.ToInt32(reader["bh"]),
+                                Id = Convert.ToInt32(reader["id"]),
+                                HostBh = Convert.ToInt32(reader["hostbh"]),
+                                Type = reader["type"].ToString()??string.Empty,
+                                Door = reader["door"].ToString()??string.Empty,
+                                DateTime = reader["datetime"].ToString()??string.Empty,
+                                Upload = reader["upload"].ToString()??string.Empty,
+                                UploadDateTime = reader["uploadtime"].ToString()??string.Empty,
+                                FilePath = reader["filepath"].ToString()??string.Empty,
+                                Serial = Convert.ToInt32(reader["serial"]),
+                            };
+                            cameraList.Add(cameraBean00);
+                        }
+                        resultInfo.CameraList = cameraList;
+                    }
+                }
+            }
+            resultInfo.ReturnInfo = new ResultInfo
+            {
+                Code = PublicConst.FlagYes,
+            };
+            return resultInfo;
+        }
+        catch (Exception ex)
+        {
+            resultInfo.ReturnInfo = new ResultInfo
+            {
+                Code = PublicConst.FlagNo,
+                Message = $"获取拍照记录异常：{ex.Message}",
+            };
+            return resultInfo;
+        }
+    }    
 }

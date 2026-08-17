@@ -21,4 +21,5 @@ public interface IDbService
     ResultInfo AddAlarm(CameraBean cameraBean);
     ResultInfo EditCommInfo(SerialComm serialComm);
     ResultInfo AddCommInfo(SerialComm serialComm);
+    ResultCamAlarmInfo QueryCamAlarm(CameraBean cameraBean);
 }

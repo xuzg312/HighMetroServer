@@ -5,6 +5,14 @@ namespace HighMetro.HikVision;
 
 public static partial class PlayCtrl
 {
+    public delegate void DeccbFun(
+        int nPort, 
+        IntPtr pBuf, 
+        int nSize, 
+        ref FrameInfo pFrameInfo, 
+        int nReserved1, 
+        int nReserved2);
+    
     public struct FrameInfo
     {
         public int NWidth;
@@ -33,8 +41,6 @@ public static partial class PlayCtrl
     [LibraryImport("PlayCtrl")]
     public static partial int PlayM4_InputData(int nPort, IntPtr pBuf, uint nSize);
     
-    public delegate void DeccbFun(int nPort, IntPtr pBuf, int nSize, ref FrameInfo pFrameInfo, int nReserved1, int nReserved2);
-
     [LibraryImport("PlayCtrl")]
     public static partial int PlayM4_SetDecCallBackEx(int nPort, DeccbFun decCbFun, IntPtr pDest, int nDestSize);
     

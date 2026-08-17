@@ -240,7 +240,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         if (camInfo is { UserId: >= 0 })
         {
             //动作：拍照；
-            var value = camInfo.CamRemoteLinkImpl!.CaptureJpegPicture(camInfo.UserId,cameraBean); 
+            var value = camInfo.CamRemoteLinkImpl!.CaptureJpegPicture(camInfo.UserId,cameraBean,SystemInfo.PhotoDir); 
             if (value.Code.Equals(PublicConst.FlagYes))
             {
                 cameraBean.Message = "拍照执行成功！";

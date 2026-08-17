@@ -4,8 +4,12 @@ using System.Runtime.InteropServices;
 namespace HighMetro.HikVision;
 
 [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-public delegate void RealDataCallBackEx(int lRealHandle, uint dwDataType, IntPtr pBuffer, uint dwBufSize, IntPtr pUser);
-public delegate void RealDataCallBack(Int32 lRealHandle, UInt32 dwDataType, IntPtr pBuffer, UInt32 dwBufSize, IntPtr pUser);
+public delegate void RealDataCallBack(
+    Int32 lRealHandle, 
+    UInt32 dwDataType, 
+    IntPtr pBuffer, 
+    UInt32 dwBufSize, 
+    IntPtr pUser);
 
 public static partial class HikSdk
 {
@@ -18,7 +22,7 @@ public static partial class HikSdk
         ref ChcNetSdk.NetDvrDeviceinfoV40 lpDeviceInfo);
 
     [LibraryImport("HCNetSDK")]
-    public static partial uint NET_DVR_GetLastError();
+    public static partial int NET_DVR_GetLastError();
 
     [LibraryImport("HCNetSDK")]
     public static partial int NET_DVR_Logout(int iUserId);
@@ -45,8 +49,6 @@ public static partial class HikSdk
     public static extern int NET_DVR_RealPlay_V40(
         int iUserId, 
         ref ChcNetSdk.NetDvrPreviewInfo lpPreviewInfo, 
-        RealDataCallBack fRealDataCallBack_V30, 
+        RealDataCallBack fRealDataCallBackV30, 
         IntPtr pUser);
-    
-
 }

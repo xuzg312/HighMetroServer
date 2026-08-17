@@ -305,8 +305,24 @@ public partial class MainViewModel : ViewModelBase
     }
     private void OpenPhotoQuery()
     {
-        // ActivePopupVm = new PhotoQueryViewModel();
-        // ShowOverlay = true;
+        var vm = new CamAlarmRecordViewModel(_dbService);
+        vm.OnClose += OnCamAlarmClose;
+        IsMenuEnabled = false;
+        ActivePopupVm = vm;
+        ShowOverlay = true;
+    }
+    private void OnCamAlarmClose()
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (ActivePopupVm is CamAlarmRecordViewModel oldCamAlarmVm)
+            {
+                oldCamAlarmVm.OnClose -= OnCamAlarmClose;
+            }
+            ActivePopupVm = null;
+            ShowOverlay = false;
+            IsMenuEnabled = true;
+        });
     }
     private void OpenFaultQuery()
     {

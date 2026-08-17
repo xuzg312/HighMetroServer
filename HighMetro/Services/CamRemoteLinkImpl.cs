@@ -66,7 +66,7 @@ public class CamRemoteLinkImpl
         };
         return loadCamResult;
     }
-    public LoadCamResult CaptureJpegPicture(int iUserId,CameraBean cameraBean)
+    public LoadCamResult CaptureJpegPicture(int iUserId,CameraBean cameraBean,string baseDirectory)
     {
         if (iUserId < 0)
         {
@@ -82,10 +82,9 @@ public class CamRemoteLinkImpl
         var dateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
         try
         {
-            var baseDir = SystemInfo.PhotoDir;
             var dateFolder = DateTime.Now.ToString("yyyy-MM-dd");
             var camIdFolder = cameraBean.Id.ToString();
-            var dayDir = Path.Combine(baseDir, dateFolder);
+            var dayDir = Path.Combine(baseDirectory, dateFolder);
             lock (_dirLockObj)
             {
                 if (!Directory.Exists(dayDir))
@@ -102,7 +101,6 @@ public class CamRemoteLinkImpl
             fullSavePath = Path.Combine(dayDir, camIdFolder, fileName);
             cameraBean.FilePath = fullSavePath;
             #endregion
-
             #region 4. SDK抓拍逻辑
             var lChannel = 1;
             var lpJpegPara = new ChcNetSdk.NetDvrJpegpara
@@ -119,7 +117,6 @@ public class CamRemoteLinkImpl
                 bufferPtr,
                 PublicConst.MaxBufferSize,
                 ref actualSize);
-
             // SDK调用失败校验
             if (nativeRet < 0 || actualSize <= 0)
             {
@@ -128,10 +125,8 @@ public class CamRemoteLinkImpl
             // 拷贝非托管内存
             var jpegBytes = new byte[actualSize];
             Marshal.Copy(bufferPtr, jpegBytes, 0, (int)actualSize);
-
             // 写入文件，单独捕获IO异常
             SafeWriteFile(fullSavePath, jpegBytes);
-            
             return new LoadCamResult
             {
                 Code = PublicConst.FlagYes,
@@ -188,21 +183,73 @@ public class CamRemoteLinkImpl
             }
         }
     }
+    public LoadCamResult DebugCaptureJpegPicture(int iUserId)
+    {
+        try
+        {
+            var lChannel = 1;
+            var lpJpegPara = new ChcNetSdk.NetDvrJpegpara
+            {
+                wPicQuality = 0,
+                wPicSize = 0xff
+            };
+            var bufferPtr = Marshal.AllocHGlobal(PublicConst.MaxBufferSize);
+            uint actualSize = 0;
+            var nativeRet = HikSdk.NET_DVR_CaptureJPEGPicture_NEW(
+                iUserId,
+                lChannel,
+                ref lpJpegPara,
+                bufferPtr,
+                PublicConst.MaxBufferSize,
+                ref actualSize);
+
+            // SDK调用失败校验
+            if (nativeRet < 0 || actualSize <= 0)
+            {
+                return GetLastError();
+            }
+
+            // 拷贝非托管内存
+            var jpegBytes = new byte[actualSize];
+            Marshal.Copy(bufferPtr, jpegBytes, 0, (int)actualSize);
+            return new LoadCamResult
+            {
+                Code = PublicConst.FlagYes,
+                ImageData = jpegBytes,
+            };
+        }
+        catch (Exception ex)
+        {
+            return new LoadCamResult
+            {
+                Code = PublicConst.FlagNo,
+                Message = $"抓拍未知异常：{ex.Message}"
+            };
+        }
+    }
     public LoadCamResult StartPreview(
         int iUserId,RealDataCallBack realDataCallBack,PlayCtrl.DeccbFun decodeCallback)
     {
         var playPort=0;
         //获取播放句柄 Get the port to play
         if (PlayCtrl.PlayM4_GetPort(ref playPort)<=0)
-        {
             return GetLastError();
-        }
+        //设置流播放模式 Set the stream mode: real-time stream mode
+        if (PlayCtrl.PlayM4_SetStreamOpenMode(playPort, 0)<=0)
+            return GetLastError();
+        //打开码流，送入头数据 Open stream
+        if (PlayCtrl.PlayM4_OpenStream(playPort, IntPtr.Zero, 0, CamConst.BufPoolSize)<=0)
+            return GetLastError();
+        //设置显示缓冲区个数 Set the display buffer number
+        if (PlayCtrl.PlayM4_SetDisplayBuf(playPort,CamConst.DisplayBufNumber)<=0)
+            return GetLastError(); 
+        //设置显示模式 Set the display mode
+        if (PlayCtrl.PlayM4_SetOverlayMode(playPort,0,0)<=0)
+            return GetLastError(); 
         //设置解码回调函数，获取解码后音视频原始数据 Set callback function of decoded data
         var value = PlayCtrl.PlayM4_SetDecCallBackEx(playPort, decodeCallback, IntPtr.Zero,0);
         if (value <= 0)
-        {
             return GetLastError();
-        }
         var playInfo = new ChcNetSdk.NetDvrPreviewInfo
         {
             hPlayWnd = IntPtr.Zero,
@@ -217,36 +264,15 @@ public class CamRemoteLinkImpl
         // 开启预览，传入码流回调
         var playHandle = HikSdk.NET_DVR_RealPlay_V40(iUserId, ref playInfo, realDataCallBack, nint.Zero);
         if (playHandle < 0)
-        {
             return GetLastError();
-        }
+        if (PlayCtrl.PlayM4_Play(playPort, nint.Zero)<=0) //传 IntPtr.Zero 表示软解码，触发回调
+            return GetLastError();
+        
         return new LoadCamResult
         {
             Code = PublicConst.FlagYes,
             Value = playHandle,
             Tag = playPort,
-        };
-    }
-    public LoadCamResult SetPreviewPara(int playPort, nint pBuffer, uint dwBufSize)
-    {
-        //设置流播放模式 Set the stream mode: real-time stream mode
-        if (PlayCtrl.PlayM4_SetStreamOpenMode(playPort, 0)<=0)
-            return GetLastError();
-        //打开码流，送入头数据 Open stream
-        if (PlayCtrl.PlayM4_OpenStream(playPort, pBuffer, dwBufSize, 1024 * 1024)<=0)
-            return GetLastError();
-        //设置显示缓冲区个数 Set the display buffer number
-        if (PlayCtrl.PlayM4_SetDisplayBuf(playPort,1)<=0)
-            return GetLastError(); 
-        //设置显示模式 Set the display mode
-        if (PlayCtrl.PlayM4_SetOverlayMode(playPort,0,0)<=0)
-            return GetLastError(); 
-        //开始解码 Start to play 
-        if (PlayCtrl.PlayM4_Play(playPort, nint.Zero)<=0) 
-            return GetLastError();
-        return new LoadCamResult
-        {
-            Code = PublicConst.FlagYes,
         };
     }
     public LoadCamResult PreviewInputData(int playPort, nint pBuffer, uint dwBufSize)
@@ -274,7 +300,6 @@ public class CamRemoteLinkImpl
         {
             HikSdk.NET_DVR_Logout(iUserId);
         }
-
         return new LoadCamResult
         {
             Code = PublicConst.FlagNo,
@@ -312,7 +337,8 @@ public class CamRemoteLinkImpl
         var loadCamResult = new LoadCamResult
         {
             Code = PublicConst.FlagNo,
-            Message = "登录失败，错误代码：" + iLastErr
+            Message = "登录失败，错误代码：" + iLastErr,
+            Value = iLastErr,
         };
         return loadCamResult;
     }
