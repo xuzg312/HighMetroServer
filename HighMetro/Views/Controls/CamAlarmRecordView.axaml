@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:classLib="clr-namespace:HighMetro.ClassLib"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="HighMetro.Views.Controls.CamAlarmRecordView"
              Width="1050" Height="600">
@@ -20,8 +21,10 @@
                 <Border Grid.Row="1" BorderThickness="1" BorderBrush="#cccccc" Padding="10" CornerRadius="6">
                     <StackPanel Orientation="Horizontal" Spacing="15" VerticalAlignment="Center">
                         <TextBlock Text="查询日期:" VerticalAlignment="Center"/>
-                        <DatePicker SelectedDate="{Binding QueryDate}" Width="160"/>
-
+                        <CalendarDatePicker 
+                            SelectedDate="{Binding QueryDate}"
+                            CustomDateFormatString="yyyy-MM-dd"
+                            Width="160"/>
                         <Button Content="查询" Command="{Binding QueryCommand}" Width="80"/>
                         <Button Content="浏览" Command="{Binding BrowseCommand}" Width="80"/>
                         <Button Content="退出" Command="{Binding ExitCommand}" Width="80" />

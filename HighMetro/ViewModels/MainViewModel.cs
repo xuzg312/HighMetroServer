@@ -1,5 +1,4 @@
 using System;
-using System.Windows.Input;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -34,13 +33,8 @@ public partial class MainViewModel : ViewModelBase
         _mainWindow = mainWindow;
         _configService = new ConfigService();
         _dbService = new DbService();
-        // 绑定命令与执行方法
-        CameraMaintainCmd = new RelayCommand(CameraMaintain);
-        BoardMaintainCmd = new RelayCommand(BoardMaintain);
-        OpenPhotoQueryCmd = new RelayCommand(OpenPhotoQuery);
-        OpenFaultQueryCmd = new RelayCommand(OpenFaultQuery);
-        CameraDebugCmd = new RelayCommand(CameraDebug);
         IsMenuEnabled = false;
+        _showOverlay = false;
         InitializeStartup();
     }
     private void InitializeStartup()
@@ -82,7 +76,6 @@ public partial class MainViewModel : ViewModelBase
             ActivePopupVm = vm;
         }
     }
-
     private void OnDbConfigSuccess(DbSetting setting)
     {
         _dbSetting = setting;
@@ -100,7 +93,6 @@ public partial class MainViewModel : ViewModelBase
             ActivePopupVm = vm;
         });
     }
-
     private void OnLoginSuccess(LoginSetting setting)
     {
         var userInfo = new UserInfo
@@ -138,10 +130,10 @@ public partial class MainViewModel : ViewModelBase
                 var vm = new HostSelectViewModel(_configService, resultHostInfo);
                 vm.OnConfirm += OnHostSuccess;
                 vm.OnCancel += ExitApplication;
-                if (ActivePopupVm is LoginViewModel oldloginVm)
+                if (ActivePopupVm is LoginViewModel oldLoginVm)
                 {
-                    oldloginVm.OnLoginSuccess -= OnLoginSuccess;
-                    oldloginVm.OnLoginCancel -= ExitApplication;
+                    oldLoginVm.OnLoginSuccess -= OnLoginSuccess;
+                    oldLoginVm.OnLoginCancel -= ExitApplication;
                 }
                 ActivePopupVm = vm;
             });
@@ -206,19 +198,13 @@ public partial class MainViewModel : ViewModelBase
             ActivePopupVm = vm;
         });
     }
-    public ICommand CameraMaintainCmd { get; }
-    public ICommand BoardMaintainCmd { get; }
-    public ICommand CameraDebugCmd { get; }
-    public ICommand OpenPhotoQueryCmd { get; }
-    public ICommand OpenFaultQueryCmd { get; }
-
     private bool _isMenuEnabled;
     public bool IsMenuEnabled
     {
         get => _isMenuEnabled;
         set => SetProperty(ref _isMenuEnabled, value);
     }
-    //===== 菜单点击命令 =====
+    [RelayCommand]
     private void CameraMaintain()
     {
         //获取摄像机；
@@ -249,6 +235,7 @@ public partial class MainViewModel : ViewModelBase
             IsMenuEnabled = true;
         });
     }
+    [RelayCommand]
     private void BoardMaintain()
     {
         //主板维护;
@@ -276,6 +263,7 @@ public partial class MainViewModel : ViewModelBase
             IsMenuEnabled = true;
         });
     }
+    [RelayCommand]
     private void CameraDebug()
     {
         var hardInfo = new HardInfo
@@ -303,6 +291,7 @@ public partial class MainViewModel : ViewModelBase
             IsMenuEnabled = true;
         });
     }
+    [RelayCommand]
     private void OpenPhotoQuery()
     {
         var vm = new CamAlarmRecordViewModel(_dbService);
@@ -323,11 +312,6 @@ public partial class MainViewModel : ViewModelBase
             ShowOverlay = false;
             IsMenuEnabled = true;
         });
-    }
-    private void OpenFaultQuery()
-    {
-        // ActivePopupVm = new FaultQueryViewModel();
-        // ShowOverlay = true;
     }
     private void ExitApplication()
     {

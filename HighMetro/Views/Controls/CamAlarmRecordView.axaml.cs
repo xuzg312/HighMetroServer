@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Markup.Xaml;
 using Avalonia.VisualTree;
 using CommunityToolkit.Mvvm.Messaging;
 using HighMetro.Models;
@@ -17,9 +15,12 @@ public partial class CamAlarmRecordView : UserControl
         InitializeComponent();
         WeakReferenceMessenger.Default.Register<PreviewImageMessage>(this, (_, msg) =>
         {
-            // 显式丢弃任务，并且内部try-catch，防止崩溃
-            _ = ShowPreviewAsync(msg.FilePath);
+            SafeRunPreview(msg.FilePath);
         });
+    }
+    private void SafeRunPreview(string filePath)
+    {
+        _ = ShowPreviewAsync(filePath);
     }
     private async Task ShowPreviewAsync(string filePath)
     {
@@ -28,12 +29,22 @@ public partial class CamAlarmRecordView : UserControl
             var previewWin = new ImagePreview();
             previewWin.LoadImage(filePath);
             var owner = this.FindAncestorOfType<Window>();
+            if (owner is null)
+            {
+                if(DataContext is CamAlarmRecordViewModel vm)
+                {
+                    vm.MessageText = "DataContext未找到！";
+                }
+                return;
+            }
             await previewWin.ShowDialog(owner);
         }
         catch (Exception ex)
         {
-            // 日志兜底，不会炸进程
-            System.Diagnostics.Debug.WriteLine($"图片预览异常：{ex.Message}");
+            if(DataContext is CamAlarmRecordViewModel vm)
+            {
+                vm.MessageText = $"查看拍照图片异常：{ex.Message}";
+            }
         }
     }
 }

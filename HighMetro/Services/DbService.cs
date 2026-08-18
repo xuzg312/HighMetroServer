@@ -803,6 +803,8 @@ public class DbService : IDbService
                         // 循环读取所有行
                         while (reader.Read())
                         {
+                            var ordDateTime = reader.GetOrdinal("datetime");
+                            var ordUploadTime = reader.GetOrdinal("uploadtime");
                             var cameraBean00 = new CameraBean
                             {
                                 Bh = Convert.ToInt32(reader["bh"]),
@@ -810,9 +812,9 @@ public class DbService : IDbService
                                 HostBh = Convert.ToInt32(reader["hostbh"]),
                                 Type = reader["type"].ToString()??string.Empty,
                                 Door = reader["door"].ToString()??string.Empty,
-                                DateTime = reader["datetime"].ToString()??string.Empty,
                                 Upload = reader["upload"].ToString()??string.Empty,
-                                UploadDateTime = reader["uploadtime"].ToString()??string.Empty,
+                                DateTime = reader.GetDateTime(ordDateTime),
+                                UploadDateTime = reader.IsDBNull(ordUploadTime) ? null : reader.GetDateTime(ordUploadTime),
                                 FilePath = reader["filepath"].ToString()??string.Empty,
                                 Serial = Convert.ToInt32(reader["serial"]),
                             };

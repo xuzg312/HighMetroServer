@@ -15,29 +15,29 @@ public partial class CamAlarmRecordViewModel : ObservableObject
 
     public event Action? OnClose;
     
-    // 选中行（预留浏览使用）
     [ObservableProperty]
     private CameraBean? _selectedRow;
     
     [ObservableProperty]
     private string _messageText=string.Empty;
     
-    // 查询日期（默认当天）
     [ObservableProperty]
-    private string _queryDate = DateTime.Now.Date.ToShortDateString();
+    private DateTime _queryDate = DateTime.Now.Date;
 
-    // 表格数据源
     [ObservableProperty]
     private ObservableCollection<CameraBean> _recordList=[];
 
+    [ObservableProperty]
+    private bool _calendarPopupOpen;
     public CamAlarmRecordViewModel(IDbService dbService)
     {
         _dbService = dbService;
-        MessageText = "请查询！";
     }
     [RelayCommand]
     private void Query()
     {
+        RecordList.Clear();
+        MessageText = string.Empty;
         var cameraBean = new CameraBean
         {
             DateTime=QueryDate,
@@ -55,6 +55,18 @@ public partial class CamAlarmRecordViewModel : ObservableObject
         {
             MessageText = "未查询到拍照记录！";
         }
+    }
+
+    [RelayCommand]
+    private void OpenCalendar()
+    {
+        CalendarPopupOpen = true;
+    }
+    [RelayCommand]
+    private void PopupClosed()
+    {
+        // 点击空白关闭弹窗时同步状态
+        CalendarPopupOpen = false;
     }
     [RelayCommand]
     private void Browse()

@@ -232,7 +232,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         byte iPosition = 3;
         //设备id
         cameraBean.Id = publicUntil.GetUshort(socketDataBlock.Content!, iPosition);
-        cameraBean.DateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        cameraBean.DateTime = DateTime.Now;//.ToString("yyyy-MM-dd HH:mm:ss");
         //次数；
         iPosition = 8;
         cameraBean.Serial = publicUntil.GetUshort(socketDataBlock.Content!, iPosition);
