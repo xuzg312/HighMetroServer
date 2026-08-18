@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Reflection;
 
 namespace HighMetro.ClassLib;
 
@@ -19,7 +20,8 @@ public static class SystemInfo
     static SystemInfo()
     {
         //_currentDir = Directory.GetCurrentDirectory();
-        var currentDir = AppContext.BaseDirectory;
+        //var currentDir = AppContext.BaseDirectory;
+        var currentDir = GetApplicationDirectory();
         SystemLib = Path.Combine(currentDir,"SystemLib");
         LogErrorDir = Path.Combine(currentDir,"Log");
         SysConfigDir = Path.Combine(currentDir,"Config");
@@ -50,4 +52,16 @@ public static class SystemInfo
         #endregion
     }
     #endregion
+
+    static string GetApplicationDirectory()
+    {
+        var exePath = Environment.ProcessPath;
+        if (!string.IsNullOrEmpty(exePath))
+        {
+            return Path.GetDirectoryName(exePath)!;
+        }
+        // 降级兜底：非单文件场景
+        return AppContext.BaseDirectory.TrimEnd(
+            Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+    }
 }

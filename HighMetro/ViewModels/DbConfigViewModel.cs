@@ -51,10 +51,14 @@ public partial class DbConfigViewModel : ObservableValidator
             MessageText = "❌ 连接失败，请检查参数:"+resultInfo.Message;
         }
     }
-
     [RelayCommand]
     private void TestConnection()
     {
+        ValidateAllProperties();
+        if (HasErrors)
+        {
+            return; 
+        }
         var setting = BuildSetting();
         ResultInfo resultInfo = _dbService.TestConnection(setting);
         MessageText = resultInfo.Code.Equals(PublicConst.FlagYes) ? "✅ 数据库连接成功！" : "❌ 连接失败，请检查参数:"+resultInfo.Message;
@@ -79,13 +83,11 @@ public partial class DbConfigViewModel : ObservableValidator
         _configService.SaveDbConfig(setting);
         OnDbConfigSuccess?.Invoke(setting);
     }
-
     [RelayCommand]
     private void Cancel(MainViewModel rootVm)
     {
         OnDbConfigCancel?.Invoke();
     }
-
     private DbSetting BuildSetting()
     {
         return new DbSetting
