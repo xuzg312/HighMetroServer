@@ -54,7 +54,7 @@ sealed class Program
             return IntPtr.Zero; 
         }
         // 2. 使用 TryLoad 防止因为找不到文件直接抛出 DllNotFoundException
-        if (NativeLibrary.TryLoad(libPath, assembly, searchPath, out IntPtr handle))
+        if (NativeLibrary.TryLoad(libPath, assembly, searchPath, out var handle))
         {
             return handle;
         }

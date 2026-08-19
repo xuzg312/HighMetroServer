@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Reflection;
+using HighMetroServer.HikVision;
 
 namespace HighMetroServer.ClassLib;
 
@@ -12,7 +13,6 @@ public static class SystemInfo
     public static string SysConfigDir { get; private set; }//系统配置路径；
     public static string UpdateDir { get; private set; }//更新日志目录；
     public static string PhotoDir { get; private set; }//图像、录像目录；
-    
     public static string TempDir { get; private set; }//临时目录；
     #endregion
 
@@ -55,13 +55,23 @@ public static class SystemInfo
 
     static string GetApplicationDirectory()
     {
+        // 1. 使用 ProcessPath (单文件场景最可靠)
         var exePath = Environment.ProcessPath;
         if (!string.IsNullOrEmpty(exePath))
         {
-            return Path.GetDirectoryName(exePath)!;
+            var dir = Path.GetDirectoryName(exePath);
+            if (!string.IsNullOrEmpty(dir))
+                return dir;
         }
-        // 降级兜底：非单文件场景
-        return AppContext.BaseDirectory.TrimEnd(
-            Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        // 2. 使用 Assembly.Location (常规场景)
+        var assemblyLocation = Assembly.GetEntryAssembly()?.Location;
+        if (!string.IsNullOrEmpty(assemblyLocation))
+        {
+            var dir = Path.GetDirectoryName(assemblyLocation);
+            if (!string.IsNullOrEmpty(dir))
+                return dir;
+        }
+        // 3. 最终兜底 (Avalonia 资源目录通常是 BaseDirectory)
+        return AppContext.BaseDirectory;
     }
 }
