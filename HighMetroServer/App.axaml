@@ -1,0 +1,36 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:viewModels="using:HighMetroServer.ViewModels"
+             xmlns:views="using:HighMetroServer.Views.Controls"
+             x:Class="HighMetroServer.App"
+             RequestedThemeVariant="Default">
+             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+
+    <Application.Styles>
+        <FluentTheme />
+        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+    </Application.Styles>
+    <Application.DataTemplates>
+        <DataTemplate DataType="viewModels:DbConfigViewModel">
+            <views:DbConfigView /> <!-- 确保这里指向正确的 UserControl -->
+        </DataTemplate>
+        <DataTemplate DataType="viewModels:LoginViewModel">
+            <views:LoginView /> <!-- 确保这里指向正确的 UserControl -->
+        </DataTemplate>
+        <DataTemplate DataType="viewModels:HostSelectViewModel">
+            <views:HostSelectView /> <!-- 确保这里指向正确的 UserControl -->
+        </DataTemplate>
+        <DataTemplate DataType="viewModels:EditCamConfigViewModel">
+            <views:EditCamConfigView /> <!-- 确保这里指向正确的 UserControl -->
+        </DataTemplate>
+        <DataTemplate DataType="viewModels:EditSerialConfigViewModel">
+            <views:EditSerialConfigView /> <!-- 确保这里指向正确的 UserControl -->
+        </DataTemplate>
+        <DataTemplate DataType="viewModels:CameraPreviewViewModel">
+            <views:CameraPreviewView /> <!-- 确保这里指向正确的 UserControl -->
+        </DataTemplate>
+        <DataTemplate DataType="viewModels:CamAlarmRecordViewModel">
+            <views:CamAlarmRecordView /> <!-- 确保这里指向正确的 UserControl -->
+        </DataTemplate>
+    </Application.DataTemplates>
+</Application>

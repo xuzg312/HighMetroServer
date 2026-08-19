@@ -1,0 +1,50 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:HighMetroServer.ViewModels"
+        xmlns:views="using:HighMetroServer.Views.Controls"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        WindowState="Maximized"
+        CanResize="False"
+        x:Class="HighMetroServer.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="HighMetroServer">
+    
+    <Grid RowDefinitions="Auto,*">
+        <!-- 顶部菜单栏 -->
+        <Menu Grid.Row="0">
+            <!-- 一级菜单：设备管理 -->
+            <MenuItem Header="设备管理">
+                <MenuItem Header="摄像头维护" Command="{Binding CameraMaintainCommand}" IsEnabled="{Binding IsMenuEnabled}" />
+                <MenuItem Header="主板维护" Command="{Binding BoardMaintainCommand}" IsEnabled="{Binding IsMenuEnabled}" />
+            </MenuItem>
+            <MenuItem Header="设备调试">
+                <MenuItem Header="摄像头调试" Command="{Binding CameraDebugCommand}" IsEnabled="{Binding IsMenuEnabled}" />
+            </MenuItem>
+            <!-- 一级菜单：日志管理 -->
+            <MenuItem Header="日志管理">
+                <MenuItem Header="拍照查询" Command="{Binding OpenPhotoQueryCommand}" IsEnabled="{Binding IsMenuEnabled}" />
+            </MenuItem>
+        </Menu>
+        <Grid Grid.Row="1">
+            <!-- 底层主页面 -->
+            <ContentControl Content="{Binding MainPageVm}">
+                <ContentControl.ContentTemplate>
+                    <DataTemplate DataType="vm:MainPageViewModel">
+                        <views:MainPageView />
+                    </DataTemplate>
+                </ContentControl.ContentTemplate>
+            </ContentControl>
+
+            <!-- 上层遮罩弹窗层 -->
+            <Grid IsVisible="{Binding ShowOverlay}">
+                <Border Background="#80000000"/>
+                <Grid HorizontalAlignment="Center" VerticalAlignment="Center" >
+                    <ContentControl Content="{Binding ActivePopupVm}" />
+                </Grid>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

@@ -1,0 +1,62 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="450"
+             x:Class="HighMetroServer.Views.Controls.HostConfigView"
+             x:Name="Root">
+    <Border BorderBrush="Black" 
+            BorderThickness="1" 
+            CornerRadius="1"
+            Padding="2">
+    <Grid RowDefinitions="Auto,Auto" RowSpacing="2" 
+          DataContext="{Binding HostConfigViewModelVm, ElementName=Root}">
+        <!-- 第一行：同一行横向排列：标题｜红色提示框｜消息栏 -->
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto" VerticalAlignment="Center">
+            <!-- 固定标题 -->
+            <TextBlock Grid.Column="0" Text="{Binding HostState}" 
+                       VerticalAlignment="Center" FontWeight="Bold"/>
+
+            <!-- 消息栏：接收消息提示 -->
+            <TextBlock Grid.Column="1" Text="{Binding MessageText}" 
+                       Foreground="ForestGreen" VerticalAlignment="Center" 
+                       TextAlignment="Left" TextWrapping="NoWrap"/>
+        </Grid>
+        <!-- 第二行：输入框 + 按钮 -->
+        <Grid Grid.Row="1" ColumnSpacing="4"
+              ColumnDefinitions="200,240,240,240,16,*" 
+              VerticalAlignment="Center">
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
+                <TextBlock Text="IP地址：" Width="60" VerticalAlignment="Center" 
+                           TextAlignment="Right"/>
+                <TextBox Text="{Binding Ip}" Width="140"
+                     IsReadOnly="True" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                <TextBlock Text="端口：" Width="80" VerticalAlignment="Center" 
+                           TextAlignment="Right"/>
+                <TextBox Text="{Binding Port}" Width="160"
+                     IsReadOnly="True" />
+            </StackPanel>
+            <StackPanel Grid.Column="2"  Orientation="Horizontal" Spacing="4">
+                <TextBlock Text="Code：" Width="80" VerticalAlignment="Center" 
+                           TextAlignment="Right"/>
+                <TextBox Text="{Binding Code}" Width="160"
+                     IsReadOnly="True" />
+            </StackPanel>
+            <StackPanel Grid.Column="3"  Orientation="Horizontal" Spacing="4">
+                <TextBlock Text="名称：" Width="80" VerticalAlignment="Center" 
+                           TextAlignment="Right"/>
+                <TextBox Text="{Binding Name}" Width="160" 
+                     IsReadOnly="True" />
+            </StackPanel>
+            <StackPanel Grid.Column="5"  Orientation="Horizontal" Spacing="4">
+                <Button Content="监听" Command="{Binding OpenCommand}" 
+                        Width="60" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <Button Content="关闭" Command="{Binding CloseCommand}" 
+                    Width="60" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+    </Border>
+</UserControl>

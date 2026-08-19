@@ -1,0 +1,90 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="using:HighMetroServer.Views.Controls"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="HighMetroServer.Views.Controls.MainPageView">
+    <!-- 整体左右分栏：左* 右固定320 -->
+    <Grid Margin="2">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="320"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ========== 左半部分：原有两个配置控件 ========== -->
+        <Grid Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="80"/>
+                <RowDefinition Height="80"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <Border Grid.Row="0" Padding="5" Background="#f0f0f0" BorderThickness="1">
+                <controls:HostConfigView
+                    Config="{Binding HostConfig,Mode=OneWay}"/>
+            </Border>
+            <Border Grid.Row="1" Padding="5" Background="#f0f0f0" BorderThickness="1">
+                <controls:CamConfigView
+                    Config="{Binding CamConfig,Mode=OneWay}"/>
+            </Border>
+            <Border Grid.Row="2" Padding="5" Background="#f0f0f0" BorderThickness="1">
+                <controls:SerialConfigView 
+                    SerialNo="1" 
+                    Config="{Binding SerialConfig1,Mode=OneWay}"/>
+            </Border>
+            <Border Grid.Row="3" Padding="5" Background="#f0f0f0" BorderThickness="1">
+                <controls:SerialConfigView 
+                    SerialNo="2" 
+                    Config="{Binding SerialConfig2,Mode=OneWay}"/>
+            </Border>
+        </Grid>
+        <!-- ========== 右半部分：上下两块错误信息区域 ========== -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="40"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <Border Grid.Row="0" Padding="5" Margin="0 0 0 2" 
+                    Background="AntiqueWhite" BorderBrush="#cccccc" BorderThickness="1">
+                <ScrollViewer>
+                    <TextBlock VerticalAlignment="Center" FontSize="15" 
+                        Text="⚠️ 配置参数修改后，需要重新启动才生效！" Foreground="Red" />
+                </ScrollViewer>
+            </Border>
+            <!-- 上区域：ASC消息日志 -->
+            <Border Grid.Row="1" Padding="5" Margin="0 0 0 2" 
+                    Background="#f8f8f8" BorderBrush="#cccccc" BorderThickness="0"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" 
+                              HorizontalScrollBarVisibility="Disabled">
+                    <TextBox 
+                        Text="{Binding AscMessageText}" 
+                        TextWrapping="Wrap" 
+                        VerticalAlignment="Stretch"
+                        IsReadOnly="True"
+                        HorizontalAlignment="Stretch"
+                        Foreground="#FF222222"/>
+                </ScrollViewer>
+            </Border>
+            <!-- 下区域：Hex消息日志 -->
+            <Border Grid.Row="2" Padding="5" Background="#f8f8f8" 
+                    BorderBrush="#cccccc" BorderThickness="0"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" 
+                              HorizontalScrollBarVisibility="Disabled">
+                    <TextBox 
+                        Text="{Binding HexMessageText}"
+                        TextWrapping="Wrap"
+                        VerticalAlignment="Stretch"
+                        HorizontalAlignment="Stretch"
+                        IsReadOnly="True"
+                        Foreground="#FF222222"/>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>
