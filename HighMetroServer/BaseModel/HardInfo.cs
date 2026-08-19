@@ -19,7 +19,7 @@ public class HardInfo
         return HostBh>0 && 
                Bh>0 && 
                !string.IsNullOrWhiteSpace(Ip) && 
-               Port>1000 && 
+               Port>1000 && Port<65535 &&
                !string.IsNullOrWhiteSpace(UserName) && 
                !string.IsNullOrWhiteSpace(PassWord);
     }

@@ -20,7 +20,7 @@
                 <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding UserName}" TextChanged="OnTextChanged"/>
 
                 <TextBlock Grid.Column="0" Grid.Row="3" Text="密码："/>
-                <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Password}" PasswordChar="●" TextChanged="OnTextChanged"/>
+                <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Password}" TextChanged="OnTextChanged"/>
 
                 <TextBlock Grid.Column="0" Grid.Row="4" Grid.ColumnSpan="2" Text="{Binding MessageText}" Foreground="#c0392b"/>
             </Grid>

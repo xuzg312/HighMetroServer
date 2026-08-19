@@ -56,7 +56,7 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
     private void Open()
     {
         var camInfo = ParaSetupModules.CamInfo!;
-        if (camInfo.IsValid())
+        if (!camInfo.IsValid())
         {
             MessageText = "摄像头参数配置不正确，如果已经配置过，请重新启动程序加载！";
             return;
@@ -129,6 +129,8 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
         //释放摄像机资源；
         if (InitDrive.InitSign)
         {
+            if (!_start)
+                _camRemoteLinkImpl = new CamRemoteLinkImpl();
             _camRemoteLinkImpl!.Clear();
             InitDrive.InitSign = false;
         }
