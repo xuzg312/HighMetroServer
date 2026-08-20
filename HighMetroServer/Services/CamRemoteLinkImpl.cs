@@ -257,7 +257,7 @@ public class CamRemoteLinkImpl
                 byPreviewMode = 0,     //预览模式，0-正常预览，1-延迟预览
             };
             // 开启预览
-            _playHandle = HikSdk.NET_DVR_RealPlay_V40(_userId, ref playInfo, null, nint.Zero);
+            _playHandle = HikSdk.NET_DVR_RealPlay_V40(_userId, ref playInfo, null!, nint.Zero);
             if (_playHandle < 0)
                 return GetLastError();
             var startRet = HikSdk.NET_DVR_SaveRealData(_playHandle, fullSavePath);

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.VisualTree;
 using CommunityToolkit.Mvvm.Messaging;
+using HighMetroServer.BaseModel;
 using HighMetroServer.Models;
 using HighMetroServer.ViewModels;
 
@@ -18,31 +19,53 @@ public partial class CamAlarmRecordView : UserControl
         InitializeComponent();
         WeakReferenceMessenger.Default.Register<PreviewImageMessage>(this, (_, msg) =>
         {
-            SafeRunPreview(msg.FilePath);
+            SafeRunPreview(msg.FilePath,msg.FileType);
         });
         Unloaded += OnControlUnloaded;
     }
-    private void SafeRunPreview(string filePath)
+    private void SafeRunPreview(string filePath,string fileType)
     {
-        _ = ShowPreviewAsync(filePath,_cts.Token);
+        _ = ShowPreviewAsync(filePath,fileType,_cts.Token);
     }
-    private async Task ShowPreviewAsync(string filePath, CancellationToken token)
+    private async Task ShowPreviewAsync(string filePath, string fileType,CancellationToken token)
     {
         try
         {
             token.ThrowIfCancellationRequested();
-            var previewWin = new ImagePreview();
-            previewWin.LoadImage(filePath);
-            var owner = this.FindAncestorOfType<Window>();
-            if (owner is null)
+            Console.WriteLine("filePath:"+filePath);
+            Console.WriteLine("fileType:"+fileType);
+            if (fileType.Equals(PublicConst.DoorStateCapture))
             {
-                if(DataContext is CamAlarmRecordViewModel vm)
+                var previewWin = new ImagePreview();
+                previewWin.LoadImage(filePath);
+                var owner = this.FindAncestorOfType<Window>();
+                if (owner is null)
                 {
-                    vm.MessageText = "DataContext未找到！";
+                    if(DataContext is CamAlarmRecordViewModel vm)
+                    {
+                        vm.MessageText = "DataContext未找到！";
+                    }
+                    return;
                 }
-                return;
+                await previewWin.ShowDialog(owner);
             }
-            await previewWin.ShowDialog(owner);
+            else if (fileType.Equals(PublicConst.DoorStateCamera))
+            {
+                var previewWin = new VideoPreview();
+                Console.WriteLine("previewWin.LoadVideo(filePath)");
+
+                previewWin.LoadVideo(filePath);
+                var owner = this.FindAncestorOfType<Window>();
+                if (owner is null)
+                {
+                    if(DataContext is CamAlarmRecordViewModel vm)
+                    {
+                        vm.MessageText = "DataContext未找到！";
+                    }
+                    return;
+                }
+                await previewWin.ShowDialog(owner);
+            }
         }
         catch (Exception ex)
         {

@@ -17,7 +17,7 @@ public partial class ImagePreview : Window
         if (!File.Exists(filePath))
         {
             ImgViewer.Source = null;
-            this.Title = "文件不存在";
+            Title = "文件不存在";
             return;
         }
         // Avalonia跨平台加载本地图片

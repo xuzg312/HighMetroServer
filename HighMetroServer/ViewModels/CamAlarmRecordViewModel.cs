@@ -65,7 +65,6 @@ public partial class CamAlarmRecordViewModel : ObservableObject
     [RelayCommand]
     private void PopupClosed()
     {
-        // 点击空白关闭弹窗时同步状态
         CalendarPopupOpen = false;
     }
     [RelayCommand]
@@ -76,6 +75,8 @@ public partial class CamAlarmRecordViewModel : ObservableObject
             MessageText = "请首先选择一条拍照记录！";
             return;
         }
+        record.FilePath = "/Users/xu_zg/Desktop/14-11-17-NO-0.mp4";
+        record.Type = PublicConst.DoorStateCamera;
         var path = record.FilePath;
         if (string.IsNullOrWhiteSpace(path))
         {
@@ -83,7 +84,7 @@ public partial class CamAlarmRecordViewModel : ObservableObject
             return;
         }
         // 触发事件，交给View层弹窗
-        WeakReferenceMessenger.Default.Send(new PreviewImageMessage(path));
+        WeakReferenceMessenger.Default.Send(new PreviewImageMessage(path,record.Type));
     }
     [RelayCommand]
     private void Exit()
