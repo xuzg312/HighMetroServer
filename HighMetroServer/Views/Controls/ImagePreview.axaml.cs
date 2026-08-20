@@ -23,6 +23,6 @@ public partial class ImagePreview : Window
         // Avalonia跨平台加载本地图片
         var bitmap = new Bitmap(filePath);
         ImgViewer.Source = bitmap;
-        this.Title = Path.GetFileName(filePath);
+        Title = Path.GetFileName(filePath);
     }
 }

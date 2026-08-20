@@ -129,9 +129,10 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
                         //检测摄像机是否在线？
                         var camInfo = ParaSetupModules.CamInfo!;
                         var onLine = false;
-                        if (camInfo.UserId >= 0)
+                        var camRemoteLinkImpl = camInfo!.CamRemoteLinkImpl;
+                        if (camRemoteLinkImpl != null && camRemoteLinkImpl.GetUserId()>=0)
                         {
-                            onLine = camInfo.CamRemoteLinkImpl!.CheckOnLine(camInfo.UserId);
+                            onLine = camRemoteLinkImpl.CheckOnLine();
                         }
                         //转发到TcpClient;
                         var iPosition = 7;
@@ -204,14 +205,11 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
     private void ClearResource()
     {
         _tcpServer?.CloseServer();
-        Console.WriteLine("释放TCP资源！");
     }
     public void Receive(AppCleanupMessage message)
     {
-        ClearResource();
-    }
-    public void Unsubscribe()
-    {
         WeakReferenceMessenger.Default.UnregisterAll(this);
+        ClearResource();
+        Console.WriteLine("释放TCP资源！");
     }
 }

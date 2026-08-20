@@ -20,22 +20,11 @@ public partial class HostConfigView : UserControl
         set => SetValue(ConfigProperty, value);
     }
 
-    // 2. 定义内部 ViewModel 属性
-    // 这样 XAML 就可以通过 ElementName="Root" 访问到它
     public HostConfigViewModel HostConfigViewModelVm { get; }
     public HostConfigView()
     {
         HostConfigViewModelVm = new HostConfigViewModel();
         InitializeComponent();
-        Unloaded += OnViewUnloaded;
-    }
-    private void OnViewUnloaded(object? sender, RoutedEventArgs e)
-    {
-        if(DataContext is HostConfigViewModel vm)
-        {
-            vm.Unsubscribe();
-        }
-        Unloaded -= OnViewUnloaded;
     }
     static HostConfigView()
     {

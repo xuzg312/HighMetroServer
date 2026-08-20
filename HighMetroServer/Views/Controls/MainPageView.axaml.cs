@@ -13,10 +13,6 @@ public partial class MainPageView : UserControl
         InitializeComponent();
         Loaded += MainPageView_Loaded;
     }
-    private void InitializeComponent()
-    {
-        AvaloniaXamlLoader.Load(this);
-    }
     private void MainPageView_Loaded(object? sender, RoutedEventArgs e)
     {
         if (DataContext is MainPageViewModel vm)

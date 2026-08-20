@@ -29,7 +29,6 @@ public partial class SerialConfigView : UserControl
     {
         InitializeComponent();
         _viewModel = new SerialConfigViewModel(0);
-        Console.WriteLine("SerialConfigView:------"+SerialNo+"-----");
         Dispatcher.UIThread.Post(() => { DataContext = _viewModel; });
     }
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
@@ -47,6 +46,5 @@ public partial class SerialConfigView : UserControl
             return;
         }
         _viewModel.UpdateParams(SerialNo, Config);
-        Console.WriteLine($"SerialConfigView 更新：No={SerialNo}");
     }
 }

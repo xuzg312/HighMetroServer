@@ -52,4 +52,6 @@ public class PublicConst
     public const byte IdentifyPhoto = 3;//获取拍照的图片文件；
     
     public const string DoorStateCapture = "拍照";
+    public const string DoorStateCamera = "录像";
+
 }

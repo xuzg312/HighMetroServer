@@ -27,14 +27,6 @@ public partial class CamConfigView : UserControl
     {
         CamConfigViewModelVm = new CamConfigViewModel();
         InitializeComponent();
-        Unloaded += OnViewUnloaded;
-    }
-    private void OnViewUnloaded(object? sender, RoutedEventArgs e)
-    {
-        if(DataContext is CamConfigViewModel vm)
-        {
-            vm.Unsubscribe();
-        }
     }
     static CamConfigView()
     {

@@ -64,9 +64,6 @@ public partial class CameraPreviewViewModel : ObservableObject,IRecipient<AppCle
     private readonly HardInfo _hardInfo;
     private bool _start;
     private readonly CamRemoteLinkImpl _camRemoteLinkImpl;
-    private int _lUserId = -1;
-    private int _lRealPlayHandle = -1;
-    private int _playPort = -1; // PlayCtrl解码端口
     private readonly RealDataCallBack _realDataCallback;
     private readonly PlayCtrl.DeccbFun _decodeCallback;
     public CameraPreviewViewModel(HardInfo hardInfo,ResultInfo resultInfo)
@@ -97,16 +94,12 @@ public partial class CameraPreviewViewModel : ObservableObject,IRecipient<AppCle
             return;        
         }
         //尝试连接摄像机；
-        if (!InitDrive.InitSign)
+        //初始化；
+        var loadCamResult00 = _camRemoteLinkImpl.Init();
+        if (!loadCamResult00.Code.Equals(PublicConst.FlagYes))
         {
-            //初始化；
-            var loadCamResult00 = _camRemoteLinkImpl.Init();
-            if (!loadCamResult00.Code.Equals(PublicConst.FlagYes))
-            {
-                MessageText = "摄像头初始化失败！";
-                return;
-            }
-            InitDrive.InitSign = true;
+            MessageText = "摄像头初始化失败！";
+            return;
         }
         //尝试登录;
         var loadCamResult = _camRemoteLinkImpl.Login(_hardInfo);
@@ -115,16 +108,13 @@ public partial class CameraPreviewViewModel : ObservableObject,IRecipient<AppCle
             MessageText = loadCamResult.Message;
             return;
         }
-        _lUserId = loadCamResult.Value;
         //打开实时预览；
-        loadCamResult = _camRemoteLinkImpl.StartPreview(_lUserId, _realDataCallback,_decodeCallback);
+        loadCamResult = _camRemoteLinkImpl.StartPreview(_realDataCallback,_decodeCallback);
         if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
         {
             MessageText = loadCamResult.Message;
             return;
         }
-        _lRealPlayHandle = loadCamResult.Value;
-        _playPort= loadCamResult.Tag;
         _start = true;
         CamState = "【 摄像头连接状态：✅ 】";
         OpenCommand.NotifyCanExecuteChanged();
@@ -133,7 +123,7 @@ public partial class CameraPreviewViewModel : ObservableObject,IRecipient<AppCle
     private void OnRealDataReceived(
         int lRealHandle, uint dwDataType, nint pBuffer, uint dwBufSize, nint pUser)
     {
-        if (_playPort < 0 || dwBufSize == 0) return;
+        if (dwBufSize == 0) return;
         if(dwDataType != CamConst.NetDvrStreamData)
             return;
         // 送入H264/H265码流解码
@@ -142,14 +132,10 @@ public partial class CameraPreviewViewModel : ObservableObject,IRecipient<AppCle
         LoadCamResult? loadCamResult=null;
         for (var i = 0; i < 20; i++)
         {
-            loadCamResult = _camRemoteLinkImpl.PreviewInputData(_playPort, pBuffer, dwBufSize);
+            loadCamResult = _camRemoteLinkImpl.PreviewInputData(pBuffer, dwBufSize);
             if (loadCamResult.Code.Equals(PublicConst.FlagYes))
             {
                 pushResult = true;
-                break;
-            }
-            if (loadCamResult.Value != 11)
-            {
                 break;
             }
         }
@@ -197,7 +183,7 @@ public partial class CameraPreviewViewModel : ObservableObject,IRecipient<AppCle
     [RelayCommand(CanExecute = nameof(CanClose))]
     private void Snap()
     {
-        var loadCamResult = _camRemoteLinkImpl.DebugCaptureJpegPicture(_lUserId); 
+        var loadCamResult = _camRemoteLinkImpl.DebugCaptureJpegPicture(); 
         (SnapshotSource as Bitmap)?.Dispose();
         if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
         {
@@ -213,14 +199,11 @@ public partial class CameraPreviewViewModel : ObservableObject,IRecipient<AppCle
     [RelayCommand(CanExecute= nameof(CanClose))]
     private void Close()
     {
-        var loadCamResult = _camRemoteLinkImpl.StopPreview(_lUserId,_playPort,_lRealPlayHandle);
+        var loadCamResult = _camRemoteLinkImpl.Close();
         if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
         {
             MessageText = "退出登录失败！";
         }
-        _lUserId = -1;
-        _playPort = -1;
-        _lRealPlayHandle = -1;
         _start = false;
         CamState = "【 摄像头连接状态：❌ 】";
         OpenCommand.NotifyCanExecuteChanged();
@@ -231,14 +214,11 @@ public partial class CameraPreviewViewModel : ObservableObject,IRecipient<AppCle
     {
         if (_start)
         {
-            var loadCamResult = _camRemoteLinkImpl.StopPreview(_lUserId,_playPort,_lRealPlayHandle);
+            var loadCamResult = _camRemoteLinkImpl.Close();
             if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
             {
                 MessageText = "退出登录失败！";
             }
-            _lUserId = -1;
-            _playPort = -1;
-            _lRealPlayHandle = -1;
             _start = false;            
         }
         OnClose?.Invoke();
@@ -267,15 +247,13 @@ public partial class CameraPreviewViewModel : ObservableObject,IRecipient<AppCle
     {
         if (_start)
         {
-            _camRemoteLinkImpl.StopPreview(_lUserId, _playPort, _lRealPlayHandle);
+            _camRemoteLinkImpl.Close();
         }
     }
     public void Receive(AppCleanupMessage message)
     {
-        ClearResource();
-    }
-    public void Unsubscribe()
-    {
+        Console.WriteLine("释放---摄像头调试----CameraPreviewViewModel！");
         WeakReferenceMessenger.Default.UnregisterAll(this);
+        ClearResource();
     }
 }

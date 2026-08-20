@@ -68,16 +68,12 @@ public partial class EditCamConfigViewModel : ObservableValidator
             return;        
         }
         //尝试连接摄像机；
-        if (!InitDrive.InitSign)
+        //初始化；
+        var loadCamResult00 = _camRemoteLinkImpl.Init();
+        if (!loadCamResult00.Code.Equals(PublicConst.FlagYes))
         {
-            //初始化；
-            var loadCamResult00 = _camRemoteLinkImpl.Init();
-            if (!loadCamResult00.Code.Equals(PublicConst.FlagYes))
-            {
-                MessageText = "摄像头初始化失败！";
-                return;
-            }
-            InitDrive.InitSign = true;
+            MessageText = "摄像头初始化失败！";
+            return;
         }
         var setting = BuildSetting();
         //尝试登录;
@@ -88,7 +84,7 @@ public partial class EditCamConfigViewModel : ObservableValidator
             return;
         }
         //连接成功，退出登录；
-        loadCamResult = _camRemoteLinkImpl.Logout(loadCamResult.Value);
+        loadCamResult = _camRemoteLinkImpl.Logout();
         if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
         {
             MessageText = "断开摄像头失败！";
@@ -118,11 +114,14 @@ public partial class EditCamConfigViewModel : ObservableValidator
             MessageText = resultInfo.Message;
             return;
         }
+
+        _camRemoteLinkImpl.Close();
         OnHardConfigSuccess?.Invoke();
     }
     [RelayCommand]
     private void Cancel()
     {
+        _camRemoteLinkImpl.Clear();
         OnHardConfigCancel?.Invoke();
     }
     private HardInfo BuildSetting()

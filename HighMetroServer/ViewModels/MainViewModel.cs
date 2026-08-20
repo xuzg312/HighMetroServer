@@ -225,10 +225,10 @@ public partial class MainViewModel : ViewModelBase
     {
         Dispatcher.UIThread.Post(() =>
         {
-            if (ActivePopupVm is EditCamConfigViewModel oldHardVm)
+            if (ActivePopupVm is EditCamConfigViewModel oldCamConfigVm)
             {
-                oldHardVm.OnHardConfigSuccess -= OnHardEnd;
-                oldHardVm.OnHardConfigCancel -= OnHardEnd;
+                oldCamConfigVm.OnHardConfigSuccess -= OnHardEnd;
+                oldCamConfigVm.OnHardConfigCancel -= OnHardEnd;
             }
             ActivePopupVm = null;
             ShowOverlay = false;

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -154,26 +155,32 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
                 }
                 else if (socketDataBlock.Content[5] == 0X84)
                 {
-                    //拍照；                         
+                    //拍照、录像；                         
                     var cameraBean = new CameraBean();
                     byte iPosition = 6;
                     var dire = socketDataBlock.Content[iPosition];
                     if (dire == 0X0F)
                     {
                         cameraBean.Door = PublicConst.DireDoor;
-                        //动作；拍照；
                         iPosition = 10;
                         var state = socketDataBlock.Content[iPosition];
                         if (state == 0X00)
                         {
+                            //动作；拍照；
                             //转发到TcpClient;
                             var tcpServer = ParaSetupModules.HostInfo!.TcpServer;
                             tcpServer?.SendMessage(socketDataBlock);
                             cameraBean.Type = PublicConst.DoorStateCapture;
-                            //拍照，并保存到数据库；
-                            ReplyCameraInfo(socketDataBlock, cameraBean);
+                            ReplyCaptureInfo(socketDataBlock, cameraBean);
                             valid = true;
                         }
+                        else if (state == 0X01)
+                        {
+                            //录像;
+                            cameraBean.Type = PublicConst.DoorStateCamera;
+                            _= ReplyCameraInfo(socketDataBlock, cameraBean);
+                            valid = true;
+                        } 
                     }
                 }
             }
@@ -225,7 +232,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         }
     }
     //拍照
-    private void ReplyCameraInfo(SocketDataBlock socketDataBlock, CameraBean cameraBean)
+    private void ReplyCaptureInfo(SocketDataBlock socketDataBlock, CameraBean cameraBean)
     {
         cameraBean.HostBh = ParaSetupModules.HostInfo!.Bh;
         var publicUntil = new PublicUntil();
@@ -237,10 +244,11 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         iPosition = 8;
         cameraBean.Serial = publicUntil.GetUshort(socketDataBlock.Content!, iPosition);
         var camInfo = ParaSetupModules.CamInfo;
-        if (camInfo is { UserId: >= 0 })
+        var camRemoteLinkImpl = camInfo!.CamRemoteLinkImpl;
+        if (camRemoteLinkImpl!=null && camRemoteLinkImpl.GetUserId()>=0)
         {
             //动作：拍照；
-            var value = camInfo.CamRemoteLinkImpl!.CaptureJpegPicture(camInfo.UserId,cameraBean,SystemInfo.PhotoDir); 
+            var value = camRemoteLinkImpl.CaptureJpegPicture(cameraBean,SystemInfo.PhotoDir); 
             if (value.Code.Equals(PublicConst.FlagYes))
             {
                 cameraBean.Message = "拍照执行成功！";
@@ -265,6 +273,60 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         else
         {
             cameraBean.Message = "触发拍照，但未连接摄像头！";
+            Dispatcher.UIThread.Post(() => { MessageText = $"{cameraBean.Message}【{cameraBean.DateTime}】";});
+            var resultInfo = ParaSetupModules.DbService!.AddError(cameraBean);
+            if (!resultInfo.Code.Equals(PublicConst.FlagYes))
+            {
+                ParaSetupModules.RaiseAscDataProdEvent(resultInfo.Message);
+            }
+        }
+    }
+    //录像
+    private async Task ReplyCameraInfo(SocketDataBlock socketDataBlock, CameraBean cameraBean)
+    { 
+        await ReplyCamera(socketDataBlock,cameraBean);
+    }
+    private async Task ReplyCamera(SocketDataBlock socketDataBlock, CameraBean cameraBean)
+    {
+        cameraBean.HostBh = ParaSetupModules.HostInfo!.Bh;
+        var publicUntil = new PublicUntil();
+        byte iPosition = 3;
+        //设备id
+        cameraBean.Id = publicUntil.GetUshort(socketDataBlock.Content!, iPosition);
+        cameraBean.DateTime = DateTime.Now; //.ToString("yyyy-MM-dd HH:mm:ss");
+        //次数；
+        iPosition = 8;
+        cameraBean.Serial = publicUntil.GetUshort(socketDataBlock.Content!, iPosition);
+        var camInfo = ParaSetupModules.CamInfo;
+        var camRemoteLinkImpl = camInfo!.CamRemoteLinkImpl;
+        if (camRemoteLinkImpl != null && camRemoteLinkImpl.GetUserId()>=0)
+        {
+            //动作：录像；
+            var value = await camRemoteLinkImpl.PlayCam(cameraBean,SystemInfo.PhotoDir); 
+            if (value.Code.Equals(PublicConst.FlagYes))
+            {
+                cameraBean.Message = "录像执行成功！";
+                Dispatcher.UIThread.Post(() => { MessageText = $"{cameraBean.Message}【{cameraBean.DateTime}】";});
+                var resultInfo = ParaSetupModules.DbService!.AddAlarm(cameraBean);
+                if (!resultInfo.Code.Equals(PublicConst.FlagYes))
+                {
+                    ParaSetupModules.RaiseAscDataProdEvent($"{resultInfo.Message}【{cameraBean.DateTime}】");
+                }
+            }
+            else
+            {
+                cameraBean.Message = value.Message;
+                ParaSetupModules.RaiseAscDataProdEvent($"{value.Message}【{cameraBean.DateTime}】");
+                var resultInfo = ParaSetupModules.DbService!.AddError(cameraBean);
+                if (!resultInfo.Code.Equals(PublicConst.FlagYes))
+                {
+                    ParaSetupModules.RaiseAscDataProdEvent($"{resultInfo.Message}【{cameraBean.DateTime}】");
+                }
+            }
+        }
+        else
+        {
+            cameraBean.Message = "触发录像，但未连接摄像头！";
             Dispatcher.UIThread.Post(() => { MessageText = $"{cameraBean.Message}【{cameraBean.DateTime}】";});
             var resultInfo = ParaSetupModules.DbService!.AddError(cameraBean);
             if (!resultInfo.Code.Equals(PublicConst.FlagYes))
@@ -337,7 +399,6 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     }
     private void ClearResource()
     {
-        Console.WriteLine("释放串口资源！");
         if(!_start)
             return;
         _commSerialImpl!.Close();
@@ -345,10 +406,8 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     }
     public void Receive(AppCleanupMessage message)
     {
-        ClearResource();
-    }
-    public void Unsubscribe()
-    {
+        Console.WriteLine("释放串口资源-----Receive！");
         WeakReferenceMessenger.Default.UnregisterAll(this);
+        ClearResource();
     }
 }

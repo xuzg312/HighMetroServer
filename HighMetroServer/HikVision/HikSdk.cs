@@ -51,4 +51,11 @@ public static partial class HikSdk
         ref ChcNetSdk.NetDvrPreviewInfo lpPreviewInfo, 
         RealDataCallBack fRealDataCallBackV30, 
         IntPtr pUser);
+    
+    [DllImport("HCNetSDK", CallingConvention = CallingConvention.Cdecl)]
+    public static extern int NET_DVR_SaveRealData(Int32 lRealHandle, string sFileName);
+    
+    [DllImport("HCNetSDK", CallingConvention = CallingConvention.Cdecl)]
+    public static extern int NET_DVR_StopSaveRealData(Int32 lRealHandle);
+
 }

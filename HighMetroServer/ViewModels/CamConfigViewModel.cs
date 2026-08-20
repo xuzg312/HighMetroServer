@@ -37,11 +37,13 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
     private string _messageText = string.Empty;
 
     private bool _start;
-    private CamRemoteLinkImpl? _camRemoteLinkImpl;
+    private CamRemoteLinkImpl _camRemoteLinkImpl;
     public CamConfigViewModel()
     {
         _start = false;
         CamState = "【 摄像头连接状态：❌ 】";
+        _camRemoteLinkImpl = new CamRemoteLinkImpl();
+        ParaSetupModules.CamInfo!.CamRemoteLinkImpl = _camRemoteLinkImpl;
         WeakReferenceMessenger.Default.RegisterAll(this);
     }
     partial void OnConfigChanged(CamOptions? value)
@@ -66,27 +68,20 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
             MessageText = "MAC环境，不支持此操作，请切换到：Windows/Linux环境测试！";
             return;        
         }
-        if (!InitDrive.InitSign)
+        //初始化；
+        var loadCamResult00 = _camRemoteLinkImpl.Init();
+        if (!loadCamResult00.Code.Equals(PublicConst.FlagYes))
         {
-            //初始化；
-            _camRemoteLinkImpl = new CamRemoteLinkImpl();
-            camInfo.CamRemoteLinkImpl = _camRemoteLinkImpl;
-            var loadCamResult00 = _camRemoteLinkImpl.Init();
-            if (!loadCamResult00.Code.Equals(PublicConst.FlagYes))
-            {
-                MessageText = "摄像头初始化失败！";
-                return;
-            }
-            InitDrive.InitSign = true;
+            MessageText = loadCamResult00.Message;
+            return;
         }
         //尝试登录;
-        var loadCamResult = _camRemoteLinkImpl!.Login(camInfo);
+        var loadCamResult = _camRemoteLinkImpl.Login(camInfo);
         if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
         {
             MessageText = loadCamResult.Message;
             return;
         }
-        camInfo.UserId = loadCamResult.Value;
         _start = true;
         CamState = "【 摄像头连接状态：✅ 】";
         OpenCommand.NotifyCanExecuteChanged();
@@ -96,14 +91,12 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
     private void Close()
     {
         //退出登录；
-        var camInfo = ParaSetupModules.CamInfo!;
-        var loadCamResult = _camRemoteLinkImpl!.Logout(camInfo.UserId);
+        var loadCamResult = _camRemoteLinkImpl.Logout();
         if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
         {
             MessageText = "退出登录失败！";
         }
         _start = false;
-        camInfo.UserId = -1;
         CamState = "【 摄像头连接状态：❌ 】";
         OpenCommand.NotifyCanExecuteChanged();
         CloseCommand.NotifyCanExecuteChanged();
@@ -119,29 +112,18 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
     }
     private void ClearResource()
     {
-        Console.WriteLine("释放摄像头资源！");
         if (_start)
         {
-            var camInfo = ParaSetupModules.CamInfo!;
-            _camRemoteLinkImpl!.Logout(camInfo.UserId);
-            camInfo.UserId = -1;
+            _camRemoteLinkImpl.Logout();
         }
         //释放摄像机资源；
-        if (InitDrive.InitSign)
-        {
-            if (!_start)
-                _camRemoteLinkImpl = new CamRemoteLinkImpl();
-            _camRemoteLinkImpl!.Clear();
-            InitDrive.InitSign = false;
-        }
+        _camRemoteLinkImpl.Clear();
         _start = false;
     }
     public void Receive(AppCleanupMessage message)
     {
-        ClearResource();
-    }
-    public void Unsubscribe()
-    {
         WeakReferenceMessenger.Default.UnregisterAll(this);
+        ClearResource();
+        Console.WriteLine("释放摄像头资源----Receive！");
     }
 }
