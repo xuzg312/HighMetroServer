@@ -237,7 +237,7 @@ public class TcpServerChatImpl : IChildCommunication
         // 缓存不足一帧，等待下次数据
         if (_receiveBuffer.Count < totalFrameLen)
             return false;
-        startPosition += (totalFrameLen - 1);
+        startPosition += (totalFrameLen - 3);
         var tailByte = byteCopy[startPosition];
         // 3. 校验包尾
         if (tailByte != PacketTail)

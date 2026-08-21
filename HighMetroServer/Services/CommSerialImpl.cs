@@ -141,7 +141,7 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
                 {
 
                     if (data.Length <= 0)
-                        continue;
+                        break;
                     hasNewData = true;
                     foreach (var b in data)
                     {
@@ -213,7 +213,7 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
         // 缓存不足一帧，等待下次数据
         if (_receiveBuffer.Count < totalFrameLength)
             return false;
-        startPosition += (totalFrameLength - 1);
+        startPosition += (totalFrameLength - 3);
         var tailByte = byteCopy[startPosition];
         if (tailByte != PacketTail)
         {

@@ -83,7 +83,8 @@ public partial class MainPageViewModel : ViewModelBase
             return;
         }
         var message = stringEventArgs.Message;
-        lock (_log4Queue) 
+        AscMessageText = message;
+        /*lock (_log4Queue) 
         {
             _log4Queue.Enqueue(message);
             // 超限就持续踢掉最早行
@@ -91,8 +92,12 @@ public partial class MainPageViewModel : ViewModelBase
             {
                 _log4Queue.Dequeue();
             }
-            Dispatcher.UIThread.Post(() => { AscMessageText = string.Join(Environment.NewLine, _log4Queue); }); 
-        }
+            Dispatcher.UIThread.Post(() =>
+            {
+                //AscMessageText = _log4Queue;
+                AscMessageText = string.Join(Environment.NewLine, _log4Queue);
+            }); 
+        }*/
     }
     //十六进制消息显示；
     private void OnShowHexDataProdEvent(object? obj, EventArgs arg)
