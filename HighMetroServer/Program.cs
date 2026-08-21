@@ -1,5 +1,6 @@
 ﻿using Avalonia;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -9,6 +10,9 @@ namespace HighMetroServer;
 
 sealed class Program
 {
+    // 使用静态字典缓存已成功加载的库句柄，确保绝对只加载一次
+    private static readonly Dictionary<string, IntPtr> LoadedLibraries = new();
+
     // Initialization code. Don't use any Avalonia, third-party APIs or any
     // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
     // yet and stuff might break.
@@ -23,6 +27,10 @@ sealed class Program
     }
     private static IntPtr ResolveHikLibrary(string libraryName, Assembly assembly, DllImportSearchPath? searchPath)
     {
+        if (LoadedLibraries.TryGetValue(libraryName, out var cachedHandle))
+        {
+            return cachedHandle;
+        }
         // 1. 确定当前平台的基础路径（完美兼容单文件发布解压目录）
         var baseDir = AppContext.BaseDirectory;
         string libPath; // 默认回退到系统搜索
@@ -59,6 +67,7 @@ sealed class Program
             return handle;
         }
         // 3. 如果绝对路径加载失败，回退到默认解析逻辑
+        Console.WriteLine($"[HikVision] 尝试加载原生库失败: {libPath}");
         return IntPtr.Zero;
     }
     // Avalonia configuration, don't remove; also used by visual designer.
