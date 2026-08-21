@@ -56,7 +56,6 @@ public partial class CamAlarmRecordViewModel : ObservableObject
             MessageText = "未查询到拍照记录！";
         }
     }
-
     [RelayCommand]
     private void OpenCalendar()
     {
@@ -75,8 +74,6 @@ public partial class CamAlarmRecordViewModel : ObservableObject
             MessageText = "请首先选择一条拍照记录！";
             return;
         }
-        record.FilePath = "/Users/xu_zg/Desktop/14-11-17-NO-0.mp4";
-        record.Type = PublicConst.DoorStateCamera;
         var path = record.FilePath;
         if (string.IsNullOrWhiteSpace(path))
         {

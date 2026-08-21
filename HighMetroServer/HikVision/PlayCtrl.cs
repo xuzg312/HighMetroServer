@@ -6,12 +6,7 @@ namespace HighMetroServer.HikVision;
 public static partial class PlayCtrl
 {
     public delegate void DeccbFun(
-        int nPort, 
-        IntPtr pBuf, 
-        int nSize, 
-        ref FrameInfo pFrameInfo, 
-        int nReserved1, 
-        int nReserved2);
+        int nPort, IntPtr pBuf, int nSize, FrameInfo frameInfo, IntPtr pUser);
     
     public struct FrameInfo
     {

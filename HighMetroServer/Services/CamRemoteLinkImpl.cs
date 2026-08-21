@@ -14,7 +14,8 @@ public class CamRemoteLinkImpl
     private int _playHandle = -1;
     private int _iPort = -1;
     private static bool _initSign;
-
+    private RealDataCallBack _realDataCallback;
+    private PlayCtrl.DeccbFun _decodeCallback;
     private readonly object _dirLockObj = new();
     public int GetUserId() => _userId;
     public LoadCamResult Init()
@@ -364,13 +365,11 @@ public class CamRemoteLinkImpl
                 bufferPtr,
                 PublicConst.MaxBufferSize,
                 ref actualSize);
-
             // SDK调用失败校验
             if (nativeRet < 0 || actualSize <= 0)
             {
                 return GetLastError();
             }
-
             // 拷贝非托管内存
             var jpegBytes = new byte[actualSize];
             Marshal.Copy(bufferPtr, jpegBytes, 0, (int)actualSize);
@@ -392,6 +391,8 @@ public class CamRemoteLinkImpl
     public LoadCamResult StartPreview(
         RealDataCallBack realDataCallBack,PlayCtrl.DeccbFun decodeCallback)
     {
+        _realDataCallback = realDataCallBack;
+        _decodeCallback = decodeCallback;
         if (_userId < 0)
         {
             return new LoadCamResult()
@@ -408,28 +409,31 @@ public class CamRemoteLinkImpl
                 Message = "PlayHandle>=0，此次操作被拒绝！"
             };
         }
-
-        if (_iPort <= 0)
+        if (_iPort >= 0)
         {
-            //获取播放句柄 Get the port to play
-            if (PlayCtrl.PlayM4_GetPort(ref _iPort) <= 0)
-                return GetLastError();
+            return new LoadCamResult()
+            {
+                Code = PublicConst.FlagNo,
+                Message = "IPort>=0，此次操作被拒绝！"
+            };
         }
+        //获取播放句柄 Get the port to play
+        if (PlayCtrl.PlayM4_GetPort(ref _iPort) < 0)
+            return GetLastError();
         //设置流播放模式 Set the stream mode: real-time stream mode
-        if (PlayCtrl.PlayM4_SetStreamOpenMode(_iPort, 0)<=0)
+        if (PlayCtrl.PlayM4_SetStreamOpenMode(_iPort, 0)<0)
             return GetLastError();
         //打开码流，送入头数据 Open stream
-        if (PlayCtrl.PlayM4_OpenStream(_iPort, IntPtr.Zero, 0, CamConst.BufPoolSize)<=0)
+        if (PlayCtrl.PlayM4_OpenStream(_iPort, IntPtr.Zero, 0, CamConst.BufPoolSize)<0)
             return GetLastError();
         //设置显示缓冲区个数 Set the display buffer number
-        if (PlayCtrl.PlayM4_SetDisplayBuf(_iPort,CamConst.DisplayBufNumber)<=0)
+        if (PlayCtrl.PlayM4_SetDisplayBuf(_iPort,CamConst.DisplayBufNumber)<0)
             return GetLastError(); 
         //设置显示模式 Set the display mode
         if (PlayCtrl.PlayM4_SetOverlayMode(_iPort,0,0)<=0)
             return GetLastError(); 
         //设置解码回调函数，获取解码后音视频原始数据 Set callback function of decoded data
-        var value = PlayCtrl.PlayM4_SetDecCallBackEx(_iPort, decodeCallback, IntPtr.Zero,0);
-        if (value <= 0)
+        if(PlayCtrl.PlayM4_SetDecCallBackEx(_iPort, decodeCallback, IntPtr.Zero,0)<0)
             return GetLastError();
         var playInfo = new ChcNetSdk.NetDvrPreviewInfo
         {
@@ -437,7 +441,7 @@ public class CamRemoteLinkImpl
             lChannel = 1,          // 通道号，IPC一般1
             dwStreamType = 1,      // 1-主码流，2-子码流
             dwLinkMode = 0,        //0：TCP方式,1：UDP方式,2：多播方式,3 - RTP方式，4-RTP/RTSP,5-RSTP/HTTP
-            bBlocked = true,      //0-非阻塞取流, 1-阻塞取流, 如果阻塞SDK内部connect失败将会有5s的超时才能够返回,不适合于轮询取流操作
+            bBlocked = false,      //0-非阻塞取流, 1-阻塞取流, 如果阻塞SDK内部connect失败将会有5s的超时才能够返回,不适合于轮询取流操作
             dwDisplayBufNum = 1,   //播放库播放缓冲区最大缓冲帧数，范围1-50，置0时默认为1 
             byProtoType = 0,       //应用层取流协议，0-私有协议，1-RTSP协议
             byPreviewMode = 0,     //预览模式，0-正常预览，1-延迟预览
@@ -456,7 +460,7 @@ public class CamRemoteLinkImpl
     }
     public LoadCamResult PreviewInputData(nint pBuffer, uint dwBufSize)
     {
-        if (PlayCtrl.PlayM4_InputData(_iPort, pBuffer, dwBufSize)<=0)
+        if (PlayCtrl.PlayM4_InputData(_iPort, pBuffer, dwBufSize)<0)
             return GetLastError(); ;
         return new LoadCamResult
         {

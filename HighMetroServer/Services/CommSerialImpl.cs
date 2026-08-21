@@ -139,7 +139,6 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
                 var hasNewData = false;
                 while (_receiveQueue.TryDequeue(out var data))
                 {
-
                     if (data.Length <= 0)
                         break;
                     hasNewData = true;

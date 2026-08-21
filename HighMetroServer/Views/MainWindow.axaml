@@ -10,7 +10,7 @@
         x:Class="HighMetroServer.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        Title="HighMetroServer">
+        Title="宁波智汇门道—高铁闸机AB门监控调试系统V1.00（服务端）">
     
     <Grid RowDefinitions="Auto,*">
         <!-- 顶部菜单栏 -->
