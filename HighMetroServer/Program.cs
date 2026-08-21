@@ -64,6 +64,7 @@ sealed class Program
         // 2. 使用 TryLoad 防止因为找不到文件直接抛出 DllNotFoundException
         if (NativeLibrary.TryLoad(libPath, assembly, searchPath, out var handle))
         {
+            LoadedLibraries[libraryName] = handle;
             return handle;
         }
         // 3. 如果绝对路径加载失败，回退到默认解析逻辑
