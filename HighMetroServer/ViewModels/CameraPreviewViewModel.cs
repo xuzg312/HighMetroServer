@@ -129,6 +129,7 @@ public partial class CameraPreviewViewModel : ObservableObject,IRecipient<AppCle
     private void OnRealDataReceived(
         int lRealHandle, uint dwDataType, nint pBuffer, uint dwBufSize, nint pUser)
     {
+        Console.WriteLine($"OnRealDataReceived:dwDataType:{dwDataType},dwBufSize:{dwBufSize}");
         if (dwBufSize == 0) return;
         if(dwDataType != 2)
             return;
@@ -141,6 +142,8 @@ public partial class CameraPreviewViewModel : ObservableObject,IRecipient<AppCle
     private void OnDecodedFrameCallback(
         int nPort, IntPtr pBuf, int nSize, PlayCtrl.FrameInfo frameInfo, IntPtr pUser)
     {
+        Console.WriteLine($"OnDecodedFrameCallback:nPort:{nPort},nSize:{nSize}");
+
         int w = frameInfo.NWidth;
         int h = frameInfo.NHeight;
         int type = frameInfo.NType;
@@ -173,7 +176,7 @@ public partial class CameraPreviewViewModel : ObservableObject,IRecipient<AppCle
                             AlphaFormat.Opaque);
                     }
                     var writeBmp = _useA ? _bmpA : _bmpB;
-                    using var lockBuf = writeBmp.Lock();
+                    using var lockBuf = writeBmp!.Lock();
                     Marshal.Copy(frameData, 0, lockBuf.Address, frameData.Length);
                     // 切换引用，Source对象变更，触发渲染！核心
                     PreviewSource = writeBmp;
@@ -183,13 +186,13 @@ public partial class CameraPreviewViewModel : ObservableObject,IRecipient<AppCle
                 }
                 catch (Exception ex)
                 {
-                    Dispatcher.UIThread.Post(() => { MessageText = "解码异常：{ex.Message}"; });
+                    Dispatcher.UIThread.Post(() => { MessageText = $"解码异常：{ex.Message}"; });
                 }
             }, DispatcherPriority.Render);
         }
         catch(Exception ex)
         {
-            Dispatcher.UIThread.Post(() => { MessageText = "解码异常：{ex.Message}"; });
+            Dispatcher.UIThread.Post(() => { MessageText = $"解码异常：{ex.Message}"; });
         }
     }
     private byte[] I420ToBgraRemovePadding(IntPtr srcPtr, int w, int h)

@@ -40,6 +40,9 @@ public static partial class PlayCtrl
     public static partial int PlayM4_SetDecCallBackEx(int nPort, DeccbFun decCbFun, IntPtr pDest, int nDestSize);
     
     [LibraryImport("PlayCtrl")]
+    public static partial int PlayM4_SetDecCallBackExMend(int nPort, DeccbFun decCbFun, IntPtr pDest, int nDestSize,IntPtr pUser);
+
+    [LibraryImport("PlayCtrl")]
     public static partial int PlayM4_GetPort(ref int nPort);
     
     [LibraryImport("PlayCtrl")]
@@ -58,6 +61,8 @@ public static partial class PlayCtrl
     public static partial int PlayM4_SetDisplayBuf(int nPort, uint nNum);
 
     [LibraryImport("PlayCtrl")]
-    public static partial int PlayM4_SetOverlayMode(int nPort, int bOverlay, uint colorKey);
+    public static partial int PlayM4_SetOverlayFlipMode(int nPort, int bOverlay, uint colorKey);
 
+    [LibraryImport("PlayCtrl")]
+    public static partial int PlayM4_GetLastError(int nPort);
 }
