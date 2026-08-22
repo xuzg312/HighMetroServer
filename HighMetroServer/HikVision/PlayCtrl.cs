@@ -65,4 +65,7 @@ public static partial class PlayCtrl
 
     [LibraryImport("PlayCtrl")]
     public static partial int PlayM4_GetLastError(int nPort);
+    
+    [LibraryImport("PlayCtrl")]
+    public static partial int PlayM4_SetDecodeEngine(int nPort, int nEngine);
 }

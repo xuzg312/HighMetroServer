@@ -455,6 +455,11 @@ public class CamRemoteLinkImpl
         Console.WriteLine($"-----PlayM4_SetDecCallBackEx:value:{value},error:{error}");
         if(value<0)
             return PlayM4GetLastError();
+        value = PlayCtrl.PlayM4_SetDecodeEngine(_iPort, 0);
+        error = PlayCtrl.PlayM4_GetLastError(_iPort);
+        Console.WriteLine($"-----PlayM4_SetDecodeEngine:value:{value},error:{error}");
+        if(value<0)
+            return PlayM4GetLastError();
         var playInfo = new ChcNetSdk.NetDvrPreviewInfo
         {
             hPlayWnd = IntPtr.Zero,
