@@ -29,7 +29,6 @@ public partial class MainPageViewModel : ViewModelBase
     [ObservableProperty]
     private string? _hexMessageText;
     
-    private readonly Queue<string> _log4Queue = new();
     public MainPageViewModel()
     {
         ParaSetupModules.AscDataProdEvent += OnShowAscDataProdEvent;

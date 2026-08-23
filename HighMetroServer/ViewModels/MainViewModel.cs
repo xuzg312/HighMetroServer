@@ -59,6 +59,26 @@ public partial class MainViewModel : ViewModelBase
         if (resultInfo.Code.Equals(PublicConst.FlagYes))
         {
             var loginSetting = _configService.LoadLoginConfig();
+            if (PublicConst.SelfStart == 1 && loginSetting.IsValid())
+            {
+                //开机自启动；确认用户名、密码是否正确？
+                resultInfo = _dbService.VerifyUser(loginSetting,_dbSetting!);
+                if (resultInfo.Code.Equals(PublicConst.FlagYes))
+                {
+                    var hostSetting = _configService.LoadHostConfig();
+                    if (hostSetting.IsValid())
+                    {
+                        //确认工控机是否正确？
+                        resultInfo = _dbService.VerifyHost(hostSetting,_dbSetting!);
+                        if (resultInfo.Code.Equals(PublicConst.FlagYes))
+                        {
+                            //一路正确，直接启动；
+                            OnHostSuccess(hostSetting);
+                            return;
+                        }
+                    }
+                }
+            }
             var vm = new LoginViewModel(_configService,_dbService,loginSetting,_dbSetting);
             vm.OnLoginSuccess += OnLoginSuccess;
             vm.OnLoginCancel += ExitApplication;            
@@ -76,6 +96,7 @@ public partial class MainViewModel : ViewModelBase
             ActivePopupVm = vm;
         }
     }
+    
     private void OnDbConfigSuccess(DbSetting setting)
     {
         _dbSetting = setting;

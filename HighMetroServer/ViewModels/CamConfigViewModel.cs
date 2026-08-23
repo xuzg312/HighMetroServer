@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -53,6 +54,17 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
         Ip = value.Ip;
         Port = value.Port;
         UserName = value.UserName;
+    }
+    public async Task Start()
+    {
+        if (PublicConst.SelfStart == 1)
+        {
+            if (!_start)
+            {
+                await Task.Delay(1000); 
+                Open();
+            }
+        }
     }
     [RelayCommand(CanExecute = nameof(CanOpen))]
     private void Open()

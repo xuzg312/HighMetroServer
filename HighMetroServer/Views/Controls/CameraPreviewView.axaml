@@ -43,7 +43,6 @@
                         <Button Content="退出" Command="{Binding ExitCommand}" Width="60"/>
                     </StackPanel>
                 </Grid>
-
                 <!-- ========== 第三行：左右严格1:1等分，带边框区分 ========== -->
                 <Grid Grid.Row="2" 
                       Height="410"
@@ -52,7 +51,8 @@
                       ColumnSpacing="6">
                     <!-- 左：实时预览 -->
                     <Grid Grid.Column="0" Background="#0A0A0A" >
-                        <Image Source="{Binding PreviewSource}"
+                        <Image Source="{Binding PreviewSource}" 
+                               Tag="{Binding FrameVersion}" 
                                Stretch="Uniform" />
                         <TextBlock Text="{Binding StatusText}"
                                    Foreground="#cccccc"
@@ -66,7 +66,6 @@
                                        FontSize="12" FontWeight="SemiBold"/>
                         </Border>
                     </Grid>
-
                     <!-- 右：抓拍图片 -->
                     <Grid Grid.Column="1" Background="#0A0A0A" >
                         <Image Source="{Binding SnapshotSource}"

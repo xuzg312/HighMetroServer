@@ -54,4 +54,7 @@ public class PublicConst
     public const string DoorStateCapture = "拍照";
     public const string DoorStateCamera = "录像";
 
+    public const byte SelfStart = 1;//开机自启动；
+    public const byte CommDataParseTask = 4;//串口数据解析后台任务个数；
+    public const byte TcpDataParseTask = 2;//Tcp数据解析后台任务个数；
 }

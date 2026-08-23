@@ -335,6 +335,22 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
             }
         }
     }
+    public async Task Start()
+    {
+        if (PublicConst.SelfStart == 1)
+        {
+            if (!_start)
+            {
+                if (SelectPortName is null || SelectedBaudRate is null || SelectedDataBits is null ||
+                    SelectedStopBits is null || SelectedParity is null)
+                {
+                    return;
+                }
+                await Task.Delay(2000); 
+                Open();
+            }
+        }
+    }
     [RelayCommand(CanExecute = nameof(CanOpen))]
     private void Open()
     {
@@ -364,7 +380,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
                 return;
             }
             //连接尝试串口
-            _commSerialImpl = new CommSerialImpl(3, serialCommInfo);
+            _commSerialImpl = new CommSerialImpl(PublicConst.CommDataParseTask, serialCommInfo);
             serialCommInfo.CommSerialImpl = _commSerialImpl;
             _buildServer = true;
         }

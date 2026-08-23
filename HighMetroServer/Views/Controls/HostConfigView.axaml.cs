@@ -1,4 +1,5 @@
-﻿using Avalonia;
+﻿using System;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
@@ -25,6 +26,18 @@ public partial class HostConfigView : UserControl
     {
         HostConfigViewModelVm = new HostConfigViewModel();
         InitializeComponent();
+        Loaded += OnLoaded;
+    }
+    private void OnLoaded(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            _ = HostConfigViewModelVm.Start();
+        }
+        catch (Exception)
+        {
+            // 捕获初始化异常，弹窗/日志
+        }
     }
     static HostConfigView()
     {

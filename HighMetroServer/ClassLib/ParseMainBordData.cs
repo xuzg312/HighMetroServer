@@ -123,8 +123,8 @@ public class ParseMainBordData
         sb.Append("\r\nA2故障码：").Append(GetFault(mainInfoBean.A2gzm));
         sb.Append("\r\nA1转速：").Append(mainInfoBean.A1zs);
         sb.Append("\r\nA2转速：").Append(mainInfoBean.A2zs);
-        sb.Append("\r\nA1电流：").Append((mainInfoBean.A1dl * 0.01).ToString("0.00"));
-        sb.Append("\r\nA2电流：").Append((mainInfoBean.A2dl * 0.01).ToString("0.00"));
+        sb.Append("\r\nA1电流：").Append((mainInfoBean.A1dl * 0.1).ToString("0.00"));
+        sb.Append("\r\nA2电流：").Append((mainInfoBean.A2dl * 0.1).ToString("0.00"));
         sb.Append("\r\nA1位置：").Append(mainInfoBean.A1wz);
         sb.Append("\r\nA2位置：").Append(mainInfoBean.A2wz);
         data.Add(sb.ToString());
@@ -135,8 +135,8 @@ public class ParseMainBordData
         sb.Append("\r\nB2故障码：").Append(GetFault(mainInfoBean.B2gzm));
         sb.Append("\r\nB1转速：").Append(mainInfoBean.B1zs);
         sb.Append("\r\nB2转速：").Append(mainInfoBean.B2zs);
-        sb.Append("\r\nB1电流：").Append((mainInfoBean.B1dl * 0.01).ToString("0.00"));
-        sb.Append("\r\nB2电流：").Append((mainInfoBean.B2dl * 0.01).ToString("0.00"));
+        sb.Append("\r\nB1电流：").Append((mainInfoBean.B1dl * 0.1).ToString("0.00"));
+        sb.Append("\r\nB2电流：").Append((mainInfoBean.B2dl * 0.1).ToString("0.00"));
         sb.Append("\r\nB1位置：").Append(mainInfoBean.B1wz);
         sb.Append("\r\nB2位置：").Append(mainInfoBean.B2Wz);
         data.Add(sb.ToString());

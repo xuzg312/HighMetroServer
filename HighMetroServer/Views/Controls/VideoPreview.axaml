@@ -5,7 +5,7 @@
         mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="500"
         x:Class="HighMetroServer.Views.Controls.VideoPreview"
         xmlns:vlc="clr-namespace:LibVLCSharp.Avalonia;assembly=LibVLCSharp.Avalonia"
-        Height="500" Width="600"
+        Height="500" Width="500"
         Title="视频播放"
         WindowStartupLocation="CenterOwner">
         <Grid >

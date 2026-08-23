@@ -35,6 +35,7 @@
             <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
         </PackageReference>
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+        <PackageReference Include="Lennox.LibYuvSharp" Version="1.1.2" />
         <PackageReference Include="LibVLCSharp.Avalonia" Version="3.10.0" />
         <PackageReference Include="MySqlConnector" Version="2.3.6" />
         <PackageReference Include="System.IO.Ports" Version="8.0.0" />

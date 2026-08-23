@@ -22,7 +22,6 @@ public class DbSetting
                "ConnectionTimeout=10;"+ // 连接超时（秒）
                "ConnectionLifeTime=300;"; // 连接生命周期（秒）
     }
-
     public bool IsValid()
     {
         return !string.IsNullOrWhiteSpace(DbHost) &&

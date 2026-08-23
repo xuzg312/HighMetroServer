@@ -148,11 +148,14 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
                     }
                 }
                 var parsedCount = 0;
-                while (parsedCount < MaxSingleParseFrame
-                       && !token.IsCancellationRequested
-                       && TryParseOnePacket())
+                if (hasNewData)
                 {
-                    parsedCount++;
+                    while (parsedCount < MaxSingleParseFrame
+                           && !token.IsCancellationRequested
+                           && TryParseOnePacket())
+                    {
+                        parsedCount++;
+                    }
                 }
                 if (!hasNewData && parsedCount == 0)
                 {

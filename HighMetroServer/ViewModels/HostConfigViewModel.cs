@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Threading.Tasks;
+using System.Windows.Input;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -39,6 +41,7 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
     private readonly HostInfo _hostInfo;
     private TcpServerListenerImpl? _tcpServer;
     private bool _buildServer;
+    
     public HostConfigViewModel()
     {
         _start = false;
@@ -56,6 +59,17 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
         Code = value.Code;
         Name = value.Name;
     }
+    public async Task Start()
+    {
+        if (PublicConst.SelfStart == 1)
+        {
+            if (!_start)
+            {
+                await Task.Delay(500); 
+                Open();
+            }
+        }
+    }
     [RelayCommand(CanExecute = nameof(CanOpen))]
     private void Open()
     {
@@ -63,7 +77,7 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
         {
             _hostInfo.BufferDataProdEvent += OnShowTcpServerDataProdEvent;
             _hostInfo.ClientConnEvent += OnClientConnEvent;
-            _tcpServer = new TcpServerListenerImpl(_hostInfo, 2); //建立2个消费者线程；
+            _tcpServer = new TcpServerListenerImpl(_hostInfo, PublicConst.TcpDataParseTask); //建立2个消费者线程；
             _buildServer = true;
             _hostInfo.TcpServer= _tcpServer;
         }

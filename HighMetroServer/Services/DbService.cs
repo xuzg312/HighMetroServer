@@ -74,7 +74,6 @@ public class DbService : IDbService
                     }
                 }
             }
-
             return resultInfo;
         }
         catch (Exception ex)
@@ -108,7 +107,6 @@ public class DbService : IDbService
                     }
                 }
             }
-
             resultInfo.Code = PublicConst.FlagNo;
             resultInfo.Message = "工控机编号无效！";
             return resultInfo;
