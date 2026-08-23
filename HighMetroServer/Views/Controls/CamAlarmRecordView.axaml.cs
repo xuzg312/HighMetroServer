@@ -1,10 +1,13 @@
 ﻿using System;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.VisualTree;
 using CommunityToolkit.Mvvm.Messaging;
 using HighMetroServer.BaseModel;
+using HighMetroServer.HikVision;
 using HighMetroServer.Models;
 using HighMetroServer.ViewModels;
 
@@ -32,8 +35,6 @@ public partial class CamAlarmRecordView : UserControl
         try
         {
             token.ThrowIfCancellationRequested();
-            Console.WriteLine("filePath:"+filePath);
-            Console.WriteLine("fileType:"+fileType);
             if (fileType.Equals(PublicConst.DoorStateCapture))
             {
                 var previewWin = new ImagePreview();
@@ -51,7 +52,7 @@ public partial class CamAlarmRecordView : UserControl
             }
             else if (fileType.Equals(PublicConst.DoorStateCamera))
             {
-                var previewWin = new VideoPreview();
+                /*var previewWin = new VideoPreview();
                 Console.WriteLine("previewWin.LoadVideo(filePath)");
 
                 previewWin.LoadVideo(filePath);
@@ -65,6 +66,15 @@ public partial class CamAlarmRecordView : UserControl
                     return;
                 }
                 await previewWin.ShowDialog(owner);
+                */
+                var resultInfo = OpenVideoBySystemPlayer(filePath);
+                if (!resultInfo.Code.Equals(PublicConst.FlagYes))
+                {
+                    if(DataContext is CamAlarmRecordViewModel vm)
+                    {
+                        vm.MessageText = $"查看录像文件异常：{resultInfo.Message}";
+                    }                    
+                }
             }
         }
         catch (Exception ex)
@@ -74,6 +84,53 @@ public partial class CamAlarmRecordView : UserControl
                 vm.MessageText = $"查看拍照图片异常：{ex.Message}";
             }
             Console.WriteLine(ex.Message);
+        }
+    }
+    private ResultInfo OpenVideoBySystemPlayer(string videoPath)
+    {
+        try
+        {
+            if (HikPlatform.IsWindows)
+            {
+                // Windows：调用系统Shell，唤起默认播放器
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = videoPath,
+                    UseShellExecute = true
+                });
+            }
+            else if (HikPlatform.IsLinux)
+            {
+                // 银河麒麟、统信UOS
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "xdg-open",
+                    Arguments = $"\"{videoPath}\"",
+                    UseShellExecute = false
+                });
+            }
+            else if (HikPlatform.IsMac)
+            {
+                // MacOS（可选，如果你需要）
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "open",
+                    Arguments = $"\"{videoPath}\"",
+                    UseShellExecute = false
+                });
+            }
+            return new ResultInfo
+            {
+                Code = PublicConst.FlagYes,
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ResultInfo
+            {
+                Code = PublicConst.FlagYes,
+                Message = ex.Message,
+            };
         }
     }
     private void OnControlUnloaded(object? sender, EventArgs e)

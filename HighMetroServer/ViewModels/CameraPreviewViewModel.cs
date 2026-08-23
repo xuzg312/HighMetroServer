@@ -141,7 +141,6 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
             Dispatcher.UIThread.Post(() => { MessageText = loadCamResult.Message; });
         }
     }
-
     private void OnDecodedFrameCallback(
         int nPort, IntPtr pBuf, int nSize, ref PlayCtrl.FrameInfo frameInfo, IntPtr pUser)
     {

@@ -240,7 +240,7 @@ public class CamRemoteLinkImpl
             #region 3. 生成带毫秒唯一文件名，避免同秒覆盖
             var now = DateTime.Now;
             var timeStr = $"{now.Hour:D2}-{now.Minute:D2}-{now.Second:D2}-{now.Millisecond:D3}";
-            var fileName = $"{cameraBean.Serial}-{timeStr}.jpg";
+            var fileName = $"{cameraBean.Serial}-{timeStr}.mp4";
             fullSavePath = Path.Combine(dayDir, camIdFolder, fileName);
             cameraBean.FilePath = fullSavePath;
             #endregion
@@ -248,7 +248,7 @@ public class CamRemoteLinkImpl
             {
                 hPlayWnd = IntPtr.Zero,
                 lChannel = 1,          // 通道号，IPC一般1
-                dwStreamType = 2,      // 1-主码流，2-子码流
+                dwStreamType = 1,      // 1-主码流，2-子码流
                 dwLinkMode = 0,        //0：TCP方式,1：UDP方式,2：多播方式,3 - RTP方式，4-RTP/RTSP,5-RSTP/HTTP
                 bBlocked = false,      //0-非阻塞取流, 1-阻塞取流, 如果阻塞SDK内部connect失败将会有5s的超时才能够返回,不适合于轮询取流操作
                 dwDisplayBufNum = 1,   //播放库播放缓冲区最大缓冲帧数，范围1-50，置0时默认为1 
@@ -264,9 +264,7 @@ public class CamRemoteLinkImpl
                     return HikSdkGetLastError();
                 var startRet = HikSdk.NET_DVR_SaveRealData(_playHandle, fullSavePath);
                 if (startRet < 0)
-                {
                     return HikSdkGetLastError();
-                }
                 // 等待10秒
                 await Task.Delay(TimeSpan.FromSeconds(CamConst.PlayCamTime));
                 return new LoadCamResult
@@ -279,6 +277,8 @@ public class CamRemoteLinkImpl
                 if (_playHandle >= 0)
                 {
                     HikSdk.NET_DVR_StopSaveRealData(_playHandle);
+                    // 额外等待一小段时间，确保文件句柄完全释放
+                    await Task.Delay(TimeSpan.FromMilliseconds(500));
                     HikSdk.NET_DVR_StopRealPlay(_playHandle);
                     _playHandle = -1;
                 }

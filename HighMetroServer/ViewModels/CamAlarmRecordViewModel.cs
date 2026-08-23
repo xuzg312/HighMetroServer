@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -79,7 +80,20 @@ public partial class CamAlarmRecordViewModel : ObservableObject
         var path = record.FilePath;
         if (string.IsNullOrWhiteSpace(path))
         {
-            MessageText = "选中的拍照记录对应的路径无效！";
+            MessageText = "选中的记录对应的路径无效！";
+            return;
+        }
+        if (record.Type.Equals(PublicConst.DoorStateCamera))
+        {
+            var dir = Path.GetDirectoryName(path)!;
+            var nameWithoutExt = Path.GetFileNameWithoutExtension(path);
+            var ext = Path.GetExtension(path);
+            var newFileName = $"{nameWithoutExt}_0{ext}";
+            path = Path.Combine(dir, newFileName);
+        }
+        if (!File.Exists(path))
+        {
+            MessageText = "选中的记录对应的文件不存在！";
             return;
         }
         // 触发事件，交给View层弹窗

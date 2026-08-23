@@ -10,6 +10,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using HighMetroServer.BaseModel;
 using HighMetroServer.ClassLib;
 using HighMetroServer.Event;
+using HighMetroServer.HikVision;
 using HighMetroServer.Message;
 using HighMetroServer.Models;
 using HighMetroServer.Parameters;
@@ -92,6 +93,11 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         }
         CommState = "【 串口连接状态：❌ 】";
         WeakReferenceMessenger.Default.RegisterAll(this);
+    }
+    private void OnRealDataReceived(
+        int lRealHandle, uint dwDataType, nint pBuffer, uint dwBufSize, nint pUser)
+    {
+        Console.WriteLine($"OnRealDataReceived:lRealHandle{lRealHandle},dwDataType{dwDataType},dwBufSize{dwBufSize}");
     }
     public void UpdateParams(int serial, SerialPortOptions? options)
     {
