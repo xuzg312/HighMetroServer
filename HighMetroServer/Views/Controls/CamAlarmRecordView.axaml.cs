@@ -73,6 +73,7 @@ public partial class CamAlarmRecordView : UserControl
             {
                 vm.MessageText = $"查看拍照图片异常：{ex.Message}";
             }
+            Console.WriteLine(ex.Message);
         }
     }
     private void OnControlUnloaded(object? sender, EventArgs e)
