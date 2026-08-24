@@ -117,58 +117,73 @@ public partial class PlayVideoViewModel : ObservableObject
         _wbB = null;
         PreviewSource = null;
     }
+
     private void OnDecodedFrameCallBack(
         int nPort, IntPtr pBuf, int nSize, ref PlayCtrl.FrameInfo frameInfo, IntPtr pUser)
     {
-        Console.WriteLine($"OnDecodedFrameCallBack:nPort:{nPort},nSize:{nSize},frameInfo.NWidth:{frameInfo.NWidth},frameInfo.NHeight:{frameInfo.NHeight},frameInfo.NType:{frameInfo.NType}");
-        if (_isClosed)
-            return;
+        Console.WriteLine(
+            $"OnDecodedFrameCallBack:nPort:{nPort},nSize:{nSize},frameInfo.NWidth:{frameInfo.NWidth},frameInfo.NHeight:{frameInfo.NHeight},frameInfo.NType:{frameInfo.NType}");
+        if (_isClosed) return;
+
         var width = frameInfo.NWidth;
         var height = frameInfo.NHeight;
+
+        // 1. 基础校验
         if (frameInfo.NType != 3 || width <= 0 || height <= 0 || pBuf == IntPtr.Zero || nSize <= 0)
             return;
+
+        // 2. 丢帧保护：如果上一帧还没渲染完，直接丢弃当前帧
         if (Interlocked.CompareExchange(ref _isRendering, 1, 0) != 0)
             return;
+
         try
         {
             int yPlaneSize = width * height;
-            int uvPlaneSize = width * height / 4;
+            int uvPlaneSize = (width / 2) * (height / 2);
             int bgraSize = width * height * 4;
+
             unsafe
             {
                 byte* src = (byte*)pBuf.ToPointer();
+
+                // 3. 严格按照海康 YV12 的紧凑内存布局提取指针 (Y + V + U)
                 byte* yPtr = src;
-                byte* vPtr = src + yPlaneSize;
-                byte* uPtr = src + yPlaneSize + uvPlaneSize;
+                byte* vPtr = src + yPlaneSize; // V 平面紧跟 Y 平面
+                byte* uPtr = vPtr + uvPlaneSize; // U 平面紧跟 V 平面
+
+                // 4. 从内存池获取缓冲区
                 if (!_bufferPool.TryDequeue(out var tempConvertBuffer) || tempConvertBuffer.Length < bgraSize)
                 {
                     tempConvertBuffer = new byte[bgraSize];
                 }
+
                 fixed (byte* dst = tempConvertBuffer)
                 {
-                    LibYuv.I420ToBGRA(
-                        (IntPtr)yPtr, width,
-                        (IntPtr)vPtr, width / 2,
-                        (IntPtr)uPtr, width / 2,
-                        (IntPtr)dst, width * 4,
+                    // 5. 调用 LibYuv 的 I420ToARGB
+                    // 注意：参数顺序必须是 Y, U, V (I420顺序)，所以这里传 uPtr 在前，vPtr 在后
+                    LibYuv.I420ToARGB(
+                        (IntPtr)yPtr, width, // Y 数据, Y 步长
+                        (IntPtr)uPtr, width / 2, // U 数据, U 步长
+                        (IntPtr)vPtr, width / 2, // V 数据, V 步长
+                        (IntPtr)dst, width * 4, // ARGB 目标数据, 目标步长
                         width, height);
                 }
-                byte[] uiFrame = new byte[bgraSize];
-                Buffer.BlockCopy(tempConvertBuffer, 0, uiFrame, 0, bgraSize);
-                _bufferPool.Enqueue(tempConvertBuffer);
-                // 把需要的局部变量提前捕获，不要在lambda内部访问回调栈变量
+
+                // 6. 捕获局部变量，避免在 lambda 中访问栈变量
                 var capWidth = width;
                 var capHeight = height;
                 var capBgraSize = bgraSize;
+                var convertBuffer = tempConvertBuffer;
+
                 Dispatcher.UIThread.Post(() =>
                 {
                     try
                     {
                         if (_isClosed) return;
-                        //尺寸变更，重建双缓冲
+
+                        // 7. 尺寸变更，重建双缓冲
                         if (_wbA == null || _wbA.PixelSize.Width != capWidth || _wbA.PixelSize.Height != capHeight)
                         {
-                            //释放旧位图，防止显存泄漏
                             _wbA?.Dispose();
                             _wbB?.Dispose();
 
@@ -182,29 +197,32 @@ public partial class PlayVideoViewModel : ObservableObject
                                 new Vector(96, 96),
                                 PixelFormat.Bgra8888);
 
-                            // ✅关键修复：第一次初始化，给PreviewSource赋初始值
                             PreviewSource = _wbA;
                         }
 
-                        // 选后台未显示的bitmap进行写入
-                        WriteableBitmap writeBmp;
-                        if (PreviewSource == _wbA)
-                        {
-                            writeBmp = _wbB!;
-                        }
-                        else
-                        {
-                            writeBmp = _wbA!;
-                        }
+                        // 8. 选择后台未显示的 bitmap 进行写入
+                        WriteableBitmap writeBmp = PreviewSource == _wbA ? _wbB! : _wbA!;
+
                         using (var fb = writeBmp.Lock())
                         {
-                            fixed (byte* pSrc = uiFrame)
+                            fixed (byte* pSrc = convertBuffer)
                             {
                                 long copyLen = Math.Min(capBgraSize, fb.RowBytes * capHeight);
                                 Buffer.MemoryCopy(pSrc, fb.Address.ToPointer(), fb.RowBytes * capHeight, copyLen);
                             }
+
+                            // 9. 【关键】ARGB 转 BGRA：交换 R 和 B 通道
+                            // I420ToARGB 输出的是 A-R-G-B，而 Avalonia Bgra8888 期望 B-G-R-A
+                            byte* pixels = (byte*)fb.Address.ToPointer();
+                            int pixelCount = capWidth * capHeight;
+                            for (int i = 0; i < pixelCount; i++)
+                            {
+                                byte* pixel = pixels + i * 4;
+                                (pixel[0], pixel[2]) = (pixel[2], pixel[0]); // 交换 B 和 R
+                            }
                         }
-                        //切换显示引用，触发UI刷新
+
+                        // 10. 切换显示引用，触发 UI 刷新
                         PreviewSource = writeBmp;
                     }
                     catch (Exception ex)
@@ -213,16 +231,20 @@ public partial class PlayVideoViewModel : ObservableObject
                     }
                     finally
                     {
+                        // 11. 归还缓冲区并重置标志位
+                        _bufferPool.Enqueue(convertBuffer);
                         Interlocked.Exchange(ref _isRendering, 0);
                     }
                 });
             }
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"解码帧异常: {ex.Message}");
             Interlocked.Exchange(ref _isRendering, 0);
         }
     }
+
     private void OnFileEndCallBack(int nPort, System.IntPtr pUser)
     {
         _isRunIng = false;

@@ -30,4 +30,18 @@ public static partial class LibYuv
         int dstStrideArgb,
         int width,
         int height);
+
+    [LibraryImport("LibYuv")]
+    public static partial int I420ToARGB(
+        IntPtr srcY,
+        int srcStrideY,
+        IntPtr srcU,
+        int srcStrideU,
+        IntPtr srcV,
+        int srcStrideV,
+        IntPtr dstArgb,
+        int dstStrideArgb,
+        int width,
+        int height);
+
 }
