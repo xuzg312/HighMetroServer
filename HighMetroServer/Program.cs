@@ -41,6 +41,7 @@ sealed class Program
             {
                 "HCNetSDK" => "HCNetSDK.dll",
                 "PlayCtrl" => "PlayCtrl.dll",
+                "LibYuv" => "libyuv.dll",
                 _ => libraryName
             };
             libPath = Path.Combine(baseDir, fileName);
@@ -51,6 +52,7 @@ sealed class Program
             {
                 "HCNetSDK" => "libhcnetsdk.so",
                 "PlayCtrl" => "libPlayCtrl.so",
+                "LibYuv" => "libyuv.so",
                 _ => libraryName
             }; 
             libPath = Path.Combine(baseDir, fileName);

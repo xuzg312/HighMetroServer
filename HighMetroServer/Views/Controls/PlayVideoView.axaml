@@ -2,9 +2,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="500"
-        x:Class="HighMetroServer.Views.Controls.VideoPreview"
-        xmlns:vlc="clr-namespace:LibVLCSharp.Avalonia;assembly=LibVLCSharp.Avalonia"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="HighMetroServer.Views.Controls.PlayVideoView"
         Height="500" Width="500"
         Title="视频播放"
         WindowStartupLocation="CenterOwner">
@@ -16,11 +15,8 @@
 
                 <!-- 第一行：视频填满剩余空间 -->
                 <Grid Grid.Row="0" ColumnDefinitions="*" VerticalAlignment="Center">
-                        <vlc:VideoView x:Name="VideoView"
-                                       Grid.Row="0"
-                                       HorizontalAlignment="Stretch"
-                                       VerticalAlignment="Stretch"
-                                       IsHitTestVisible="False"/>
+                        <Image Source="{Binding PreviewSource}" 
+                               Stretch="Uniform" />
                 </Grid>
                 <!-- 第二行：控制栏，高度由内容自适应 -->
                 <Border Grid.Row="1" BorderBrush="Black" 
@@ -41,6 +37,9 @@
                                         Width="60" Height="35"/>
                                 <Button Content="⏹ 停止"
                                         Command="{Binding StopCommand}"
+                                        Width="60" Height="35"/>
+                                <Button Content="退出"
+                                        Command="{Binding ExitCommand}"
                                         Width="60" Height="35"/>
                         </StackPanel>
                 </Border>

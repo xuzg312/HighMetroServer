@@ -7,7 +7,8 @@ public static partial class PlayCtrl
 {
     public delegate void DeccbFun(
         int nPort, IntPtr pBuf, int nSize, ref FrameInfo frameInfo, IntPtr pUser);
-    
+    public delegate void FileEndCallBack(int nPort, System.IntPtr pUser);
+
     [StructLayout(LayoutKind.Sequential)]
     public struct FrameInfo
     {
@@ -69,4 +70,19 @@ public static partial class PlayCtrl
     
     [LibraryImport("PlayCtrl")]
     public static partial int PlayM4_SetDecodeEngine(int nPort, int nEngine);
+    
+    [DllImport("PlayCtrl.dll", CallingConvention = CallingConvention.Cdecl)]
+    public static extern bool PlayM4_OpenFile(int nPort, String sFileName);
+
+    [LibraryImport("PlayCtrl")]
+    public static partial int PlayM4_SetFileEndCallback(int nPort, FileEndCallBack fileEndCallback, IntPtr pUser);
+    
+    [LibraryImport("PlayCtrl")]
+    public static partial int PlayM4_CloseFile(int nPort);
+
+    [LibraryImport("PlayCtrl")]
+    public static partial int PlayM4_Pause(int nPort, uint nPause);
+    
+    [LibraryImport("PlayCtrl")]
+    public static partial int PlayM4_GetPlayPos(int nPort);
 }

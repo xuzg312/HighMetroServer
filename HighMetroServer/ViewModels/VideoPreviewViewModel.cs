@@ -2,14 +2,14 @@
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using LibVLCSharp.Avalonia;
-using LibVLCSharp.Shared;
+//using LibVLCSharp.Avalonia;
+//using LibVLCSharp.Shared;
 
 namespace HighMetroServer.ViewModels;
 
 public partial class VideoPreviewViewModel : ObservableObject
 {
-    private readonly LibVLC _libVcl;
+    /*private readonly LibVLC _libVcl;
     private readonly MediaPlayer _mediaPlayer;
     private string? _filePath;
     
@@ -51,5 +51,5 @@ public partial class VideoPreviewViewModel : ObservableObject
             var media = new Media(_libVcl, _filePath, FromType.FromLocation);
             _mediaPlayer.Play(media);
         }
-    }
+    }*/
 }

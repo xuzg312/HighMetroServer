@@ -52,6 +52,20 @@ public partial class CamAlarmRecordView : UserControl
             }
             else if (fileType.Equals(PublicConst.DoorStateCamera))
             {
+                var playVideoView = new PlayVideoView();
+                Console.WriteLine("playVideoView.LoadVideo(filePath)");
+                playVideoView.LoadVideo(filePath);
+                var owner = this.FindAncestorOfType<Window>();
+                if (owner is null)
+                {
+                    if(DataContext is PlayVideoViewModel vm)
+                    {
+                        vm.MessageText = "DataContext未找到！";
+                    }
+                    return;
+                }
+                await playVideoView.ShowDialog(owner);
+                
                 /*var previewWin = new VideoPreview();
                 Console.WriteLine("previewWin.LoadVideo(filePath)");
 
@@ -67,14 +81,14 @@ public partial class CamAlarmRecordView : UserControl
                 }
                 await previewWin.ShowDialog(owner);
                 */
-                var resultInfo = OpenVideoBySystemPlayer(filePath);
+                /*var resultInfo = OpenVideoBySystemPlayer(filePath);
                 if (!resultInfo.Code.Equals(PublicConst.FlagYes))
                 {
                     if(DataContext is CamAlarmRecordViewModel vm)
                     {
                         vm.MessageText = $"查看录像文件异常：{resultInfo.Message}";
                     }                    
-                }
+                }*/
             }
         }
         catch (Exception ex)

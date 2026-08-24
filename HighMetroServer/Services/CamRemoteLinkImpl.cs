@@ -12,9 +12,11 @@ public class CamRemoteLinkImpl
     private int _userId = -1;
     private int _playHandle = -1;
     private int _iPort = -1;
+    private int _playPort = -1;
     private static bool _initSign;
     private RealDataCallBack? _realDataCallback;
     private PlayCtrl.DeccbFun? _decodeCallback;
+    private PlayCtrl.DeccbFun? _playDecodeCallBack;
     private readonly object _dirLockObj = new();
     public int GetUserId() => _userId;
     public LoadCamResult Init()
@@ -416,7 +418,7 @@ public class CamRemoteLinkImpl
             };
         }
         //获取播放句柄 Get the port to play
-        int value = PlayCtrl.PlayM4_GetPort(ref _iPort);
+        var value = PlayCtrl.PlayM4_GetPort(ref _iPort);
         if(value<0)
             return PlayM4GetLastError();
         //设置流播放模式 Set the stream mode: real-time stream mode
@@ -472,6 +474,101 @@ public class CamRemoteLinkImpl
             Code = PublicConst.FlagYes
         };
     }
+    public LoadCamResult PlayOpenMp4(string fileName,
+        PlayCtrl.DeccbFun decodeCallback,PlayCtrl.FileEndCallBack fileEndCallBack)
+    {
+        _playDecodeCallBack = decodeCallback;
+        try
+        {
+            if (_playPort < 0)
+            {
+                var value00 = PlayCtrl.PlayM4_GetPort(ref _playPort);
+                if (value00 < 0)
+                {
+                    _playPort = -1;
+                    return PlayM4GetLastError();
+                }
+            }
+            var value = PlayCtrl.PlayM4_SetDecCallBackExMend(_playPort, _playDecodeCallBack, IntPtr.Zero, 0,
+                IntPtr.Zero);
+            if (value < 0)
+                return PlayM4GetLastError();
+            value = PlayCtrl.PlayM4_SetFileEndCallback(_playPort, fileEndCallBack,IntPtr.Zero);
+            if (value < 0)
+                return PlayM4GetLastError();
+            var ret = PlayCtrl.PlayM4_OpenFile(_playPort, fileName);
+            if (!ret)
+                return PlayM4GetLastError();
+            return new LoadCamResult
+            {
+                Code = PublicConst.FlagNo,
+            };
+        }
+        catch (Exception ex)
+        {
+            return new LoadCamResult
+            {
+                Code = PublicConst.FlagNo,
+                Message = ex.Message,
+            };
+        }
+    }
+    public LoadCamResult PlayPlayMp4()
+    {
+        if (_playPort < 0)
+        {
+            return new LoadCamResult
+            {
+                Code = PublicConst.FlagNo,
+                Message = "PlayPort无效！",
+            };
+        }
+        var value = PlayCtrl.PlayM4_Play(_playPort, nint.Zero); //传 IntPtr.Zero 表示软解码，触发回调
+        if (value < 0)
+            return PlayM4GetLastError();
+        return new LoadCamResult
+        {
+            Code = PublicConst.FlagNo,
+        };
+    }
+    public LoadCamResult PlayPauseMp4(uint nPause)
+    {
+        if (_playPort < 0)
+        {
+            return new LoadCamResult
+            {
+                Code = PublicConst.FlagNo,
+                Message = "PlayPort无效！",
+            };
+        }
+        var value = PlayCtrl.PlayM4_Pause(_playPort, nPause); 
+        if (value < 0)
+            return PlayM4GetLastError();
+        return new LoadCamResult
+        {
+            Code = PublicConst.FlagNo,
+        };
+    }
+    public LoadCamResult StopPlayMp4()
+    {
+        if (_playPort < 0)
+        {
+            return new LoadCamResult
+            {
+                Code = PublicConst.FlagNo,
+                Message = "PlayPort无效！",
+            };
+        }
+        PlayCtrl.PlayM4_Stop(_playPort);
+        PlayCtrl.PlayM4_CloseFile(_playPort);
+        PlayCtrl.PlayM4_FreePort(_playPort);
+        _playPort = -1;
+        _playDecodeCallBack = null;
+        return new LoadCamResult
+        {
+            Code = PublicConst.FlagYes,
+        };
+    }
     private void SafeWriteFile(string filePath, byte[] data)
     {
         // FileOptions.None 常规写入；可加 FileOptions.WriteThrough 强制落盘
@@ -500,6 +597,13 @@ public class CamRemoteLinkImpl
             PlayCtrl.PlayM4_FreePort(_iPort);
             _iPort = -1;
         }
+        if (_playPort >= 0)
+        {
+            PlayCtrl.PlayM4_Stop(_playPort);
+            PlayCtrl.PlayM4_CloseFile(_playPort);
+            PlayCtrl.PlayM4_FreePort(_playPort);
+            _playPort = -1;
+        }
         if (_playHandle >= 0)
         {
             HikSdk.NET_DVR_StopRealPlay(_playHandle);
@@ -510,6 +614,9 @@ public class CamRemoteLinkImpl
             HikSdk.NET_DVR_Logout(_userId);
             _userId = -1;
         }
+        _realDataCallback = null;
+        _playDecodeCallBack=null;
+        _decodeCallback = null;
         return new LoadCamResult
         {
             Code = PublicConst.FlagYes,
