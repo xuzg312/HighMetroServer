@@ -501,7 +501,7 @@ public class CamRemoteLinkImpl
                 return PlayM4GetLastError();
             return new LoadCamResult
             {
-                Code = PublicConst.FlagNo,
+                Code = PublicConst.FlagYes,
             };
         }
         catch (Exception ex)

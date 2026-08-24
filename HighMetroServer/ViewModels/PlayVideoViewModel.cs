@@ -57,7 +57,8 @@ public partial class PlayVideoViewModel : ObservableObject
         }
         _isValid = true;
         _filePath = filePath;
-        MessageText = string.Empty; 
+        MessageText = string.Empty;
+        NotifyCanExecuteChanged();
     }
     [RelayCommand(CanExecute= nameof(CanPlay))]
     private void Play()
@@ -77,9 +78,7 @@ public partial class PlayVideoViewModel : ObservableObject
             return;
         }
         _isRunIng = true;
-        PlayCommand.NotifyCanExecuteChanged();
-        PauseCommand.NotifyCanExecuteChanged();
-        StopCommand.NotifyCanExecuteChanged();
+        NotifyCanExecuteChanged();
     }
     [RelayCommand(CanExecute = nameof(CanStop))]
     private void Pause()
@@ -91,9 +90,7 @@ public partial class PlayVideoViewModel : ObservableObject
             return;
         }
         _isPause = true;
-        PlayCommand.NotifyCanExecuteChanged();
-        PauseCommand.NotifyCanExecuteChanged();
-        StopCommand.NotifyCanExecuteChanged();
+        NotifyCanExecuteChanged();
     }
     [RelayCommand(CanExecute = nameof(CanStop))]
     private void Stop()
@@ -106,9 +103,7 @@ public partial class PlayVideoViewModel : ObservableObject
         }
         _isPause = false;
         _isRunIng = false;
-        PlayCommand.NotifyCanExecuteChanged();
-        PauseCommand.NotifyCanExecuteChanged();
-        StopCommand.NotifyCanExecuteChanged();
+        NotifyCanExecuteChanged();
     }
     [RelayCommand]
     private void Exit()
@@ -125,6 +120,7 @@ public partial class PlayVideoViewModel : ObservableObject
     private void OnDecodedFrameCallBack(
         int nPort, IntPtr pBuf, int nSize, ref PlayCtrl.FrameInfo frameInfo, IntPtr pUser)
     {
+        Console.WriteLine($"OnDecodedFrameCallBack:nPort:{nPort},nSize:{nSize},frameInfo.NWidth:{frameInfo.NWidth},frameInfo.NHeight:{frameInfo.NHeight},frameInfo.NType:{frameInfo.NType}");
         if (_isClosed)
             return;
         var width = frameInfo.NWidth;
@@ -231,9 +227,7 @@ public partial class PlayVideoViewModel : ObservableObject
     {
         _isRunIng = false;
         _isPause = false;
-        PlayCommand.NotifyCanExecuteChanged();
-        PauseCommand.NotifyCanExecuteChanged();
-        StopCommand.NotifyCanExecuteChanged();
+        NotifyCanExecuteChanged();
     }
     private bool CanPlay()
     {
@@ -242,5 +236,12 @@ public partial class PlayVideoViewModel : ObservableObject
     private bool CanStop()
     {
         return _isRunIng && !_isPause; 
+    }
+
+    private void NotifyCanExecuteChanged()
+    {
+        PlayCommand.NotifyCanExecuteChanged();
+        PauseCommand.NotifyCanExecuteChanged();
+        StopCommand.NotifyCanExecuteChanged();
     }
 }

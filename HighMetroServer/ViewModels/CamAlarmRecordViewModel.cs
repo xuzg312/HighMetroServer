@@ -75,8 +75,8 @@ public partial class CamAlarmRecordViewModel : ObservableObject
             MessageText = "请首先选择一条拍照记录！";
             return;
         }
-        //record.FilePath = "/Users/xu_zg/Desktop/14-11-17-NO-0.mp4";
-        //record.Type = PublicConst.DoorStateCamera;
+        record.FilePath = "C:\\Users\\sunny\\Desktop\\share\\14-11-17-NO.mp4";
+        record.Type = PublicConst.DoorStateCamera;
         var path = record.FilePath;
         if (string.IsNullOrWhiteSpace(path))
         {
