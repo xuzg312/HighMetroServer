@@ -85,4 +85,7 @@ public static partial class PlayCtrl
     
     [LibraryImport("PlayCtrl")]
     public static partial int PlayM4_GetPlayPos(int nPort);
+    
+    [LibraryImport("PlayCtrl")]
+    public static partial int PlayM4_SetPlayPos(int nPort, uint fPos);
 }

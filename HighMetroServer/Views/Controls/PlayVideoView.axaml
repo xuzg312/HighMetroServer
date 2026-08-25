@@ -10,7 +10,8 @@
         <Grid >
                 <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>
-                        <RowDefinition Height="50"/>
+                        <RowDefinition Height="40"/>
+                        <RowDefinition Height="40"/>
                 </Grid.RowDefinitions>
 
                 <!-- 第一行：视频填满剩余空间 -->
@@ -29,18 +30,27 @@
                                 <TextBlock Text="{Binding MessageText}" 
                                            Foreground="ForestGreen" VerticalAlignment="Center" 
                                            TextAlignment="Left" TextWrapping="NoWrap"/>
+                        </StackPanel>
+                </Border>
+                <Border Grid.Row="2" BorderBrush="Black" 
+                        BorderThickness="1" 
+                        CornerRadius="1"
+                        Padding="10">
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="15"
+                                    HorizontalAlignment="Center">
                                 <Button Content="▶ 播放"
                                         Command="{Binding PlayCommand}"
-                                        Width="60" Height="35"/>
+                                        Width="80" Height="35"/>
                                 <Button Content="⏸ 暂停"
                                         Command="{Binding PauseCommand}"
-                                        Width="60" Height="35"/>
+                                        Width="80" Height="35"/>
                                 <Button Content="⏹ 停止"
                                         Command="{Binding StopCommand}"
-                                        Width="60" Height="35"/>
+                                        Width="80" Height="35"/>
                                 <Button Content="退出"
                                         Command="{Binding ExitCommand}"
-                                        Width="60" Height="35"/>
+                                        Width="80" Height="35"/>
                         </StackPanel>
                 </Border>
         </Grid>

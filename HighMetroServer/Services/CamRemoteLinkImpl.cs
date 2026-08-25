@@ -528,7 +528,7 @@ public class CamRemoteLinkImpl
             return PlayM4GetLastError();
         return new LoadCamResult
         {
-            Code = PublicConst.FlagNo,
+            Code = PublicConst.FlagYes,
         };
     }
     public LoadCamResult PlayPauseMp4(uint nPause)
@@ -546,7 +546,7 @@ public class CamRemoteLinkImpl
             return PlayM4GetLastError();
         return new LoadCamResult
         {
-            Code = PublicConst.FlagNo,
+            Code = PublicConst.FlagYes,
         };
     }
     public LoadCamResult StopPlayMp4()
@@ -559,11 +559,27 @@ public class CamRemoteLinkImpl
                 Message = "PlayPort无效！",
             };
         }
-        PlayCtrl.PlayM4_Stop(_playPort);
-        PlayCtrl.PlayM4_CloseFile(_playPort);
-        PlayCtrl.PlayM4_FreePort(_playPort);
-        _playPort = -1;
-        _playDecodeCallBack = null;
+        var value = PlayCtrl.PlayM4_Stop(_playPort);
+        if (value < 0)
+            return PlayM4GetLastError();
+        return new LoadCamResult
+        {
+            Code = PublicConst.FlagYes,
+        };
+    }
+    public LoadCamResult SetPlayPos(uint position)
+    {
+        if (_playPort < 0)
+        {
+            return new LoadCamResult
+            {
+                Code = PublicConst.FlagNo,
+                Message = "PlayPort无效！",
+            };
+        }
+        var value = PlayCtrl.PlayM4_SetPlayPos(_playPort,position);
+        if (value < 0)
+            return PlayM4GetLastError();
         return new LoadCamResult
         {
             Code = PublicConst.FlagYes,

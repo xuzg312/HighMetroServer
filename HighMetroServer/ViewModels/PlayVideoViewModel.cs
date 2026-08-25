@@ -117,7 +117,6 @@ public partial class PlayVideoViewModel : ObservableObject
         _wbB = null;
         PreviewSource = null;
     }
-
     private void OnDecodedFrameCallBack(
         int nPort, IntPtr pBuf, int nSize, ref PlayCtrl.FrameInfo frameInfo, IntPtr pUser)
     {
@@ -244,26 +243,34 @@ public partial class PlayVideoViewModel : ObservableObject
             Interlocked.Exchange(ref _isRendering, 0);
         }
     }
-
     private void OnFileEndCallBack(int nPort, System.IntPtr pUser)
     {
+        var loadCamResult = _camRemoteLinkImpl.SetPlayPos(0);
+        if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
+        {
+            MessageText = loadCamResult.Message;
+            return;
+        }
         _isRunIng = false;
         _isPause = false;
         NotifyCanExecuteChanged();
     }
     private bool CanPlay()
     {
-        return _isValid && (!_isRunIng || _isPause); 
+        return _isValid && ((_isRunIng && _isPause) || (!_isRunIng)); 
     }
     private bool CanStop()
     {
-        return _isRunIng && !_isPause; 
+        return _isValid && _isRunIng && !_isPause; 
     }
 
     private void NotifyCanExecuteChanged()
     {
-        PlayCommand.NotifyCanExecuteChanged();
-        PauseCommand.NotifyCanExecuteChanged();
-        StopCommand.NotifyCanExecuteChanged();
+        Dispatcher.UIThread.Post(() =>
+        {
+            PlayCommand.NotifyCanExecuteChanged();
+            PauseCommand.NotifyCanExecuteChanged();
+            StopCommand.NotifyCanExecuteChanged();
+        });
     }
 }
