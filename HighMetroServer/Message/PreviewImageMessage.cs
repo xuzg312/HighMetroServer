@@ -1,4 +1,4 @@
-﻿namespace HighMetroServer.Models;
+﻿namespace HighMetroServer.Message;
 
 public class PreviewImageMessage(string filePath,string fileType)
 {

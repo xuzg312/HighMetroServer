@@ -9,18 +9,12 @@
         WindowStartupLocation="CenterOwner">
         <Grid >
                 <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
-                        <RowDefinition Height="40"/>
-                        <RowDefinition Height="40"/>
+                        <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- 第一行：视频填满剩余空间 -->
-                <Grid Grid.Row="0" ColumnDefinitions="*" VerticalAlignment="Center">
-                        <Image Source="{Binding PreviewSource}" 
-                               Stretch="Uniform" />
-                </Grid>
-                <!-- 第二行：控制栏，高度由内容自适应 -->
-                <Border Grid.Row="1" BorderBrush="Black" 
+                <Border Grid.Row="0" BorderBrush="Black" 
                         BorderThickness="1" 
                         CornerRadius="1"
                         Padding="10">
@@ -32,6 +26,11 @@
                                            TextAlignment="Left" TextWrapping="NoWrap"/>
                         </StackPanel>
                 </Border>
+                <Image Grid.Row="1"
+                       Source="{Binding PreviewSource}" 
+                       Stretch="Uniform"
+                       VerticalAlignment="Stretch"
+                       HorizontalAlignment="Stretch"/>
                 <Border Grid.Row="2" BorderBrush="Black" 
                         BorderThickness="1" 
                         CornerRadius="1"

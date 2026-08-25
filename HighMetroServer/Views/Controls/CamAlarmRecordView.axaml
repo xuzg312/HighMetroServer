@@ -2,13 +2,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:classLib="clr-namespace:HighMetroServer.ClassLib"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="HighMetroServer.Views.Controls.CamAlarmRecordView"
              Width="1070" Height="600">
     <Border Background="White" Padding="24" CornerRadius="8">
-        <StackPanel Spacing="12">
-            <Grid RowDefinitions="30,60,*" Margin="12" RowSpacing="10">
+        <!-- ❗把StackPanel改成Grid，分配剩余空间，Spacing换成Margin -->
+        <Grid RowDefinitions="Auto,*" RowSpacing="12">
+            <!-- 上面整块查询区域 -->
+            <Grid Grid.Row="0" RowDefinitions="Auto,Auto,*,Auto" Margin="12" RowSpacing="10">
                 <Border Grid.Row="0" BorderThickness="1" BorderBrush="#cccccc" 
                         Padding="10" CornerRadius="6">
                     <StackPanel Orientation="Horizontal" Spacing="15" VerticalAlignment="Center">
@@ -30,6 +31,7 @@
                         <Button Content="退出" Command="{Binding ExitCommand}" Width="80" />
                     </StackPanel>
                 </Border>
+                <!-- 这一行*现在真正生效，给DataGrid区域 -->
                 <Border Grid.Row="2" BorderThickness="1" BorderBrush="#cccccc" Padding="6" CornerRadius="6">
                     <DataGrid ItemsSource="{Binding RecordList}"
                               SelectedItem="{Binding SelectedRow}"
@@ -38,7 +40,7 @@
                               VerticalAlignment="Stretch"
                               HeadersVisibility="All"
                               HorizontalScrollBarVisibility="Auto"
-                              VerticalScrollBarVisibility="Visible"
+                              VerticalScrollBarVisibility="Auto"
                               MinHeight="120">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="80"/>
@@ -52,7 +54,16 @@
                         </DataGrid.Columns>
                     </DataGrid>
                 </Border>
+                <Border Grid.Row="3" BorderThickness="1" BorderBrush="#cccccc" Padding="10" CornerRadius="6">
+                    <StackPanel Orientation="Horizontal" Spacing="20" HorizontalAlignment="Center">
+                        <Button Content="上一页" Command="{Binding PrevPageCommand}" Width="80" Height="32"/>
+                        <TextBlock Text="{Binding PageInfo}" VerticalAlignment="Center"/>
+                        <Button Content="下一页" Command="{Binding NextPageCommand}" Width="80" Height="32"/>
+                    </StackPanel>
+                </Border>
             </Grid>
-        </StackPanel>
+            <!-- 占位，Grid.Row="1" 是*，留给上面内层Grid剩余空间 -->
+            <Grid Grid.Row="1"/>
+        </Grid>
     </Border>
 </UserControl>

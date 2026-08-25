@@ -26,7 +26,6 @@ public class DbService : IDbService
                     conn.Open();
                 }
             }
-
             resultInfo.Code = PublicConst.FlagYes;
             resultInfo.Message = "";
             return resultInfo;
@@ -38,7 +37,6 @@ public class DbService : IDbService
             return resultInfo;
         }
     }
-
     public ResultInfo VerifyUser(LoginSetting loginSetting, DbSetting dbSetting)
     {
         var resultInfo = new ResultInfo
@@ -782,18 +780,20 @@ public class DbService : IDbService
             return resultInfo;        
         }
     }
-    public ResultCamAlarmInfo QueryCamAlarm(CameraBean cameraBean)
+    public ResultCamAlarmInfo QueryCamAlarm(CameraBean cameraBean,DataBaseQueryPage page)
     {
         var resultInfo = new ResultCamAlarmInfo();
         try
         {
             using (var conn = new MySqlConnection(GetConnectionString()))
             {
-                var sql = "SELECT * FROM t_alarm WHERE hostbh=@hostbh and datetime >= @datetime order by datetime desc";
+                var sql = "SELECT * FROM t_alarm WHERE hostbh=@hostbh and datetime >= @datetime order by datetime desc LIMIT @offset , @pageSize;";
                 using (var cmd = new MySqlCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue("@hostbh", cameraBean.HostBh);
                     cmd.Parameters.AddWithValue("@datetime", cameraBean.DateTime);
+                    cmd.Parameters.AddWithValue("@offset", (page.CurrentPage-1) * page.PageSize);
+                    cmd.Parameters.AddWithValue("@pageSize", page.PageSize);
                     conn.Open();
                     using (var reader = cmd.ExecuteReader())
                     {
@@ -835,6 +835,38 @@ public class DbService : IDbService
                 Code = PublicConst.FlagNo,
                 Message = $"获取拍照记录异常：{ex.Message}",
             };
+            return resultInfo;
+        }
+    } 
+    public ResultInfo QueryCamAlarmCount(CameraBean cameraBean)
+    {
+        var resultInfo = new ResultInfo();
+        try
+        {
+            using (var conn = new MySqlConnection(GetConnectionString()))
+            {
+                var sql = "SELECT count(*) total FROM t_alarm WHERE hostbh=@hostbh and datetime >= @datetime";
+                using (var cmd = new MySqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@hostbh", cameraBean.HostBh);
+                    cmd.Parameters.AddWithValue("@datetime", cameraBean.DateTime);
+                    conn.Open();
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            resultInfo.Tag = Convert.ToInt32(reader["total"]);
+                        }
+                    }
+                }
+            }
+            resultInfo.Code = PublicConst.FlagYes;
+            return resultInfo;
+        }
+        catch (Exception ex)
+        {
+            resultInfo.Code = PublicConst.FlagNo;
+            resultInfo.Message = $"获取拍照记录异常：{ex.Message}";
             return resultInfo;
         }
     }    

@@ -5,11 +5,44 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="HighMetroServer.Views.Controls.ImagePreview"
         Title="抓拍图片预览"
-        Width="500" Height="500"
+        Width="500"
+        Height="500"
         WindowStartupLocation="CenterOwner">
-    <Grid Margin="10">
-        <Image x:Name="ImgViewer"
-               Stretch="Uniform"
-               StretchDirection="Both"/>
+    <Grid >
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Border Grid.Row="0" BorderBrush="Black" 
+                BorderThickness="1" 
+                CornerRadius="1"
+                Padding="10">
+            <StackPanel Orientation="Horizontal"
+                        Spacing="15"
+                        HorizontalAlignment="Center">
+                <TextBlock Text="{Binding MessageText}" 
+                           Foreground="ForestGreen" VerticalAlignment="Center" 
+                           TextAlignment="Left" TextWrapping="NoWrap"/>
+            </StackPanel>
+        </Border>
+        <Grid Grid.Row="1">
+            <Image x:Name="ImgViewer"
+                   Stretch="Uniform"
+                   VerticalAlignment="Stretch"
+                   HorizontalAlignment="Stretch"/>
+        </Grid>
+        <Border Grid.Row="2" BorderBrush="Black" 
+                BorderThickness="1" 
+                CornerRadius="1"
+                Padding="10">
+            <StackPanel Orientation="Horizontal"
+                        Spacing="15"
+                        HorizontalAlignment="Center">
+                <Button Content="退出"
+                        Command="{Binding ExitCommand}"
+                        Width="80" Height="35"/>
+            </StackPanel>
+        </Border>
     </Grid>
 </Window>

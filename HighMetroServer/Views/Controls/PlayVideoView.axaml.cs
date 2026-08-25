@@ -1,13 +1,13 @@
 ﻿using System;
 using System.IO;
-using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Markup.Xaml;
+using CommunityToolkit.Mvvm.Messaging;
+using HighMetroServer.Message;
 using HighMetroServer.ViewModels;
 
 namespace HighMetroServer.Views.Controls;
 
-public partial class PlayVideoView : Window
+public partial class PlayVideoView : Window,IRecipient<ClosePlayVideoViewMessage>
 {
     private readonly PlayVideoViewModel _playViewModel;
     public PlayVideoView()
@@ -15,13 +15,25 @@ public partial class PlayVideoView : Window
         InitializeComponent();
         _playViewModel = new PlayVideoViewModel();
         DataContext = _playViewModel;
+        // 注册消息接收
+        WeakReferenceMessenger.Default.Register(this);
     }
     public void LoadVideo(string filePath)
     {
         _playViewModel.LoadVideo(filePath);
-        Console.WriteLine("--------Core.Initialize()---4----");
-
-        Title = Path.GetFileName(filePath);
-        Console.WriteLine("--------Core.Initialize()---5----");
+        if (DataContext is PlayVideoViewModel vm)
+        {
+            vm.MessageText = filePath;
+        }
+    }
+    protected override void OnClosed(EventArgs e)
+    {
+        base.OnClosed(e);
+        _playViewModel.ReleaseResource();
+        WeakReferenceMessenger.Default.UnregisterAll(this);
+    }
+    public void Receive(ClosePlayVideoViewMessage message)
+    {
+        Close();
     }
 }

@@ -23,7 +23,7 @@
             </MenuItem>
             <!-- 一级菜单：日志管理 -->
             <MenuItem Header="日志管理">
-                <MenuItem Header="拍照查询" Command="{Binding OpenPhotoQueryCommand}" IsEnabled="{Binding IsMenuEnabled}" />
+                <MenuItem Header="报警查询" Command="{Binding OpenPhotoQueryCommand}" IsEnabled="{Binding IsMenuEnabled}" />
             </MenuItem>
         </Menu>
         <Grid Grid.Row="1">

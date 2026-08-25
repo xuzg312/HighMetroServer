@@ -1,28 +1,41 @@
 ﻿using System;
 using System.IO;
-using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
+using CommunityToolkit.Mvvm.Messaging;
+using HighMetroServer.Message;
+using HighMetroServer.ViewModels;
 
 namespace HighMetroServer.Views.Controls;
 
-public partial class ImagePreview : Window
+public partial class ImagePreview : Window,IRecipient<ClosePlayImageMessage>
 {
+    private readonly ImagePreviewModel _imagePreviewModel;
+
     public ImagePreview()
     {
         InitializeComponent();
+        _imagePreviewModel = new ImagePreviewModel();
+        DataContext = _imagePreviewModel;
+        WeakReferenceMessenger.Default.Register(this);
     }
     public void LoadImage(string filePath)
     {
-        if (!File.Exists(filePath))
-        {
-            ImgViewer.Source = null;
-            Title = "文件不存在";
-            return;
-        }
-        // Avalonia跨平台加载本地图片
         var bitmap = new Bitmap(filePath);
         ImgViewer.Source = bitmap;
-        Title = Path.GetFileName(filePath);
+        if (DataContext is ImagePreviewModel vm)
+        {
+            vm.MessageText = filePath;
+        }
+    }
+    protected override void OnClosed(EventArgs e)
+    {
+        base.OnClosed(e);
+        _imagePreviewModel.ReleaseResource();
+        WeakReferenceMessenger.Default.UnregisterAll(this);
+    }
+    public void Receive(ClosePlayImageMessage message)
+    {
+        Close();
     }
 }
