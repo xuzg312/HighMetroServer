@@ -4,13 +4,13 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="HighMetroServer.Views.Controls.PlayVideoView"
-        Height="500" Width="500"
+        Width="800" SizeToContent="Height"
         Title="视频播放"
         WindowStartupLocation="CenterOwner">
         <Grid >
                 <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="500"/>
                         <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 

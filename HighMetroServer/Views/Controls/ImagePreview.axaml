@@ -5,13 +5,12 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="HighMetroServer.Views.Controls.ImagePreview"
         Title="抓拍图片预览"
-        Width="500"
-        Height="500"
+        Width="800" SizeToContent="Height"
         WindowStartupLocation="CenterOwner">
     <Grid >
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
+            <RowDefinition Height="500"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <Border Grid.Row="0" BorderBrush="Black" 
