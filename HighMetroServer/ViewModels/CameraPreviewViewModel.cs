@@ -1,9 +1,9 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.IO;
-using System.Runtime.CompilerServices;
-using System.Runtime.Intrinsics;
 using System.Threading;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
@@ -22,11 +22,6 @@ namespace HighMetroServer.ViewModels;
 
 public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<AppCleanupMessage>
 {
-    private readonly ConcurrentQueue<byte[]> _bufferPool = new();
-    private int _isRendering;
-    
-    [ObservableProperty]
-    private ulong _frameVersion; 
     public event Action? OnClose;
 
     [ObservableProperty] 
@@ -71,8 +66,18 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
     private readonly HardInfo _hardInfo;
     private bool _start;
     private readonly CamRemoteLinkImpl _camRemoteLinkImpl;
-    private readonly RealDataCallBack _realDataCallback;
-    private readonly PlayCtrl.DeccbFun _decodeCallback;
+    private RealDataCallBack? _realDataCallback;
+    private PlayCtrl.DeccbFun? _decodeCallback;
+    
+    private WriteableBitmap? _wbA;
+    private WriteableBitmap? _wbB;
+    private readonly ConcurrentQueue<FrameData> _frameQueue = new();
+    private readonly SemaphoreSlim _frameSignal;
+    private readonly MemoryPool<byte> _memoryPool = MemoryPool<byte>.Shared;
+    private readonly CancellationTokenSource _cts;
+    private Task? _showUiTask;
+    private volatile bool _isClosed;
+
     public CameraPreviewViewModel(HardInfo hardInfo,ResultInfo resultInfo)
     {
         CamState = "【 摄像头连接状态：❌ 】";
@@ -89,6 +94,115 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
         _realDataCallback = OnRealDataReceived;
         _decodeCallback = OnDecodedFrameCallback;
         WeakReferenceMessenger.Default.RegisterAll(this);
+        _frameSignal = new SemaphoreSlim(0);
+        _cts = new CancellationTokenSource();
+        _showUiTask = Task.Run(() => SafeHandleLoop(_cts.Token), _cts.Token);
+    }
+    private async Task SafeHandleLoop(CancellationToken token)
+    {
+        try
+        {
+            await ProcessFrameQueueAsync(token);
+        }
+        catch (OperationCanceledException)
+        {
+            Dispatcher.UIThread.Post(() => { MessageText = $"正常关闭";});
+        }
+        catch (Exception ex)
+        {
+            Dispatcher.UIThread.Post(() => { MessageText = $"接收循环顶层异常：{ex.Message}";});
+        }
+    }
+    private async Task ProcessFrameQueueAsync(CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            try
+            {
+                await _frameSignal.WaitAsync(_cts.Token);
+                if (!_frameQueue.TryDequeue(out var frame))
+                    continue;
+                try
+                {
+                    await RenderFrameAsync(frame);
+                }
+                catch (Exception ex)
+                {
+                    await Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        if (!_isClosed)
+                            MessageText = $"渲染异常: {ex.Message}";
+                    });
+                }
+                finally
+                {
+                    frame.Dispose();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    if (!_isClosed)
+                        MessageText = $"循环任务异常: {ex.Message}";
+                });
+            }
+        }
+    }
+    private async Task RenderFrameAsync(FrameData frame)
+    {
+        var w = frame.Width;
+        var h = frame.Height;
+        // 在 unsafe 块外获取指针数据
+        IntPtr yPtr, uPtr, vPtr;
+        unsafe
+        {
+            var yPtrRaw = frame.GetYPtr();
+            var uPtrRaw = frame.GetUPtr(); // U分量
+            var vPtrRaw = frame.GetVPtr(); // V分量
+            if (yPtrRaw == null || uPtrRaw == null || vPtrRaw == null)
+                return;
+            yPtr = (IntPtr)yPtrRaw;
+            uPtr = (IntPtr)uPtrRaw;
+            vPtr = (IntPtr)vPtrRaw;
+        }
+        // 在UI线程上更新WriteableBitmap
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            if (_isClosed)
+                return;
+            // 初始化或重建Bitmap
+            var useA = ReferenceEquals(PreviewSource, _wbA);
+            var useSource = useA ? _wbB : _wbA;
+            if (useSource == null || useSource.PixelSize.Width != w || useSource.PixelSize.Height != h)
+            {
+                useSource?.Dispose();
+                useSource = new WriteableBitmap(new PixelSize(w, h), new Vector(96, 96), PixelFormat.Bgra8888);
+                if (useA)
+                    _wbB = useSource;
+                else
+                    _wbA = useSource;
+            }
+            using (var fb = useSource.Lock())
+            {
+                var ret = LibYuv.I420ToARGB(
+                    yPtr, w,
+                    uPtr, w / 2,
+                    vPtr, w / 2, 
+                    fb.Address, fb.RowBytes,
+                    w, h);
+                if (ret < 0)
+                {
+                    MessageText = $"转换失败：{ret}";
+                    return;
+                }
+            }
+            PreviewSource = useSource;
+        }, DispatcherPriority.Background);
     }
     [RelayCommand(CanExecute = nameof(CanOpen))]
     private void Open()
@@ -116,7 +230,7 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
             return;
         }
         //打开实时预览；
-        loadCamResult = _camRemoteLinkImpl.StartPreview(_realDataCallback,_decodeCallback);
+        loadCamResult = _camRemoteLinkImpl.StartPreview(_realDataCallback!,_decodeCallback!);
         if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
         {
             MessageText = loadCamResult.Message;
@@ -148,142 +262,47 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
         var height = frameInfo.NHeight;
         if (frameInfo.NType != 3 || width <= 0 || height <= 0 || pBuf == IntPtr.Zero || nSize <= 0)
             return;
-        if (Interlocked.CompareExchange(ref _isRendering, 1, 0) != 0)
-            return;
-        var bgraSize = width * height * 4;
-        // 【后台线程操作】从内存池获取或创建新缓冲区
-        if (!_bufferPool.TryDequeue(out var bgraBuffer) || bgraBuffer.Length < bgraSize)
+        var ySize = width * height; 
+        var uvSize = (width / 2) * (height / 2); 
+        if (nSize < ySize + uvSize * 2) return;
+        // 1. 从内存池租借一块内存
+        IMemoryOwner<byte>? memOwner = null;
+        FrameData? frame = null;
+        try
         {
-            bgraBuffer = new byte[bgraSize];
+            memOwner = _memoryPool.Rent(nSize);
+            var destSpan = memOwner.Memory.Span;
+            unsafe
+            {
+                if (nSize <= destSpan.Length)
+                {
+                    var source = new Span<byte>((void*)pBuf, nSize);
+                    source.CopyTo(destSpan.Slice(0, nSize));
+                }
+                else
+                {
+                    // 内存池分片导致单块不够大时，直接丢弃或降级处理
+                    memOwner.Dispose();
+                    Dispatcher.UIThread.InvokeAsync(() => { MessageText = $"内存池分片单块不够大！";});
+                    return;
+                }
+            }
+            frame = new FrameData(memOwner)
+            {
+                DataSize = nSize,
+                Width = width,
+                Height = height,
+                YSize = ySize,
+                UvSize = uvSize,
+            };
+            _frameQueue.Enqueue(frame);
+            _frameSignal.Release();
         }
-        // 【核心优化】在后台线程完成耗时的 SIMD 转换，彻底解放 UI 线程
-        unsafe
+        catch (Exception ex)
         {
-            var src = (byte*)pBuf.ToPointer();
-            var yPlaneSize = width * height;
-            var uvPlaneSize = width * height / 4;
-            var yPtr = src;
-            var vPtr = src + yPlaneSize;
-            var uPtr = src + yPlaneSize + uvPlaneSize;
-            ConvertYuvToBgraSimd(yPtr, uPtr, vPtr, bgraBuffer, width, height);
-        }
-        // 切换到 UI 线程，只做最轻量的内存拷贝
-        Dispatcher.UIThread.Post(() =>
-        {
-            try
-            {
-                if (PreviewSource == null || PreviewSource.PixelSize.Width != width ||
-                    PreviewSource.PixelSize.Height != height)
-                {
-                    PreviewSource = new WriteableBitmap(
-                        new PixelSize(width, height),
-                        new Vector(96, 96),
-                        PixelFormat.Bgra8888);
-                }
-                using (var fb = PreviewSource.Lock())
-                {
-                    unsafe
-                    {
-                        fixed (byte* src = bgraBuffer)
-                        {
-                            // UI线程只做极速的内存拷贝
-                            Buffer.MemoryCopy(src, fb.Address.ToPointer(), fb.RowBytes * height, bgraSize);
-                        }
-                    }
-                }
-                // 触发 Avalonia 重绘
-                var temp = PreviewSource;
-                PreviewSource = null;
-                PreviewSource = temp;
-                FrameVersion++;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"渲染视频帧异常: {ex.Message}");
-            }
-            finally
-            {
-                // 【核心】无论渲染成功还是失败，都必须归还缓冲区并重置标志位
-                _bufferPool.Enqueue(bgraBuffer);
-                Interlocked.Exchange(ref _isRendering, 0);
-            }
-        });
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private unsafe void ConvertYuvToBgraSimd(byte* yPtr, byte* uPtr, byte* vPtr, byte[] bgraBuffer, int width,
-        int height)
-    {
-        fixed (byte* dst = bgraBuffer)
-        {
-            var dstStride = width * 4;
-            // 预定义 SIMD 常量
-            var v128 = Vector128.Create(128.0f);
-            var v1402 = Vector128.Create(1.402f);
-            var v0344 = Vector128.Create(0.344f);
-            var v0714 = Vector128.Create(0.714f);
-            var v1772 = Vector128.Create(1.772f);
-            var v255 = Vector128.Create(255.0f);
-            var v0 = Vector128<float>.Zero;
-
-            for (var y = 0; y < height; y++)
-            {
-                var dstRow = dst + y * dstStride;
-                var uvRow = y / 2;
-                var yRow = yPtr + y * width;
-                var uRow = uPtr + uvRow * (width / 2);
-                var vRow = vPtr + uvRow * (width / 2);
-
-                var x = 0;
-                for (; x <= width - 4; x += 4)
-                {
-                    var uvCol = x / 2;
-                    var yVec = Vector128.Create(yRow[x], yRow[x + 1], yRow[x + 2],
-                        (float)yRow[x + 3]);
-                    var uVal = uRow[uvCol] - 128.0f;
-                    var vVal = vRow[uvCol] - 128.0f;
-                    var uVec = Vector128.Create(uVal);
-                    var vVec = Vector128.Create(vVal);
-
-                    var rVec = yVec + v1402 * vVec;
-                    var gVec = yVec - v0344 * uVec - v0714 * vVec;
-                    var bVec = yVec + v1772 * uVec;
-
-                    rVec = Vector128.Min(Vector128.Max(rVec, v0), v255);
-                    gVec = Vector128.Min(Vector128.Max(gVec, v0), v255);
-                    bVec = Vector128.Min(Vector128.Max(bVec, v0), v255);
-
-                    dstRow[x * 4 + 0] = (byte)bVec.GetElement(0);
-                    dstRow[x * 4 + 1] = (byte)gVec.GetElement(0);
-                    dstRow[x * 4 + 2] = (byte)rVec.GetElement(0);
-                    dstRow[x * 4 + 3] = 255;
-                    dstRow[x * 4 + 4] = (byte)bVec.GetElement(1);
-                    dstRow[x * 4 + 5] = (byte)gVec.GetElement(1);
-                    dstRow[x * 4 + 6] = (byte)rVec.GetElement(1);
-                    dstRow[x * 4 + 7] = 255;
-                    dstRow[x * 4 + 8] = (byte)bVec.GetElement(2);
-                    dstRow[x * 4 + 9] = (byte)gVec.GetElement(2);
-                    dstRow[x * 4 + 10] = (byte)rVec.GetElement(2);
-                    dstRow[x * 4 + 11] = 255;
-                    dstRow[x * 4 + 12] = (byte)bVec.GetElement(3);
-                    dstRow[x * 4 + 13] = (byte)gVec.GetElement(3);
-                    dstRow[x * 4 + 14] = (byte)rVec.GetElement(3);
-                    dstRow[x * 4 + 15] = 255;
-                }
-                // 边缘处理
-                for (; x < width; x++)
-                {
-                    var uvCol = x / 2;
-                    int c = yRow[x], d = uRow[uvCol] - 128, e = vRow[uvCol] - 128;
-                    var rVal = c + (int)(1.402f * e);
-                    var gVal = c - (int)(0.344f * d) - (int)(0.714f * e);
-                    var bVal = c + (int)(1.772f * d);
-                    var idx = x * 4;
-                    dstRow[idx] = (byte)Math.Clamp(bVal, 0, 255);
-                    dstRow[idx + 1] = (byte)Math.Clamp(gVal, 0, 255);
-                    dstRow[idx + 2] = (byte)Math.Clamp(rVal, 0, 255);
-                    dstRow[idx + 3] = 255;
-                }
-            }
+            frame?.Dispose();
+            memOwner?.Dispose();
+            Dispatcher.UIThread.InvokeAsync(() => { MessageText = $"触发解码回调，处理异常：{ex.Message}";});
         }
     }
     [RelayCommand(CanExecute = nameof(CanSnap))]
@@ -330,8 +349,7 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
             }
             _start = false;            
         }
-        PreviewSource?.Dispose();
-        WeakReferenceMessenger.Default.UnregisterAll(this);
+        ClearResource();
         OnClose?.Invoke();
     }
     private bool CanOpen()
@@ -367,15 +385,79 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
     }
     private void ClearResource()
     {
+        Console.WriteLine("释放---摄像头调试----CameraPreviewViewModel！");
         if (_start)
         {
             _camRemoteLinkImpl.Close();
         }
+        if (_isClosed) 
+            return;
+        _isClosed = true;
+        try
+        {
+            _cts.Cancel();
+        }
+        catch
+        {
+            //忽略；
+        }
+
+        try
+        {
+            _frameSignal.Release();
+        }
+        catch
+        {
+            //忽略；
+        }
+        try
+        {
+            _showUiTask?.Wait(500);
+        }
+        catch (Exception)
+        {
+            //忽略;
+        }
+        while (_frameQueue.TryDequeue(out var frame))
+        {
+            try
+            {
+                frame.Dispose();
+            }
+            catch
+            {
+                //忽略；
+            }
+        }
+        try
+        {
+            _cts.Dispose();
+        }
+        catch
+        {
+            //忽略；
+        }
+        try
+        {
+            _frameSignal.Dispose();
+        }
+        catch
+        {
+            //忽略；
+        }
+        _showUiTask = null;
+        _wbA?.Dispose();
+        _wbB?.Dispose();
+        _wbA = null;
+        _wbB = null;
+        PreviewSource = null;
+        _realDataCallback = null;
+        _decodeCallback = null;
+        _frameSignal.Dispose();
+        WeakReferenceMessenger.Default.UnregisterAll(this);
     }
     public void Receive(AppCleanupMessage message)
     {
-        Console.WriteLine("释放---摄像头调试----CameraPreviewViewModel！");
-        WeakReferenceMessenger.Default.UnregisterAll(this);
         ClearResource();
     }
 }

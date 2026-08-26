@@ -217,7 +217,7 @@ public partial class PlayVideoViewModel : ObservableObject
                     yPtr, w,
                     uPtr, w / 2,
                     vPtr, w / 2,
-                    (IntPtr)fb.Address, fb.RowBytes,
+                    fb.Address, fb.RowBytes,
                     w, h);
                 if (ret < 0)
                 {
