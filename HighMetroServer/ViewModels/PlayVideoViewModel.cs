@@ -26,7 +26,6 @@ public partial class PlayVideoViewModel : ObservableObject
     private readonly CamRemoteLinkImpl _camRemoteLinkImpl;
     private bool _isValid;
     private PlayBackState _playState;
-    private int _isRendering;
     private volatile bool _isClosed;
     private WriteableBitmap? _wbA;
     private WriteableBitmap? _wbB;
@@ -36,7 +35,6 @@ public partial class PlayVideoViewModel : ObservableObject
     private readonly CancellationTokenSource _cts;
     private Task? _showUiTask;
     private int _frameCounter; 
-
     
     [ObservableProperty]
     private string _messageText = string.Empty;
@@ -153,6 +151,14 @@ public partial class PlayVideoViewModel : ObservableObject
                 {
                     await RenderFrameAsync(frame);
                 }
+                catch (Exception ex)
+                {
+                    await Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        if (!_isClosed)
+                            MessageText = $"渲染异常: {ex.Message}";
+                    });
+                }
                 finally
                 {
                     frame.Dispose();
@@ -167,7 +173,7 @@ public partial class PlayVideoViewModel : ObservableObject
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     if (!_isClosed)
-                        MessageText = $"渲染异常: {ex.Message}";
+                        MessageText = $"循环任务异常: {ex.Message}";
                 });
             }
         }
@@ -176,8 +182,6 @@ public partial class PlayVideoViewModel : ObservableObject
     {
         var w = frame.Width;
         var h = frame.Height;
-        var ySize = frame.YSize;
-        var uvSize = frame.UvSize;
         // 在 unsafe 块外获取指针数据
         IntPtr yPtr, uPtr, vPtr;
         unsafe
@@ -186,7 +190,7 @@ public partial class PlayVideoViewModel : ObservableObject
             var uPtrRaw = frame.GetUPtr(); // U分量
             var vPtrRaw = frame.GetVPtr(); // V分量
             if (yPtrRaw == null || uPtrRaw == null || vPtrRaw == null)
-                return; 
+                return;
             yPtr = (IntPtr)yPtrRaw;
             uPtr = (IntPtr)uPtrRaw;
             vPtr = (IntPtr)vPtrRaw;
@@ -194,42 +198,37 @@ public partial class PlayVideoViewModel : ObservableObject
         // 在UI线程上更新WriteableBitmap
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
-            try
+            if (_isClosed)
+                return;
+            // 初始化或重建Bitmap
+            var useA = ReferenceEquals(PreviewSource, _wbA);
+            var useSource = useA ? _wbB : _wbA;
+            if (useSource == null || useSource.PixelSize.Width != w || useSource.PixelSize.Height != h)
             {
-                if (_isClosed)
+                useSource?.Dispose();
+                useSource = new WriteableBitmap(new PixelSize(w, h), new Vector(96, 96), PixelFormat.Bgra8888);
+                if (useA)
+                    _wbB = useSource;
+                else
+                    _wbA = useSource;
+            }
+            using (var fb = useSource.Lock())
+            {
+                var ret = LibYuv.I420ToARGB(
+                    yPtr, w,
+                    uPtr, w / 2,
+                    vPtr, w / 2,
+                    (IntPtr)fb.Address, fb.RowBytes,
+                    w, h);
+                if (ret < 0)
+                {
+                    MessageText = $"转换失败：{ret}";
                     return;
-                // 初始化或重建Bitmap
-                var useA = ReferenceEquals(PreviewSource, _wbA);
-                var useSource = useA ? _wbB : _wbA;
-                if (useSource == null || useSource.PixelSize.Width != w || useSource.PixelSize.Height != h)
-                {
-                    useSource?.Dispose();
-                    useSource = new WriteableBitmap(new PixelSize(w, h), new Vector(96, 96), PixelFormat.Bgra8888);
                 }
-                using (var fb = useSource.Lock())
-                {
-                    var ret = LibYuv.I420ToARGB(
-                        yPtr, w,
-                        uPtr, w / 2,
-                        vPtr, w / 2,
-                        (IntPtr)fb.Address, fb.RowBytes,
-                        w, h);
-                    if (ret < 0)
-                    {
-                        MessageText = $"转换失败：{ret}";
-                        return;
-                    }
-                }
-                PreviewSource = useSource;
             }
-            catch (Exception ex)
-            {
-                if (!_isClosed)
-                    MessageText = $"渲染帧异常: {ex.Message}";
-            }
+            PreviewSource = useSource;
         }, DispatcherPriority.Background);
     }
-
     private void OnFileEndCallBack(int nPort, IntPtr pUser)
     {
         Dispatcher.UIThread.Post(() =>
@@ -309,7 +308,9 @@ public partial class PlayVideoViewModel : ObservableObject
     public void ReleaseResource()
     {
         Console.WriteLine("释放PlayVideoViewModel->ReleaseResource！");
-        _camRemoteLinkImpl.Close();
+        if (_isClosed) 
+            return;
+        _isClosed = true;
         try
         {
             _cts.Cancel();
@@ -317,6 +318,35 @@ public partial class PlayVideoViewModel : ObservableObject
         catch
         {
             //忽略；
+        }
+
+        try
+        {
+            _frameSignal.Release();
+        }
+        catch
+        {
+            //忽略；
+        }
+        _camRemoteLinkImpl.Close();
+        try
+        {
+            _showUiTask?.Wait(500);
+        }
+        catch (Exception)
+        {
+            //忽略;
+        }
+        while (_frameQueue.TryDequeue(out var frame))
+        {
+            try
+            {
+                frame.Dispose();
+            }
+            catch
+            {
+                //忽略；
+            }
         }
         try
         {
@@ -326,16 +356,16 @@ public partial class PlayVideoViewModel : ObservableObject
         {
             //忽略；
         }
+
         try
         {
-            _showUiTask?.Wait(500);
+            _frameSignal.Dispose();
         }
-        catch (Exception)
+        catch
         {
-            //忽略;
+            //忽略；
         }
         _showUiTask = null;
-        _isClosed = true;
         _wbA?.Dispose();
         _wbB?.Dispose();
         _wbA = null;
@@ -343,5 +373,6 @@ public partial class PlayVideoViewModel : ObservableObject
         PreviewSource = null;
         _decodeCallBack = null;
         _fileEndCallBack = null;
+        _frameSignal.Dispose();
     }
 }
