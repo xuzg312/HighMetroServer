@@ -47,7 +47,7 @@ public partial class PlayVideoViewModel : ObservableObject
         _decodeCallBack = OnDecodedFrameCallBack;
         _fileEndCallBack = OnFileEndCallBack;
         _camRemoteLinkImpl = new CamRemoteLinkImpl();
-        _frameSignal = new SemaphoreSlim(0, PublicConst.MaxPlayQueueSize);
+        _frameSignal = new SemaphoreSlim(0);
         _cts = new CancellationTokenSource();
         _showUiTask = Task.Run(() => SafeHandleLoop(_cts.Token), _cts.Token);
     }
