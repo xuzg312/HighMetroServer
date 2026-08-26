@@ -143,8 +143,7 @@ public partial class PlayVideoViewModel : ObservableObject
         {
             try
             {
-                if (!await _frameSignal.WaitAsync(100, _cts.Token))
-                    continue;
+                await _frameSignal.WaitAsync(_cts.Token);
                 if (!_frameQueue.TryDequeue(out var frame))
                     continue;
                 try
