@@ -43,6 +43,7 @@ public partial class CamAlarmRecordView : UserControl
                     {
                         vm.MessageText = "DataContext未找到！";
                     }
+                    WeakReferenceMessenger.Default.Send(new ClosePlayImageMessage());
                     return;
                 }
                 await previewWin.ShowDialog(owner);
@@ -58,6 +59,7 @@ public partial class CamAlarmRecordView : UserControl
                     {
                         vm.MessageText = "DataContext未找到！";
                     }
+                    WeakReferenceMessenger.Default.Send(new ClosePlayVideoViewMessage());
                     return;
                 }
                 await playVideoView.ShowDialog(owner);

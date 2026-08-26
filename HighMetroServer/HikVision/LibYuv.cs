@@ -43,5 +43,4 @@ public static partial class LibYuv
         int dstStrideArgb,
         int width,
         int height);
-
 }

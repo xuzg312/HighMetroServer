@@ -59,4 +59,5 @@ public class PublicConst
     public const byte TcpDataParseTask = 2;//Tcp数据解析后台任务个数；
 
     public const byte PageSize = 20;
+    public const int MaxPlayQueueSize = 10;
 }

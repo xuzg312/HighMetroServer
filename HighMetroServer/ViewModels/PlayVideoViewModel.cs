@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Buffers;
+using System.Collections.Concurrent;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
@@ -19,8 +21,8 @@ namespace HighMetroServer.ViewModels;
 public partial class PlayVideoViewModel : ObservableObject
 {
     private string? _filePath;
-    private readonly PlayCtrl.DeccbFun _decodeCallBack;
-    private readonly PlayCtrl.FileEndCallBack _fileEndCallBack;
+    private PlayCtrl.DeccbFun? _decodeCallBack;
+    private PlayCtrl.FileEndCallBack? _fileEndCallBack;
     private readonly CamRemoteLinkImpl _camRemoteLinkImpl;
     private bool _isValid;
     private PlayBackState _playState;
@@ -28,7 +30,13 @@ public partial class PlayVideoViewModel : ObservableObject
     private volatile bool _isClosed;
     private WriteableBitmap? _wbA;
     private WriteableBitmap? _wbB;
-    private byte[]? _yuvBuffer;
+    private readonly ConcurrentQueue<FrameData> _frameQueue = new();
+    private readonly SemaphoreSlim _frameSignal;
+    private readonly MemoryPool<byte> _memoryPool = MemoryPool<byte>.Shared;
+    private readonly CancellationTokenSource _cts;
+    private Task? _showUiTask;
+    private int _frameCounter; 
+
     
     [ObservableProperty]
     private string _messageText = string.Empty;
@@ -41,6 +49,9 @@ public partial class PlayVideoViewModel : ObservableObject
         _decodeCallBack = OnDecodedFrameCallBack;
         _fileEndCallBack = OnFileEndCallBack;
         _camRemoteLinkImpl = new CamRemoteLinkImpl();
+        _frameSignal = new SemaphoreSlim(0, PublicConst.MaxPlayQueueSize);
+        _cts = new CancellationTokenSource();
+        _showUiTask = Task.Run(() => SafeHandleLoop(_cts.Token), _cts.Token);
     }
     public void LoadVideo(string filePath)
     {
@@ -50,96 +61,175 @@ public partial class PlayVideoViewModel : ObservableObject
             return;
         }
         _filePath = filePath;
-        var loadCamResult = _camRemoteLinkImpl.PlayOpenMp4(_filePath,_decodeCallBack,_fileEndCallBack);
+        var loadCamResult = _camRemoteLinkImpl.PlayOpenMp4(_filePath,_decodeCallBack!,_fileEndCallBack!);
         if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
         {
             MessageText = loadCamResult.Message;
             return;
         }
         _isValid = true;
-        _filePath = filePath;
         MessageText = string.Empty;
         NotifyCanExecuteChanged();
+    }
+    private async Task SafeHandleLoop(CancellationToken token)
+    {
+        try
+        {
+            await ProcessFrameQueueAsync(token);
+        }
+        catch (OperationCanceledException)
+        {
+            Dispatcher.UIThread.Post(() => { MessageText = $"正常关闭";});
+        }
+        catch (Exception ex)
+        {
+            Dispatcher.UIThread.Post(() => { MessageText = $"接收循环顶层异常：{ex.Message}";});
+        }
     }
     private void OnDecodedFrameCallBack(
         int nPort, IntPtr pBuf, int nSize, ref PlayCtrl.FrameInfo frameInfo, IntPtr pUser)
     {
-        if (_isClosed) return;
+        if (_isClosed) 
+            return;
         var width = frameInfo.NWidth;
         var height = frameInfo.NHeight;
         if (frameInfo.NType != 3 || width <= 0 || height <= 0 || pBuf == IntPtr.Zero || nSize <= 0)
             return;
-        int ySize = width * height; // 2073600
-        int uvSize = (width / 2) * (height / 2); // 518400
+        var ySize = width * height; 
+        var uvSize = (width / 2) * (height / 2); 
         if (nSize < ySize + uvSize * 2) return;
-
-        if (_yuvBuffer == null || _yuvBuffer.Length < nSize)
-            _yuvBuffer = new byte[nSize];
-        Marshal.Copy(pBuf, _yuvBuffer, 0, nSize);
-
-        var yuv = _yuvBuffer;
-        var w = width;
-        var h = height;
-
-        Dispatcher.UIThread.Post(() =>
+        // 1. 从内存池租借一块内存
+        IMemoryOwner<byte>? memOwner = null;
+        FrameData? frame = null;
+        try
+        {
+            memOwner = _memoryPool.Rent(nSize);
+            var destSpan = memOwner.Memory.Span;
+            unsafe
+            {
+                if (nSize <= destSpan.Length)
+                {
+                    var source = new Span<byte>((void*)pBuf, nSize);
+                    source.CopyTo(destSpan.Slice(0, nSize));
+                }
+                else
+                {
+                    // 内存池分片导致单块不够大时，直接丢弃或降级处理
+                    memOwner.Dispose();
+                    Dispatcher.UIThread.InvokeAsync(() => { MessageText = $"内存池分片单块不够大！";});
+                    return;
+                }
+            }
+            frame = new FrameData(memOwner)
+            {
+                DataSize = nSize,
+                Width = width,
+                Height = height,
+                YSize = ySize,
+                UvSize = uvSize,
+                FrameNumber = Interlocked.Increment(ref _frameCounter) 
+            };
+            _frameQueue.Enqueue(frame);
+            _frameSignal.Release();
+        }
+        catch (Exception ex)
+        {
+            frame?.Dispose();
+            memOwner?.Dispose();
+            Dispatcher.UIThread.InvokeAsync(() => { MessageText = $"触发解码回调，处理异常：{ex.Message}";});
+        }
+    }
+    private async Task ProcessFrameQueueAsync(CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
         {
             try
             {
-                if (_isClosed) return;
-                // 丢帧保护
-                if (Interlocked.CompareExchange(ref _isRendering, 1, 0) != 0)
-                    return;
-                if (_wbA == null || _wbA.PixelSize.Width != w || _wbA.PixelSize.Height != h)
+                if (!await _frameSignal.WaitAsync(100, _cts.Token))
+                    continue;
+                if (!_frameQueue.TryDequeue(out var frame))
+                    continue;
+                try
                 {
-                    _wbA?.Dispose();
-                    _wbB?.Dispose();
-                    _wbA = new WriteableBitmap(new PixelSize(w, h), new Vector(96, 96), PixelFormat.Bgra8888);
-                    _wbB = new WriteableBitmap(new PixelSize(w, h), new Vector(96, 96), PixelFormat.Bgra8888);
-                    PreviewSource = _wbA;
+                    await RenderFrameAsync(frame);
                 }
-
-                var writeBmp = ReferenceEquals(PreviewSource, _wbA) ? _wbB! : _wbA!;
-
-                unsafe
+                finally
                 {
-                    fixed (byte* src = yuv)
-                    {
-                        // 海康 YV12：平面2=V(@ySize)，平面3=U(@ySize+uvSize)
-                        byte* yPtr = src;
-                        byte* vPtr = src + ySize;
-                        byte* uPtr = src + ySize + uvSize;
-
-                        using (var fb = writeBmp.Lock())
-                        {
-                            // 【修复2】改用 I420ToARGB：输出内存序 B,G,R,A = Bgra8888
-                            // 【修复3】U 平面进 U 槽、V 平面进 V 槽
-                            int ret = LibYuv.I420ToARGB(
-                                (IntPtr)yPtr, w,
-                                (IntPtr)uPtr, w / 2,
-                                (IntPtr)vPtr, w / 2,
-                                (IntPtr)fb.Address, fb.RowBytes,
-                                w, h);
-                            if (ret < 0)
-                            {
-                                MessageText = $"转换失败：{ret}";
-                                return;
-                            }
-                        }
-                    }
+                    frame.Dispose();
                 }
-
-                PreviewSource = writeBmp;
+            }
+            catch (OperationCanceledException)
+            {
+                break;
             }
             catch (Exception ex)
             {
-                MessageText = $"渲染帧异常: {ex.Message}";
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    if (!_isClosed)
+                        MessageText = $"渲染异常: {ex.Message}";
+                });
             }
-            finally
-            {
-                Interlocked.Exchange(ref _isRendering, 0);
-            }
-        });
+        }
     }
+    private async Task RenderFrameAsync(FrameData frame)
+    {
+        var w = frame.Width;
+        var h = frame.Height;
+        var ySize = frame.YSize;
+        var uvSize = frame.UvSize;
+        // 在 unsafe 块外获取指针数据
+        IntPtr yPtr, uPtr, vPtr;
+        unsafe
+        {
+            var yPtrRaw = frame.GetYPtr();
+            var uPtrRaw = frame.GetUPtr(); // U分量
+            var vPtrRaw = frame.GetVPtr(); // V分量
+            if (yPtrRaw == null || uPtrRaw == null || vPtrRaw == null)
+                return; 
+            yPtr = (IntPtr)yPtrRaw;
+            uPtr = (IntPtr)uPtrRaw;
+            vPtr = (IntPtr)vPtrRaw;
+        }
+        // 在UI线程上更新WriteableBitmap
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            try
+            {
+                if (_isClosed)
+                    return;
+                // 初始化或重建Bitmap
+                var useA = ReferenceEquals(PreviewSource, _wbA);
+                var useSource = useA ? _wbB : _wbA;
+                if (useSource == null || useSource.PixelSize.Width != w || useSource.PixelSize.Height != h)
+                {
+                    useSource?.Dispose();
+                    useSource = new WriteableBitmap(new PixelSize(w, h), new Vector(96, 96), PixelFormat.Bgra8888);
+                }
+                using (var fb = useSource.Lock())
+                {
+                    var ret = LibYuv.I420ToARGB(
+                        yPtr, w,
+                        uPtr, w / 2,
+                        vPtr, w / 2,
+                        (IntPtr)fb.Address, fb.RowBytes,
+                        w, h);
+                    if (ret < 0)
+                    {
+                        MessageText = $"转换失败：{ret}";
+                        return;
+                    }
+                }
+                PreviewSource = useSource;
+            }
+            catch (Exception ex)
+            {
+                if (!_isClosed)
+                    MessageText = $"渲染帧异常: {ex.Message}";
+            }
+        }, DispatcherPriority.Background);
+    }
+
     private void OnFileEndCallBack(int nPort, IntPtr pUser)
     {
         Dispatcher.UIThread.Post(() =>
@@ -220,11 +310,38 @@ public partial class PlayVideoViewModel : ObservableObject
     {
         Console.WriteLine("释放PlayVideoViewModel->ReleaseResource！");
         _camRemoteLinkImpl.Close();
+        try
+        {
+            _cts.Cancel();
+        }
+        catch
+        {
+            //忽略；
+        }
+        try
+        {
+            _cts.Dispose();
+        }
+        catch
+        {
+            //忽略；
+        }
+        try
+        {
+            _showUiTask?.Wait(500);
+        }
+        catch (Exception)
+        {
+            //忽略;
+        }
+        _showUiTask = null;
         _isClosed = true;
         _wbA?.Dispose();
         _wbB?.Dispose();
         _wbA = null;
         _wbB = null;
         PreviewSource = null;
+        _decodeCallBack = null;
+        _fileEndCallBack = null;
     }
 }

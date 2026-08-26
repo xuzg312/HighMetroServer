@@ -23,10 +23,7 @@ public partial class ImagePreview : Window,IRecipient<ClosePlayImageMessage>
     {
         var bitmap = new Bitmap(filePath);
         ImgViewer.Source = bitmap;
-        if (DataContext is ImagePreviewModel vm)
-        {
-            vm.MessageText = filePath;
-        }
+        Title = filePath;
     }
     protected override void OnClosed(EventArgs e)
     {
