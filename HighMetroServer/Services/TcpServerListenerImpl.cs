@@ -23,6 +23,7 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
     private CancellationTokenSource? _ctsServer;
     private Task? _acceptLoopTask;
     private Task? _readTask;
+    private SemaphoreSlim? _semaphoreSlim;
     #endregion
     
     public bool Start()
@@ -37,6 +38,7 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
             _ctsServer = new CancellationTokenSource();
             _listener = new TcpListener(IPAddress.Any, hostInfo.Port);
             _listener.Start();
+            _semaphoreSlim = new SemaphoreSlim(0);
             //接收生产者串口数据；
             _iDataBufferPool = new DataBufferPoolImpl();
             //数据消费者
@@ -94,7 +96,8 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
                     _iDataBufferPool!,
                     _dictionary,
                     key,
-                    token);
+                    token,
+                    _semaphoreSlim!);
                 _dictionary.TryRemove(key, out var oldChild);
                 _dictionary.TryAdd(key, newChild);
                 oldChild?.CloseClient();
@@ -133,8 +136,9 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
     {
         while (!token.IsCancellationRequested)
         {
-            var execCount = 0;
+            await _semaphoreSlim!.WaitAsync(token);
             var childList = _dictionary.Values.ToList();
+            var parseCount = 0;
             foreach (var child in childList)
             {
                 try
@@ -144,7 +148,7 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
                     var hasProcessData = child.ParseDatas();
                     if (hasProcessData)
                     {
-                        execCount++;
+                        parseCount++;
                     }
                 }
                 catch (OperationCanceledException)
@@ -157,11 +161,10 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
                     ParaSetupModules.RaiseAscDataProdEvent($"解析客户端数据异常：{ex.Message}【{currentTime}】");
                 }
             }
-            if (execCount > 0)
+            for (var i = 1; i < parseCount; i++)
             {
-                continue;
+                await _semaphoreSlim.WaitAsync(0,token); 
             }
-            await Task.Delay(100, token);
         }
     }
     #endregion
@@ -352,6 +355,15 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
             //忽略;
         }
         _readTask = null;
+        try
+        {
+            _semaphoreSlim?.Dispose();
+        }
+        catch (Exception)
+        {
+            //忽略异常；
+        }
+        _semaphoreSlim = null;
         _start = false;
     }
     #endregion

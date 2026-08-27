@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO.Ports;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using HighMetroServer.BaseModel;
@@ -30,15 +29,15 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
     private const byte PacketHead1 = 0xEB;
     private const byte PacketHead2 = 0xAA;
     private const byte PacketTail = 0xED;
-    private const int ParseLoopDelayMs = 100;
     private const int TaskWaitTimeoutMs = 500;
-    private const int MaxSingleParseFrame = 20; 
     private int _receiveTotalCount;
     private int _parseTotalCount;
     private int _receiveTotalBytes;
     private int _parseTotalBytes;
     private Task? _parseBackgroundTask;
     private CancellationTokenSource? _parseCts;
+    private SemaphoreSlim? _semaphoreSlim;
+
     public bool Open()
     {
         if (_start)
@@ -64,6 +63,7 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
             //启动1个线程，进行数据包的拆分或合并；
             _parseBackgroundTask = Task.Run(() => ParseDataLoop(_parseCts.Token), _parseCts.Token);
             ResetStatistics();
+            _semaphoreSlim = new SemaphoreSlim(0);
             _start = true;
             return true;
         }
@@ -106,6 +106,7 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
             Interlocked.Increment(ref _receiveTotalCount);
             Interlocked.Add(ref _receiveTotalBytes, actualRead);
             _receiveQueue.Enqueue(validData);
+            _semaphoreSlim!.Release();
         }
         catch (Exception ex)
         {
@@ -136,35 +137,15 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
         {
             try
             {
-                var hasNewData = false;
-                while (_receiveQueue.TryDequeue(out var data))
+                await _semaphoreSlim!.WaitAsync(token);
+                if (!_receiveQueue.TryDequeue(out var data))
+                    continue;
+                foreach (var b in data)
                 {
-                    if (data.Length <= 0)
-                        break;
-                    hasNewData = true;
-                    foreach (var b in data)
-                    {
-                        _receiveBuffer.Enqueue(b);
-                    }
+                    _receiveBuffer.Enqueue(b);
                 }
-                var parsedCount = 0;
-                if (hasNewData)
-                {
-                    while (parsedCount < MaxSingleParseFrame
-                           && !token.IsCancellationRequested
-                           && TryParseOnePacket())
-                    {
-                        parsedCount++;
-                    }
-                }
-                if (!hasNewData && parsedCount == 0)
-                {
-                    await Task.Delay(ParseLoopDelayMs, token);
-                }
-                else
-                {
-                    await Task.Yield();
-                }
+                while (!token.IsCancellationRequested
+                       && TryParseOnePacket()) ;
             }
             catch (OperationCanceledException)
             {
@@ -279,8 +260,6 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
             ParaSetupModules.RaiseAscDataProdEvent($"发送串口数据异常！{ex.Message}【{currentTime}】");
         }
     }
-    public bool IsOpen { get; private set; }
-
     public bool TestComm()
     {
         try
@@ -326,6 +305,14 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
         }
         try
         {
+            _parseCts?.Dispose();
+        }
+        catch
+        {
+            //忽略；
+        }
+        try
+        {
             _parseBackgroundTask?.Wait(TaskWaitTimeoutMs);
         }
         catch (Exception)
@@ -333,14 +320,6 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
             //忽略;
         }
         _parseBackgroundTask = null;
-        try
-        {
-            _parseCts?.Dispose();
-        }
-        catch
-        {
-            //忽略；
-        }
         _parseCts = null;
         try
         {
@@ -363,6 +342,15 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
             item.DisConnect();
         }
         _getBufferDataImplList.Clear();
+        try
+        {
+            _semaphoreSlim?.Dispose();
+        }
+        catch (Exception)
+        {
+            //忽略异常；
+        }
+        _semaphoreSlim = null;
         _start = false;
     }
 }

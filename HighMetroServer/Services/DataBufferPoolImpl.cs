@@ -6,7 +6,7 @@ namespace HighMetroServer.Services;
 public class DataBufferPoolImpl : IDataBufferPool
 {
     #region 私有数据；
-    private readonly ConcurrentQueue<SocketDataBlock> _receiveQueue = new ConcurrentQueue<SocketDataBlock>();
+    private readonly ConcurrentQueue<SocketDataBlock> _receiveQueue = [];
     #endregion
 
     #region 数据进入队列；

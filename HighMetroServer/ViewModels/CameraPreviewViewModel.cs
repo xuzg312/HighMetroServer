@@ -128,7 +128,7 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
                 }
                 catch (Exception ex)
                 {
-                    await Dispatcher.UIThread.InvokeAsync(() =>
+                    Dispatcher.UIThread.Post(() =>
                     {
                         if (!_isClosed)
                             MessageText = $"渲染异常: {ex.Message}";
@@ -145,7 +145,7 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
             }
             catch (Exception ex)
             {
-                await Dispatcher.UIThread.InvokeAsync(() =>
+                Dispatcher.UIThread.Post(() =>
                 {
                     if (!_isClosed)
                         MessageText = $"循环任务异常: {ex.Message}";
@@ -283,13 +283,12 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
                 {
                     // 内存池分片导致单块不够大时，直接丢弃或降级处理
                     memOwner.Dispose();
-                    Dispatcher.UIThread.InvokeAsync(() => { MessageText = $"内存池分片单块不够大！";});
+                    Dispatcher.UIThread.Post(() => { MessageText = $"内存池分片单块不够大！";});
                     return;
                 }
             }
             frame = new FrameData(memOwner)
             {
-                DataSize = nSize,
                 Width = width,
                 Height = height,
                 YSize = ySize,
@@ -302,7 +301,7 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
         {
             frame?.Dispose();
             memOwner?.Dispose();
-            Dispatcher.UIThread.InvokeAsync(() => { MessageText = $"触发解码回调，处理异常：{ex.Message}";});
+            Dispatcher.UIThread.Post(() => { MessageText = $"触发解码回调，处理异常：{ex.Message}";});
         }
     }
     [RelayCommand(CanExecute = nameof(CanSnap))]
@@ -401,15 +400,6 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
         {
             //忽略；
         }
-
-        try
-        {
-            _frameSignal.Release();
-        }
-        catch
-        {
-            //忽略；
-        }
         try
         {
             _showUiTask?.Wait(500);
@@ -453,7 +443,6 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
         PreviewSource = null;
         _realDataCallback = null;
         _decodeCallback = null;
-        _frameSignal.Dispose();
         WeakReferenceMessenger.Default.UnregisterAll(this);
     }
     public void Receive(AppCleanupMessage message)

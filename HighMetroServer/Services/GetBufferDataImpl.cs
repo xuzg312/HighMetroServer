@@ -65,6 +65,7 @@ public class GetBufferDataImpl : IGetBufferData
             }
             catch (OperationCanceledException)
             {
+                break;
             }
             catch (Exception ex)
             {

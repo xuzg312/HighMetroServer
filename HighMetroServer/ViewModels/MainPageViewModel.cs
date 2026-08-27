@@ -1,6 +1,8 @@
 using System;
-using System.Collections.Generic;
 using Avalonia.Threading;
+using System.Text;
+using System.Threading;
+using System.Collections.Concurrent;
 using CommunityToolkit.Mvvm.ComponentModel;
 using HighMetroServer.BaseModel;
 using HighMetroServer.ClassLib;
@@ -28,7 +30,10 @@ public partial class MainPageViewModel : ViewModelBase
     
     [ObservableProperty]
     private string? _hexMessageText;
-    
+
+    private readonly ConcurrentQueue<string> _log4Queue = [];
+    private readonly StringBuilder _stringBuilder = new ();
+    private int _pendingUpdate;
     public MainPageViewModel()
     {
         ParaSetupModules.AscDataProdEvent += OnShowAscDataProdEvent;
@@ -82,21 +87,31 @@ public partial class MainPageViewModel : ViewModelBase
             return;
         }
         var message = stringEventArgs.Message;
-        AscMessageText = message;
-        /*lock (_log4Queue) 
+        _log4Queue.Enqueue(message);
+        while (_log4Queue.Count > PublicConst.MaxLogLines)
         {
-            _log4Queue.Enqueue(message);
-            // 超限就持续踢掉最早行
-            while (_log4Queue.Count > PublicConst.MaxLogLines)
+            _log4Queue.TryDequeue(out _);
+        }
+        if (Interlocked.Exchange(ref _pendingUpdate, 1) == 1)
+        {
+            return; // 已有更新等待，跳过本次
+        }
+        Dispatcher.UIThread.Post(() =>
+        {
+            try
             {
-                _log4Queue.Dequeue();
+                _stringBuilder.Clear();
+                foreach (var line in _log4Queue)
+                {
+                    _stringBuilder.AppendLine(line);
+                }
+                AscMessageText = _stringBuilder.ToString();
             }
-            Dispatcher.UIThread.Post(() =>
+            finally
             {
-                //AscMessageText = _log4Queue;
-                AscMessageText = string.Join(Environment.NewLine, _log4Queue);
-            }); 
-        }*/
+                Interlocked.Exchange(ref _pendingUpdate, 0);
+            }
+        }, DispatcherPriority.Normal);
     }
     //十六进制消息显示；
     private void OnShowHexDataProdEvent(object? obj, EventArgs arg)

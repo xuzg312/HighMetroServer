@@ -35,12 +35,10 @@ public sealed class FrameData : IDisposable
             throw;
         }
     }
-    public int DataSize { get; set; }
-    public int Width { get; set; }
-    public int Height { get; set; }
-    public int YSize { get; set; }
-    public int UvSize { get; set; }
-    public int FrameNumber { get; set; }
+    public int Width { get; init; }
+    public int Height { get; init; }
+    public int YSize { get; init; }
+    public int UvSize { get; init; }
 
     public unsafe byte* GetYPtr()
     {

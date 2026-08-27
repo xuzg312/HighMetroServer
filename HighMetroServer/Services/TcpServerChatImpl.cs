@@ -28,16 +28,19 @@ public class TcpServerChatImpl : IChildCommunication
     private const byte PacketHead1 = 0xEB;
     private const byte PacketHead2 = 0xAA;
     private const byte PacketTail = 0xED;
+    private readonly SemaphoreSlim _semaphoreSlim;
     #endregion
 
     #region 构造函数；
     public TcpServerChatImpl(TcpClient client, HostInfo hostInfo, IDataBufferPool iDataBufferPool, 
-        ConcurrentDictionary<string, IChildCommunication> dictionary,string key,CancellationToken serverToken)
+        ConcurrentDictionary<string, IChildCommunication> dictionary,
+        string key,CancellationToken serverToken,SemaphoreSlim semaphoreSlim)
     {
         _client = client;
         _hostInfo = hostInfo;
         _iDataBufferPool = iDataBufferPool;
         _dictionary = dictionary;
+        _semaphoreSlim = semaphoreSlim;
         _clientCts = CancellationTokenSource.CreateLinkedTokenSource(serverToken);
         _start = true;
         
@@ -45,6 +48,7 @@ public class TcpServerChatImpl : IChildCommunication
         _key = key;
         _receiveQueue = [];
         _receiveBuffer = [];
+
         _clientType = PublicConst.IdentifyNone;//未验证；
         _hostInfo.RaiseClientConnEvent($"{_key}：客户端上线！【{currDateTime}】");
         _readTask = Task.Run(() => SafeHandleClientLoop(_clientCts.Token), _clientCts.Token);
@@ -89,6 +93,7 @@ public class TcpServerChatImpl : IChildCommunication
                 var data00 = new byte[bytesRead];
                 Array.Copy(data, data00, bytesRead);
                 _receiveQueue.Enqueue(data00);
+                _semaphoreSlim.Release();
                 _hostInfo.RaiseClientConnEvent($"{_key}：收到客户端数据！【{currDateTime}】");
             }
             catch (OperationCanceledException)
@@ -189,7 +194,7 @@ public class TcpServerChatImpl : IChildCommunication
             {
                 _receiveBuffer.Enqueue(b);
             }
-            while (ParsePacket()) ;
+            while (!_clientCts.Token.IsCancellationRequested && ParsePacket()) ;
             return true;
         }
         catch (Exception ex)

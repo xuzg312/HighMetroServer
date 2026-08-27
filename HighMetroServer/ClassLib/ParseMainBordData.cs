@@ -5,11 +5,10 @@ using HighMetroServer.BaseModel;
 
 namespace HighMetroServer.ClassLib;
 
-public class ParseMainBordData
+public static class ParseMainBordData
 {
     public static MainInfoBean? ReplyHeartInfo(SocketDataBlock socketDataBlock)
     {
-        var mainInfoList = new List<MainInfoBean>();
         var mainInfoBean00 = new MainInfoBean();
         //总长度62字节；
         if (socketDataBlock.Length < 62)

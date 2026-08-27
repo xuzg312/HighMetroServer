@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Threading;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -10,7 +11,6 @@ using CommunityToolkit.Mvvm.Messaging;
 using HighMetroServer.BaseModel;
 using HighMetroServer.ClassLib;
 using HighMetroServer.Event;
-using HighMetroServer.HikVision;
 using HighMetroServer.Message;
 using HighMetroServer.Models;
 using HighMetroServer.Parameters;
@@ -81,6 +81,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     private int _serial;
     private CommSerialImpl? _commSerialImpl;
     private bool _buildServer;
+    private static readonly SemaphoreSlim AsyncLock = new SemaphoreSlim(1, 1);
 
     public SerialConfigViewModel(int serial)
     {
@@ -93,11 +94,6 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         }
         CommState = "【 串口连接状态：❌ 】";
         WeakReferenceMessenger.Default.RegisterAll(this);
-    }
-    private void OnRealDataReceived(
-        int lRealHandle, uint dwDataType, nint pBuffer, uint dwBufSize, nint pUser)
-    {
-        Console.WriteLine($"OnRealDataReceived:lRealHandle{lRealHandle},dwDataType{dwDataType},dwBufSize{dwBufSize}");
     }
     public void UpdateParams(int serial, SerialPortOptions? options)
     {
@@ -155,7 +151,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
                         var tcpServer = ParaSetupModules.HostInfo!.TcpServer;
                         tcpServer?.SendMessage(socketDataBlock);
                         //保存心跳;
-                        ReplyHeartInfo(socketDataBlock);
+                        _= ReplyHeartInfo(socketDataBlock);
                         valid = true;
                     }
                 }
@@ -177,7 +173,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
                             var tcpServer = ParaSetupModules.HostInfo!.TcpServer;
                             tcpServer?.SendMessage(socketDataBlock);
                             cameraBean.Type = PublicConst.DoorStateCapture;
-                            ReplyCaptureInfo(socketDataBlock, cameraBean);
+                            _= ReplyCaptureInfo(socketDataBlock, cameraBean);
                             valid = true;
                         }
                         else if (state == 0X01)
@@ -198,47 +194,66 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         }
     }
     //心跳；
-    private void ReplyHeartInfo(SocketDataBlock socketDataBlock)
-    {
-        var mainInfoBean = ParseMainBordData.ReplyHeartInfo(socketDataBlock);
-        if (mainInfoBean != null)
+    private async Task ReplyHeartInfo(SocketDataBlock socketDataBlock)
+    { 
+        await ReplyHeart(socketDataBlock);
+    }
+    private async Task ReplyHeart(SocketDataBlock socketDataBlock)
+    { 
+        await AsyncLock.WaitAsync();
+        try
         {
-            mainInfoBean.HostBh = ParaSetupModules.CamInfo!.HostBh;
-            var data = ParseMainBordData.ParsePack(mainInfoBean);
-            ResultInfo resultInfo;
-            if (mainInfoBean.A1gzm > 0 || mainInfoBean.A2gzm > 0 || mainInfoBean.B1gzm > 0 || mainInfoBean.B2gzm > 0)
+            var mainInfoBean = ParseMainBordData.ReplyHeartInfo(socketDataBlock);
+            if (mainInfoBean != null)
             {
-                //异常的心跳，保存到数据库;
-                resultInfo = ParaSetupModules.DbService!.AddHeart(mainInfoBean);
+                mainInfoBean.HostBh = ParaSetupModules.CamInfo!.HostBh;
+                var data = ParseMainBordData.ParsePack(mainInfoBean);
+                ResultInfo resultInfo;
+                if (mainInfoBean.A1gzm > 0 || mainInfoBean.A2gzm > 0 || mainInfoBean.B1gzm > 0 ||
+                    mainInfoBean.B2gzm > 0)
+                {
+                    //异常的心跳，保存到数据库;
+                    resultInfo = ParaSetupModules.DbService!.AddHeart(mainInfoBean);
+                }
+                else
+                {
+                    //正常心跳，数据库更新次数，每天一条记录；
+                    mainInfoBean.Datetime = DateTime.Now.Date.ToString("yyyy-MM-dd HH:mm:ss");
+                    resultInfo = ParaSetupModules.DbService!.SavePersonDay(mainInfoBean);
+                }
+
+                if (!resultInfo.Code.Equals(PublicConst.FlagYes))
+                {
+                    var currDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                    ParaSetupModules.RaiseAscDataProdEvent($"{resultInfo.Message}【{currDate}】");
+                }
+
+                Dispatcher.UIThread.Post(() =>
+                {
+                    MessageText1 = data[0];
+                    MessageText2 = data[1];
+                    MessageText3 = data[2];
+                    MessageText4 = data[3];
+                    var currDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                    MessageText = $"收到主板【{_serial}】的心跳数据！【{currDate}】";
+                });
             }
             else
             {
-                //正常心跳，数据库更新次数，每天一条记录；
-                mainInfoBean.Datetime = DateTime.Now.Date.ToString("yyyy-MM-dd HH:mm:ss");
-                resultInfo = ParaSetupModules.DbService!.SavePersonDay(mainInfoBean);
+                ParaSetupModules.RaiseHexDataProdEvent(socketDataBlock);
             }
-            if (!resultInfo.Code.Equals(PublicConst.FlagYes))
-            {
-                var currDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                ParaSetupModules.RaiseAscDataProdEvent($"{resultInfo.Message}【{currDate}】");
-            }
-            Dispatcher.UIThread.Post(() =>
-            {
-                MessageText1 = data[0];
-                MessageText2 = data[1];
-                MessageText3 = data[2];
-                MessageText4 = data[3];
-                var currDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                MessageText = $"收到主板【{_serial}】的心跳数据！【{currDate}】";
-            });
         }
-        else
+        finally
         {
-            ParaSetupModules.RaiseHexDataProdEvent(socketDataBlock);
+            AsyncLock.Release();
         }
     }
     //拍照
-    private void ReplyCaptureInfo(SocketDataBlock socketDataBlock, CameraBean cameraBean)
+    private async Task ReplyCaptureInfo(SocketDataBlock socketDataBlock, CameraBean cameraBean)
+    { 
+        await ReplyCapture(socketDataBlock,cameraBean);
+    }
+    private async Task ReplyCapture(SocketDataBlock socketDataBlock, CameraBean cameraBean)
     {
         cameraBean.HostBh = ParaSetupModules.HostInfo!.Bh;
         var publicUntil = new PublicUntil();
@@ -254,7 +269,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         if (camRemoteLinkImpl!=null && camRemoteLinkImpl.GetUserId()>=0)
         {
             //动作：拍照；
-            var value = camRemoteLinkImpl.CaptureJpegPicture(cameraBean,SystemInfo.PhotoDir); 
+            var value = await camRemoteLinkImpl.CaptureJpegPicture(cameraBean,SystemInfo.PhotoDir); 
             if (value.Code.Equals(PublicConst.FlagYes))
             {
                 cameraBean.Message = "拍照执行成功！";

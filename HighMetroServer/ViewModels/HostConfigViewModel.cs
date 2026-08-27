@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using System.Windows.Input;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -143,7 +142,7 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
                         //检测摄像机是否在线？
                         var camInfo = ParaSetupModules.CamInfo!;
                         var onLine = false;
-                        var camRemoteLinkImpl = camInfo!.CamRemoteLinkImpl;
+                        var camRemoteLinkImpl = camInfo.CamRemoteLinkImpl;
                         if (camRemoteLinkImpl != null && camRemoteLinkImpl.GetUserId()>=0)
                         {
                             onLine = camRemoteLinkImpl.CheckOnLine();

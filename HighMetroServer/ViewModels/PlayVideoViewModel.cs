@@ -34,7 +34,6 @@ public partial class PlayVideoViewModel : ObservableObject
     private readonly MemoryPool<byte> _memoryPool = MemoryPool<byte>.Shared;
     private readonly CancellationTokenSource _cts;
     private Task? _showUiTask;
-    private int _frameCounter; 
     
     [ObservableProperty]
     private string _messageText = string.Empty;
@@ -114,18 +113,16 @@ public partial class PlayVideoViewModel : ObservableObject
                 {
                     // 内存池分片导致单块不够大时，直接丢弃或降级处理
                     memOwner.Dispose();
-                    Dispatcher.UIThread.InvokeAsync(() => { MessageText = $"内存池分片单块不够大！";});
+                    Dispatcher.UIThread.Post(() => { MessageText = $"内存池分片单块不够大！";});
                     return;
                 }
             }
             frame = new FrameData(memOwner)
             {
-                DataSize = nSize,
                 Width = width,
                 Height = height,
                 YSize = ySize,
                 UvSize = uvSize,
-                FrameNumber = Interlocked.Increment(ref _frameCounter) 
             };
             _frameQueue.Enqueue(frame);
             _frameSignal.Release();
@@ -134,7 +131,7 @@ public partial class PlayVideoViewModel : ObservableObject
         {
             frame?.Dispose();
             memOwner?.Dispose();
-            Dispatcher.UIThread.InvokeAsync(() => { MessageText = $"触发解码回调，处理异常：{ex.Message}";});
+            Dispatcher.UIThread.Post(() => { MessageText = $"触发解码回调，处理异常：{ex.Message}";});
         }
     }
     private async Task ProcessFrameQueueAsync(CancellationToken ct)
@@ -152,7 +149,7 @@ public partial class PlayVideoViewModel : ObservableObject
                 }
                 catch (Exception ex)
                 {
-                    await Dispatcher.UIThread.InvokeAsync(() =>
+                    Dispatcher.UIThread.Post(() =>
                     {
                         if (!_isClosed)
                             MessageText = $"渲染异常: {ex.Message}";
@@ -169,7 +166,7 @@ public partial class PlayVideoViewModel : ObservableObject
             }
             catch (Exception ex)
             {
-                await Dispatcher.UIThread.InvokeAsync(() =>
+                Dispatcher.UIThread.Post(() =>
                 {
                     if (!_isClosed)
                         MessageText = $"循环任务异常: {ex.Message}";
@@ -318,15 +315,6 @@ public partial class PlayVideoViewModel : ObservableObject
         {
             //忽略；
         }
-
-        try
-        {
-            _frameSignal.Release();
-        }
-        catch
-        {
-            //忽略；
-        }
         _camRemoteLinkImpl.Close();
         try
         {
@@ -355,7 +343,6 @@ public partial class PlayVideoViewModel : ObservableObject
         {
             //忽略；
         }
-
         try
         {
             _frameSignal.Dispose();
@@ -372,6 +359,5 @@ public partial class PlayVideoViewModel : ObservableObject
         PreviewSource = null;
         _decodeCallBack = null;
         _fileEndCallBack = null;
-        _frameSignal.Dispose();
     }
 }

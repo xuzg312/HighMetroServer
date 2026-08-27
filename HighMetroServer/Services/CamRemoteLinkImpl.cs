@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using HighMetroServer.BaseModel;
 using HighMetroServer.HikVision;
@@ -18,6 +19,7 @@ public class CamRemoteLinkImpl
     private PlayCtrl.DeccbFun? _decodeCallback;
     private PlayCtrl.DeccbFun? _playDecodeCallBack;
     private readonly object _dirLockObj = new();
+    private static readonly SemaphoreSlim AsyncLock = new SemaphoreSlim(1, 1);
     public int GetUserId() => _userId;
     public LoadCamResult Init()
     {
@@ -87,7 +89,7 @@ public class CamRemoteLinkImpl
         }
         return HikSdkGetLastError();
     }
-    public LoadCamResult CaptureJpegPicture(CameraBean cameraBean,string baseDirectory)
+    public async Task<LoadCamResult> CaptureJpegPicture(CameraBean cameraBean,string baseDirectory)
     {
         if (_userId < 0)
         {
@@ -98,8 +100,7 @@ public class CamRemoteLinkImpl
             };
         }
         var bufferPtr = IntPtr.Zero;
-        var fullSavePath = string.Empty;
-        // 静态锁防止多线程并发创建目录冲突
+        await AsyncLock.WaitAsync();
         var dateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
         try
         {
@@ -119,11 +120,10 @@ public class CamRemoteLinkImpl
             var now = DateTime.Now;
             var timeStr = $"{now.Hour:D2}-{now.Minute:D2}-{now.Second:D2}-{now.Millisecond:D3}";
             var fileName = $"{cameraBean.Serial}-{timeStr}.jpg";
-            fullSavePath = Path.Combine(dayDir, camIdFolder, fileName);
+            var fullSavePath = Path.Combine(dayDir, camIdFolder, fileName);
             cameraBean.FilePath = fullSavePath;
             #endregion
             #region 4. SDK抓拍逻辑
-            var lChannel = 1;
             var lpJpegPara = new ChcNetSdk.NetDvrJpegpara
             {
                 wPicQuality = 0,
@@ -133,7 +133,7 @@ public class CamRemoteLinkImpl
             uint actualSize = 0;
             var nativeRet = HikSdk.NET_DVR_CaptureJPEGPicture_NEW(
                 _userId,
-                lChannel,
+                1,
                 ref lpJpegPara,
                 bufferPtr,
                 PublicConst.MaxBufferSize,
@@ -154,38 +154,6 @@ public class CamRemoteLinkImpl
             };
             #endregion
         }
-        catch (IOException ioEx)
-        {
-            return new LoadCamResult
-            {
-                Code = PublicConst.FlagNo,
-                Message = $"文件IO异常：{ioEx.Message}，路径：{fullSavePath}【{dateTime}】"
-            };
-        }
-        catch (UnauthorizedAccessException authEx)
-        {
-            return new LoadCamResult
-            {
-                Code = PublicConst.FlagNo,
-                Message = $"目录无读写权限：{authEx.Message}，路径：{fullSavePath}【{dateTime}】"
-            };
-        }
-        catch (OutOfMemoryException memEx)
-        {
-            return new LoadCamResult
-            {
-                Code = PublicConst.FlagNo,
-                Message = $"内存不足无法抓拍：{memEx.Message}【{dateTime}】"
-            };
-        }
-        catch (ArgumentException argEx)
-        {
-            return new LoadCamResult
-            {
-                Code = PublicConst.FlagNo,
-                Message = $"路径参数非法：{argEx.Message}【{dateTime}】"
-            };
-        }
         catch (Exception ex)
         {
             // 兜底所有未知异常
@@ -202,6 +170,7 @@ public class CamRemoteLinkImpl
             {
                 Marshal.FreeHGlobal(bufferPtr);
             }
+            AsyncLock.Release();
         }
     }
     public async Task<LoadCamResult> PlayCam(CameraBean cameraBean,string baseDirectory)
@@ -222,8 +191,8 @@ public class CamRemoteLinkImpl
                 Message = "PlayHandle>=0，此次操作被拒绝！"
             };
         }
-        var fullSavePath = string.Empty;
         // 静态锁防止多线程并发创建目录冲突
+        await AsyncLock.WaitAsync();
         var dateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
         try
         {
@@ -243,19 +212,19 @@ public class CamRemoteLinkImpl
             var now = DateTime.Now;
             var timeStr = $"{now.Hour:D2}-{now.Minute:D2}-{now.Second:D2}-{now.Millisecond:D3}";
             var fileName = $"{cameraBean.Serial}-{timeStr}.mp4";
-            fullSavePath = Path.Combine(dayDir, camIdFolder, fileName);
+            var fullSavePath = Path.Combine(dayDir, camIdFolder, fileName);
             cameraBean.FilePath = fullSavePath;
             #endregion
             var playInfo = new ChcNetSdk.NetDvrPreviewInfo
             {
                 hPlayWnd = IntPtr.Zero,
-                lChannel = 1,          // 通道号，IPC一般1
-                dwStreamType = 1,      // 1-主码流，2-子码流
-                dwLinkMode = 0,        //0：TCP方式,1：UDP方式,2：多播方式,3 - RTP方式，4-RTP/RTSP,5-RSTP/HTTP
-                bBlocked = false,      //0-非阻塞取流, 1-阻塞取流, 如果阻塞SDK内部connect失败将会有5s的超时才能够返回,不适合于轮询取流操作
-                dwDisplayBufNum = 1,   //播放库播放缓冲区最大缓冲帧数，范围1-50，置0时默认为1 
-                byProtoType = 0,       //应用层取流协议，0-私有协议，1-RTSP协议
-                byPreviewMode = 0,     //预览模式，0-正常预览，1-延迟预览
+                lChannel = 1,         
+                dwStreamType = 1,     
+                dwLinkMode = 0,        
+                bBlocked = false,      
+                dwDisplayBufNum = 1,  
+                byProtoType = 0,       
+                byPreviewMode = 0,     
             };
             // 开启预览
             _playHandle = -1;
@@ -286,38 +255,6 @@ public class CamRemoteLinkImpl
                 }
             }
         }
-        catch (IOException ioEx)
-        {
-            return new LoadCamResult
-            {
-                Code = PublicConst.FlagNo,
-                Message = $"文件IO异常：{ioEx.Message}，路径：{fullSavePath}【{dateTime}】"
-            };
-        }
-        catch (UnauthorizedAccessException authEx)
-        {
-            return new LoadCamResult
-            {
-                Code = PublicConst.FlagNo,
-                Message = $"目录无读写权限：{authEx.Message}，路径：{fullSavePath}【{dateTime}】"
-            };
-        }
-        catch (OutOfMemoryException memEx)
-        {
-            return new LoadCamResult
-            {
-                Code = PublicConst.FlagNo,
-                Message = $"内存不足无法抓拍：{memEx.Message}【{dateTime}】"
-            };
-        }
-        catch (ArgumentException argEx)
-        {
-            return new LoadCamResult
-            {
-                Code = PublicConst.FlagNo,
-                Message = $"路径参数非法：{argEx.Message}【{dateTime}】"
-            };
-        }
         catch (Exception ex)
         {
             // 兜底所有未知异常
@@ -336,6 +273,7 @@ public class CamRemoteLinkImpl
                 HikSdk.NET_DVR_StopRealPlay(_playHandle);
                 _playHandle = -1;
             }
+            AsyncLock.Release();
         }
     }
     public LoadCamResult DebugCaptureJpegPicture()
@@ -443,13 +381,13 @@ public class CamRemoteLinkImpl
         var playInfo = new ChcNetSdk.NetDvrPreviewInfo
         {
             hPlayWnd = IntPtr.Zero,
-            lChannel = 1,          // 通道号，IPC一般1
-            dwStreamType = 1,      // 1-主码流，2-子码流
-            dwLinkMode = 0,        //0：TCP方式,1：UDP方式,2：多播方式,3 - RTP方式，4-RTP/RTSP,5-RSTP/HTTP
-            bBlocked = false,      //0-非阻塞取流, 1-阻塞取流, 如果阻塞SDK内部connect失败将会有5s的超时才能够返回,不适合于轮询取流操作
-            dwDisplayBufNum = 1,   //播放库播放缓冲区最大缓冲帧数，范围1-50，置0时默认为1 
-            byProtoType = 0,       //应用层取流协议，0-私有协议，1-RTSP协议
-            byPreviewMode = 0,     //预览模式，0-正常预览，1-延迟预览
+            lChannel = 1,          
+            dwStreamType = 1,      
+            dwLinkMode = 0,       
+            bBlocked = false,     
+            dwDisplayBufNum = 1,   
+            byProtoType = 0,       
+            byPreviewMode = 0,     
         };
         // 开启预览，传入码流回调
         _playHandle = HikSdk.NET_DVR_RealPlay_V40(_userId, ref playInfo, _realDataCallback, nint.Zero);
@@ -468,7 +406,7 @@ public class CamRemoteLinkImpl
     {
         var value = PlayCtrl.PlayM4_InputData(_iPort, pBuffer, dwBufSize);
         if(value<0)
-            return PlayM4GetLastError(); ;
+            return PlayM4GetLastError();
         return new LoadCamResult
         {
             Code = PublicConst.FlagYes
