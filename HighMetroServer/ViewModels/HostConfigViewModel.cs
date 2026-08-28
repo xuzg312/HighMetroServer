@@ -47,7 +47,7 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
         _buildServer = false;
         _hostInfo = ParaSetupModules.HostInfo!;
         HostState = "【 TCP端口监听状态：❌ 】";
-        WeakReferenceMessenger.Default.RegisterAll(this);
+        WeakReferenceMessenger.Default.Register(this);
     }
     partial void OnConfigChanged(HostOptions? value)
     {

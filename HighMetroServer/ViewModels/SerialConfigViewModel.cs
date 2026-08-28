@@ -81,7 +81,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     private int _serial;
     private CommSerialImpl? _commSerialImpl;
     private bool _buildServer;
-    private static readonly SemaphoreSlim AsyncLock = new SemaphoreSlim(1, 1);
+    private static readonly SemaphoreSlim AsyncLock = new (1, 1);
 
     public SerialConfigViewModel(int serial)
     {
@@ -93,7 +93,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
             item.BufferDataProdEvent += OnBufferDataProdEvent;
         }
         CommState = "【 串口连接状态：❌ 】";
-        WeakReferenceMessenger.Default.RegisterAll(this);
+        WeakReferenceMessenger.Default.Register<AppCleanupMessage>(this);
     }
     public void UpdateParams(int serial, SerialPortOptions? options)
     {

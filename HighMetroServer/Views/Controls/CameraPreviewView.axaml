@@ -2,9 +2,11 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:HighMetroServer.ViewModels"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="HighMetroServer.Views.Controls.CameraPreviewView"
-             Width="1020" Height="600">
+             Width="1020" Height="600"
+             x:DataType="vm:CameraPreviewViewModel">
     <Border Background="White" Padding="24" CornerRadius="8">
         <StackPanel Spacing="12">
             <TextBlock Text="摄像头调试" FontSize="18" FontWeight="Bold" Height="30"/>
@@ -52,7 +54,6 @@
                     <!-- 左：实时预览 -->
                     <Grid Grid.Column="0" Background="#0A0A0A" >
                         <Image Source="{Binding PreviewSource}" 
-                               Tag="{Binding FrameVersion}" 
                                Stretch="Uniform" />
                         <TextBlock Text="{Binding StatusText}"
                                    Foreground="#cccccc"

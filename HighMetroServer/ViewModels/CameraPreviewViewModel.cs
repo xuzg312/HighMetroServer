@@ -93,7 +93,7 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
         _start = false;
         _realDataCallback = OnRealDataReceived;
         _decodeCallback = OnDecodedFrameCallback;
-        WeakReferenceMessenger.Default.RegisterAll(this);
+        WeakReferenceMessenger.Default.Register<AppCleanupMessage>(this);
         _frameSignal = new SemaphoreSlim(0);
         _cts = new CancellationTokenSource();
         _showUiTask = Task.Run(() => SafeHandleLoop(_cts.Token), _cts.Token);

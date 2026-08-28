@@ -1,8 +1,6 @@
 ﻿using System;
-using System.ComponentModel.DataAnnotations;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using HighMetroServer.Attributes;
 using HighMetroServer.BaseModel;
 using HighMetroServer.HikVision;
 using HighMetroServer.Models;
@@ -10,28 +8,25 @@ using HighMetroServer.Services;
 
 namespace HighMetroServer.ViewModels;
 
-public partial class EditCamConfigViewModel : ObservableValidator
+public partial class EditCamConfigViewModel : ViewModelBase
 {
     private readonly IDbService _dbService;
     public event Action? OnHardConfigSuccess;
     public event Action? OnHardConfigCancel;
     
     [ObservableProperty]
-    [Required(ErrorMessage = "地址不能为空")]
-    [IpAddress(ErrorMessage = "IP 地址格式不正确")]
     private string _ip;
 
     [ObservableProperty]
-    [Required(ErrorMessage = "端口不能为空")]
-    [Range(1001, 65535, ErrorMessage = "端口必须在 1001-65535 之间")]
+    private string _portText;
+    
+    [ObservableProperty]
     private int _port;
     
     [ObservableProperty]
-    [Required(ErrorMessage = "用户名不能为空")]
     private string _userName;
 
     [ObservableProperty]
-    [Required(ErrorMessage = "密码不能为空")]
     private string _password;
 
     [ObservableProperty]
@@ -49,6 +44,7 @@ public partial class EditCamConfigViewModel : ObservableValidator
         }
         Ip = hardInfo.Ip;
         Port = hardInfo.Port;
+        PortText= hardInfo.Port.ToString();
         UserName = hardInfo.UserName;
         Password = hardInfo.PassWord;
         _hardInfo = hardInfo;
@@ -57,8 +53,7 @@ public partial class EditCamConfigViewModel : ObservableValidator
     [RelayCommand]
     private void TestConnection()
     {
-        ValidateAllProperties();
-        if (HasErrors)
+        if (!ValidateProperty())
         {
             return; 
         }
@@ -96,8 +91,7 @@ public partial class EditCamConfigViewModel : ObservableValidator
     private void Confirm()
     {
         MessageText = "";
-        ValidateAllProperties();
-        if (HasErrors)
+        if (!ValidateProperty())
         {
             return; 
         }
@@ -133,5 +127,40 @@ public partial class EditCamConfigViewModel : ObservableValidator
             UserName = UserName,
             PassWord = Password
         };
+    }
+    private bool ValidateProperty()
+    {
+        if (string.IsNullOrWhiteSpace(Ip))
+        {
+            MessageText = "地址不能为空！";
+            return false;
+        }
+        if (string.IsNullOrWhiteSpace(PortText))
+        {
+            MessageText = "端口无效！";
+            return false;
+        }
+        if (!int.TryParse(PortText, out int portNumber))
+        {
+            MessageText = "端口号格式不正确";
+            return false;
+        }
+        if (portNumber < 1000 || portNumber > 65535)
+        {
+            MessageText = $"端口 {portNumber} 【1000-65535】";
+            return false;
+        }
+        Port= portNumber;
+        if (string.IsNullOrWhiteSpace(UserName))
+        {
+            MessageText = "用户名不能为空！";
+            return false;
+        }
+        if (string.IsNullOrWhiteSpace(Password))
+        {
+            MessageText = "密码不能为空！";
+            return false;
+        }
+        return true;
     }
 }

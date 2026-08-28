@@ -38,14 +38,14 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
     private string _messageText = string.Empty;
 
     private bool _start;
-    private CamRemoteLinkImpl _camRemoteLinkImpl;
+    private readonly CamRemoteLinkImpl _camRemoteLinkImpl;
     public CamConfigViewModel()
     {
         _start = false;
         CamState = "【 摄像头连接状态：❌ 】";
         _camRemoteLinkImpl = new CamRemoteLinkImpl();
         ParaSetupModules.CamInfo!.CamRemoteLinkImpl = _camRemoteLinkImpl;
-        WeakReferenceMessenger.Default.RegisterAll(this);
+        WeakReferenceMessenger.Default.Register<AppCleanupMessage>(this);
     }
     partial void OnConfigChanged(CamOptions? value)
     {

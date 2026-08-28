@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using HighMetroServer.Aot;
 using HighMetroServer.ClassLib;
 using HighMetroServer.Parameters;
 
@@ -76,7 +77,7 @@ public class ConfigService : IConfigService
         try
         {
             var json = File.ReadAllText(_configPath);
-            return JsonSerializer.Deserialize<AppConfig>(json) ?? new AppConfig();
+            return JsonSerializer.Deserialize(json, AppConfigJsonContext.Default.AppConfig) ?? new AppConfig();
         }
         catch
         {
@@ -85,7 +86,7 @@ public class ConfigService : IConfigService
     }
     private void SaveAppConfig(AppConfig appConfig)
     {
-        var json = JsonSerializer.Serialize(appConfig, JsonWriteIndentedOptions);
+        var json = JsonSerializer.Serialize(appConfig, AppConfigJsonContext.Default.AppConfig);
         var tempFile = _configPath + ".tmp";
         File.WriteAllText(tempFile, json);
         if (File.Exists(_configPath))

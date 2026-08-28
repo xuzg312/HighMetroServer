@@ -2,9 +2,11 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:HighMetroServer.ViewModels"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="HighMetroServer.Views.Controls.CamAlarmRecordView"
-             Width="1070" Height="600">
+             Width="1070" Height="600" 
+             x:DataType="vm:CamAlarmRecordViewModel">
     <Border Background="White" Padding="24" CornerRadius="8">
         <!-- ❗把StackPanel改成Grid，分配剩余空间，Spacing换成Margin -->
         <Grid RowDefinitions="Auto,*" RowSpacing="12">

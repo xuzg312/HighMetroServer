@@ -7,16 +7,12 @@
 	    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <PublishReadyToRun>false</PublishReadyToRun>
         <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+        <DebugType>none</DebugType>
+        <DebugSymbols>false</DebugSymbols>
         <!--
-        <SelfContained>true</SelfContained>
-        <PublishSingleFile>true</PublishSingleFile>
-        <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
-        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-        <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
-        <RuntimeIdentifier>osx-arm64</RuntimeIdentifier>
-        dotnet publish ./HighMetro/HighMetro.csproj -c Release -r osx-arm64  -o ./publish/osx-arm64
-        dotnet publish ./HighMetro/HighMetro.csproj -c Release -r win-x64  -o ./publish/win-x64
-        <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+        <PublishAot>true</PublishAot>
+        <IlcGenerateStackTraceInformation>true</IlcGenerateStackTraceInformation>
+        <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         -->
     </PropertyGroup>
     
@@ -25,17 +21,18 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="11.3.18" />
         <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.13" />
+        <PackageReference Include="Avalonia" Version="11.3.18" />
         <PackageReference Include="Avalonia.Desktop" Version="11.3.18" />
-        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.18" />
         <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.18" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.18" />
         <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3">
             <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
             <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
         </PackageReference>
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
         <PackageReference Include="MySqlConnector" Version="2.3.6" />
+        <PackageReference Include="PublishAotCross.Tools" Version="0.6.0.7" />
         <PackageReference Include="Sdcb.LibYuv.runtime.linux-x64" Version="1.0.0.12" />
         <PackageReference Include="Sdcb.LibYuv.runtime.osx-arm64" Version="1.0.0.12" />
         <PackageReference Include="Sdcb.LibYuv.runtime.win-x64" Version="1.0.0.12" />

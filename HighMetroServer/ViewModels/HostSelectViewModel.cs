@@ -10,7 +10,7 @@ using HighMetroServer.Services;
 
 namespace HighMetroServer.ViewModels;
 
-public partial class HostSelectViewModel : ObservableValidator
+public partial class HostSelectViewModel : ViewModelBase
 {
     private readonly IConfigService _configService;
 

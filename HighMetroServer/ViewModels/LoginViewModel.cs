@@ -1,6 +1,4 @@
 using System;
-using System.ComponentModel.DataAnnotations;
-using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HighMetroServer.BaseModel;
@@ -10,7 +8,7 @@ using HighMetroServer.Services;
 
 namespace HighMetroServer.ViewModels;
 
-public partial class LoginViewModel : ObservableValidator
+public partial class LoginViewModel : ViewModelBase
 {
     private readonly IDbService _dbService;
     private readonly IConfigService _configService;
@@ -20,11 +18,9 @@ public partial class LoginViewModel : ObservableValidator
     public event Action? OnLoginCancel;
 
     [ObservableProperty]
-    [Required(ErrorMessage = "用户名不能为空")]
     private string _username = "";
 
     [ObservableProperty]
-    [Required(ErrorMessage = "密码不能为空")]
     private string _password = "";
 
     [ObservableProperty]
@@ -41,8 +37,7 @@ public partial class LoginViewModel : ObservableValidator
     private void Login()
     {
         // 清除旧的错误并验证所有属性
-        ValidateAllProperties();
-        if (HasErrors)
+        if (!ValidateProperty())
         {
             return; 
         }
@@ -78,5 +73,19 @@ public partial class LoginViewModel : ObservableValidator
             LoginUser = Username,
             LoginPassword = Password
         };
+    }
+    private bool ValidateProperty()
+    {
+        if (string.IsNullOrWhiteSpace(Username))
+        {
+            Msg = "用户名不能为空！";
+            return false;
+        }
+        if (string.IsNullOrWhiteSpace(Password))
+        {
+            Msg = "密码不能为空！";
+            return false;
+        }
+        return true;
     }
 }

@@ -3,8 +3,10 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:controls="using:HighMetroServer.Views.Controls"
+             xmlns:vm="using:HighMetroServer.ViewModels"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="HighMetroServer.Views.Controls.MainPageView">
+             x:Class="HighMetroServer.Views.Controls.MainPageView"
+             x:DataType="vm:MainPageViewModel">
     <!-- 整体左右分栏：左* 右固定320 -->
     <Grid Margin="2">
         <Grid.ColumnDefinitions>

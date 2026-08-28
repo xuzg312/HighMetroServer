@@ -55,7 +55,6 @@ public static class SystemInfo
 
     static string GetApplicationDirectory()
     {
-        // 1. 使用 ProcessPath (单文件场景最可靠)
         var exePath = Environment.ProcessPath;
         if (!string.IsNullOrEmpty(exePath))
         {
@@ -63,15 +62,6 @@ public static class SystemInfo
             if (!string.IsNullOrEmpty(dir))
                 return dir;
         }
-        // 2. 使用 Assembly.Location (常规场景)
-        var assemblyLocation = Assembly.GetEntryAssembly()?.Location;
-        if (!string.IsNullOrEmpty(assemblyLocation))
-        {
-            var dir = Path.GetDirectoryName(assemblyLocation);
-            if (!string.IsNullOrEmpty(dir))
-                return dir;
-        }
-        // 3. 最终兜底 (Avalonia 资源目录通常是 BaseDirectory)
         return AppContext.BaseDirectory;
     }
 }

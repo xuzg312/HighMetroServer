@@ -1,8 +1,6 @@
 using System;
-using System.ComponentModel.DataAnnotations;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using HighMetroServer.Attributes;
 using HighMetroServer.BaseModel;
 using HighMetroServer.Models;
 using HighMetroServer.Parameters;
@@ -10,7 +8,7 @@ using HighMetroServer.Services;
 
 namespace HighMetroServer.ViewModels;
 
-public partial class DbConfigViewModel : ObservableValidator
+public partial class DbConfigViewModel : ViewModelBase
 {
     private readonly IDbService _dbService;
     private readonly IConfigService _configService;
@@ -19,21 +17,18 @@ public partial class DbConfigViewModel : ObservableValidator
     public event Action? OnDbConfigCancel;
     
     [ObservableProperty]
-    [Required(ErrorMessage = "地址不能为空")]
-    [IpAddress(ErrorMessage = "IP 地址格式不正确")]
     private string _host;
 
     [ObservableProperty]
-    [Required(ErrorMessage = "端口不能为空")]
-    [Range(1001, 65535, ErrorMessage = "端口必须在 1001-65535 之间")]
+    private string _portText;
+    
+    [ObservableProperty]
     private int _port;
     
     [ObservableProperty]
-    [Required(ErrorMessage = "用户名不能为空")]
     private string _dbUser;
 
     [ObservableProperty]
-    [Required(ErrorMessage = "密码不能为空")]
     private string _dbPassword;
 
     [ObservableProperty]
@@ -43,6 +38,7 @@ public partial class DbConfigViewModel : ObservableValidator
         _dbService = dbService;
         _configService = configService;
         Host = setting.DbHost;
+        PortText = setting.DbPort.ToString();
         Port = setting.DbPort;
         DbUser = setting.DbUser;
         DbPassword = setting.DbPassword;
@@ -54,8 +50,7 @@ public partial class DbConfigViewModel : ObservableValidator
     [RelayCommand]
     private void TestConnection()
     {
-        ValidateAllProperties();
-        if (HasErrors)
+        if (!ValidateProperty())
         {
             return; 
         }
@@ -66,9 +61,7 @@ public partial class DbConfigViewModel : ObservableValidator
     [RelayCommand]
     private void Confirm()
     {
-        // 清除旧的错误并验证所有属性
-        ValidateAllProperties();
-        if (HasErrors)
+        if (!ValidateProperty())
         {
             return; 
         }
@@ -97,5 +90,40 @@ public partial class DbConfigViewModel : ObservableValidator
             DbUser = DbUser,
             DbPassword = DbPassword
         };
+    }
+    private bool ValidateProperty()
+    {
+        if (string.IsNullOrWhiteSpace(Host))
+        {
+            MessageText = "地址不能为空！";
+            return false;
+        }
+        if (string.IsNullOrWhiteSpace(PortText))
+        {
+            MessageText = "端口无效！";
+            return false;
+        }
+        if (!int.TryParse(PortText, out int portNumber))
+        {
+            MessageText = "端口号格式不正确";
+            return false;
+        }
+        if (portNumber < 1000 || portNumber > 65535)
+        {
+            MessageText = $"端口 {portNumber} 【1000-65535】";
+            return false;
+        }
+        Port= portNumber;
+        if (string.IsNullOrWhiteSpace(DbUser))
+        {
+            MessageText = "用户名不能为空！";
+            return false;
+        }
+        if (string.IsNullOrWhiteSpace(DbPassword))
+        {
+            MessageText = "密码不能为空！";
+            return false;
+        }
+        return true;
     }
 }

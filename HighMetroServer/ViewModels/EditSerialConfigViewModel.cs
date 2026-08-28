@@ -11,7 +11,7 @@ using HighMetroServer.Services;
 
 namespace HighMetroServer.ViewModels;
 
-public partial class EditSerialConfigViewModel : ObservableValidator
+public partial class EditSerialConfigViewModel : ViewModelBase
 {
     private readonly IDbService _dbService;
     public event Action? OnExit;
