@@ -8,12 +8,6 @@
         <PublishReadyToRun>false</PublishReadyToRun>
         <DebugType>none</DebugType>
         <DebugSymbols>false</DebugSymbols>
-        <PublishAot>true</PublishAot>
-        <!--
-        <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
-        <IlcGenerateStackTraceInformation>true</IlcGenerateStackTraceInformation>
-        <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
-        -->
     </PropertyGroup>
     
     <ItemGroup>
@@ -72,19 +66,6 @@
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
             <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
             <Link>%(RecursiveDir)%(Filename)%(Extension)</Link>
-        </Content>
-    </ItemGroup>
-    <ItemGroup Condition="'$(RuntimeIdentifier)'=='osx-arm64'">
-        <Content Include="libvlc/osx-arm64/lib/**/*">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-            <Link>libvlc/osx-arm64/lib/%(RecursiveDir)%(Filename)%(Extension)</Link>
-        </Content>
-
-        <Content Include="libvlc/osx-arm64/plugins/**/*">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-            <Link>libvlc/osx-arm64/plugins/%(RecursiveDir)%(Filename)%(Extension)</Link>
         </Content>
     </ItemGroup>
 </Project>
