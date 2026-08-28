@@ -6,11 +6,11 @@
         <ApplicationManifest>app.manifest</ApplicationManifest>
 	    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <PublishReadyToRun>false</PublishReadyToRun>
-        <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
         <DebugType>none</DebugType>
         <DebugSymbols>false</DebugSymbols>
-        <!--
         <PublishAot>true</PublishAot>
+        <!--
+        <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
         <IlcGenerateStackTraceInformation>true</IlcGenerateStackTraceInformation>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         -->
