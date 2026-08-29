@@ -6,8 +6,15 @@
         <ApplicationManifest>app.manifest</ApplicationManifest>
 	    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <PublishReadyToRun>false</PublishReadyToRun>
+
+        <PublishAot>true</PublishAot>
+        <IsAotCompatible>true</IsAotCompatible>
+        <BuiltInComInteropSupport>false</BuiltInComInteropSupport>
+        <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         <DebugType>none</DebugType>
         <DebugSymbols>false</DebugSymbols>
+        <NoWarn>$(NoWarn);IL2104</NoWarn>
+        <NoWarn>$(NoWarn);IL3053</NoWarn>
     </PropertyGroup>
     
     <ItemGroup>
@@ -26,7 +33,6 @@
         </PackageReference>
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
         <PackageReference Include="MySqlConnector" Version="2.3.6" />
-        <PackageReference Include="PublishAotCross.Tools" Version="0.6.0.7" />
         <PackageReference Include="Sdcb.LibYuv.runtime.linux-x64" Version="1.0.0.12" />
         <PackageReference Include="Sdcb.LibYuv.runtime.osx-arm64" Version="1.0.0.12" />
         <PackageReference Include="Sdcb.LibYuv.runtime.win-x64" Version="1.0.0.12" />
