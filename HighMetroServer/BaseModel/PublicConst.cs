@@ -30,5 +30,5 @@ public static class PublicConst
     public const byte CommDataParseTask = 3;//串口数据解析后台任务个数；
     public const byte TcpDataParseTask = 2;//Tcp数据解析后台任务个数；
 
-    public const byte PageSize = 20;
+    public const byte PageSize = 10;
 }
