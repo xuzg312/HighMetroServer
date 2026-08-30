@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.Messaging;
 using HighMetroServer.Message;
@@ -15,7 +14,6 @@ public partial class PlayVideoView : Window,IRecipient<ClosePlayVideoViewMessage
         InitializeComponent();
         _playViewModel = new PlayVideoViewModel();
         DataContext = _playViewModel;
-        // 注册消息接收
         WeakReferenceMessenger.Default.Register(this);
     }
     public void LoadVideo(string filePath)

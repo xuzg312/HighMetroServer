@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Text;
 using HighMetroServer.BaseModel;
 
 namespace HighMetroServer.ClassLib;
@@ -81,7 +82,7 @@ public static class ParseClientData
                 };
                 //长度，1字节；
                 var fileLength = socketDataBlock.Content[2] -5;
-                tcpDataBean.FileName = System.Text.Encoding.UTF8.GetString(socketDataBlock.Content, 8, fileLength);
+                tcpDataBean.FileName = Encoding.UTF8.GetString(socketDataBlock.Content, 8, fileLength);
                 //hostBh；
                 iPosition = 3;
                 tcpDataBean.HostBh = publicUntil.GetUshort(socketDataBlock.Content, iPosition);

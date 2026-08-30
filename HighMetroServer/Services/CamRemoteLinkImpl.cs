@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using HighMetroServer.BaseModel;
@@ -58,17 +59,17 @@ public class CamRemoteLinkImpl
         var loginInfo = new ChcNetSdk.NetDvrUserLoginInfo();
 
         //设备IP地址或者域名
-        var byIp = System.Text.Encoding.Default.GetBytes(hardInfo.Ip);
+        var byIp = Encoding.Default.GetBytes(hardInfo.Ip);
         loginInfo.sDeviceAddress = new byte[129];
         byIp.CopyTo(loginInfo.sDeviceAddress, 0);
 
         //设备用户名
-        var byUserName = System.Text.Encoding.Default.GetBytes(hardInfo.UserName);
+        var byUserName = Encoding.Default.GetBytes(hardInfo.UserName);
         loginInfo.sUserName = new byte[64];
         byUserName.CopyTo(loginInfo.sUserName, 0);
 
         //设备密码
-        var byPassword = System.Text.Encoding.Default.GetBytes(hardInfo.PassWord);
+        var byPassword = Encoding.Default.GetBytes(hardInfo.PassWord);
         loginInfo.sPassword = new byte[64];
         byPassword.CopyTo(loginInfo.sPassword, 0);
 

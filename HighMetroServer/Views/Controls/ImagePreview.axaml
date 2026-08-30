@@ -40,8 +40,8 @@
             <StackPanel Orientation="Horizontal"
                         Spacing="15"
                         HorizontalAlignment="Center">
-                <Button Content="退出"
-                        Command="{Binding ExitCommand}"
+                <Button Content="退出" 
+                        Command="{Binding QuitCommand}"
                         Width="80" Height="35"/>
             </StackPanel>
         </Border>

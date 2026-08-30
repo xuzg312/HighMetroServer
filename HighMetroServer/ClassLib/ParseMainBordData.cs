@@ -19,7 +19,7 @@ public static class ParseMainBordData
         //设备id
         PublicUntil publicUntil = new PublicUntil();
         mainInfoBean00.Id = publicUntil.GetUshort(socketDataBlock.Content!, iPosition);
-        mainInfoBean00.Datetime = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        mainInfoBean00.Datetime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
         //长度；---1字节
         iPosition = 7;

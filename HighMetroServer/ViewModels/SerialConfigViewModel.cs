@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Threading;
+using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -93,7 +93,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
             item.BufferDataProdEvent += OnBufferDataProdEvent;
         }
         CommState = "【 串口连接状态：❌ 】";
-        WeakReferenceMessenger.Default.Register<AppCleanupMessage>(this);
+        WeakReferenceMessenger.Default.Register(this);
     }
     public void UpdateParams(int serial, SerialPortOptions? options)
     {

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Reflection.Metadata.Ecma335;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -68,6 +67,8 @@ public partial class CamAlarmRecordViewModel(IDbService dbService) : ObservableO
         //record.Type = PublicConst.DoorStateCamera;
         //record.FilePath = "/Users/xu_zg/Desktop/JetBrainsRider/bak/9-11-52-26.jpg";
         //record.Type = PublicConst.DoorStateCapture;
+        //record.FilePath = "/Users/xu_zg/Desktop/JetBrainsRider/bak/14-11-17-NO.mp4";
+        //record.Type = PublicConst.DoorStateCamera;
         var path = record.FilePath;
         if (string.IsNullOrWhiteSpace(path))
         {

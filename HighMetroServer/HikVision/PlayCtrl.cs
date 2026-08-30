@@ -7,7 +7,7 @@ public static partial class PlayCtrl
 {
     public delegate void DeccbFun(
         int nPort, IntPtr pBuf, int nSize, ref FrameInfo frameInfo, IntPtr pUser);
-    public delegate void FileEndCallBack(int nPort, System.IntPtr pUser);
+    public delegate void FileEndCallBack(int nPort, IntPtr pUser);
 
     [StructLayout(LayoutKind.Sequential)]
     public struct FrameInfo

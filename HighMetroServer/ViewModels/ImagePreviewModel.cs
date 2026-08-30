@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -12,7 +13,7 @@ public partial class ImagePreviewModel : ObservableObject
     private string _messageText=string.Empty;
     
     [RelayCommand]
-    private void Exit()
+    private void Quit()
     {
         WeakReferenceMessenger.Default.Send(new ClosePlayImageMessage());
     }

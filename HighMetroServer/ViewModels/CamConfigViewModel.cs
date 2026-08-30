@@ -45,7 +45,7 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
         CamState = "【 摄像头连接状态：❌ 】";
         _camRemoteLinkImpl = new CamRemoteLinkImpl();
         ParaSetupModules.CamInfo!.CamRemoteLinkImpl = _camRemoteLinkImpl;
-        WeakReferenceMessenger.Default.Register<AppCleanupMessage>(this);
+        WeakReferenceMessenger.Default.Register(this);
     }
     partial void OnConfigChanged(CamOptions? value)
     {

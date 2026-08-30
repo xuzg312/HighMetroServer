@@ -1,6 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
-using System.IO.Ports;
-    
+
 namespace HighMetroServer.Models;
 
 public partial class SerialPortOptions : ObservableObject

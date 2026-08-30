@@ -1,5 +1,3 @@
-using HighMetroServer.Models;
-
 namespace HighMetroServer.Parameters;
 
 public class AppConfig

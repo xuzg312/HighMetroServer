@@ -1,7 +1,6 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:viewModels="using:HighMetroServer.ViewModels"
-             xmlns:views="using:HighMetroServer.Views.Controls"
              xmlns:controls="clr-namespace:HighMetroServer.Views.Controls"
              x:Class="HighMetroServer.App"
              RequestedThemeVariant="Default">
