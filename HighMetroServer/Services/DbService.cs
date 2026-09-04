@@ -116,17 +116,14 @@ public class DbService : IDbService
             return resultInfo;
         }
     }
-
     private string GetConnectionString()
     {
         if (_connectionString.Equals(string.Empty))
         {
             _connectionString = DataBaseConnect.Instance.GetConnectionString();
         }
-
         return _connectionString;
     }
-
     public ResultHostInfo GetHostList(DbSetting dbSetting)
     {
         var resultHostInfo = new ResultHostInfo();
@@ -154,12 +151,10 @@ public class DbService : IDbService
                             };
                             hostInfoList.Add(hostInfo);
                         }
-
                         resultHostInfo.HostList = hostInfoList;
                     }
                 }
             }
-
             var resultInfo = new ResultInfo
             {
                 Code = PublicConst.FlagYes
@@ -206,7 +201,6 @@ public class DbService : IDbService
                     }
                 }
             }
-
             resultInfo.Code = PublicConst.FlagNo;
             resultInfo.Message = "工控机编号无效！";
             return resultInfo;
@@ -218,7 +212,6 @@ public class DbService : IDbService
             return resultInfo;
         }
     }
-
     public ResultInfo GetHardCamera(HardInfo hardInfo)
     {
         var resultInfo = new ResultInfo();
@@ -248,7 +241,6 @@ public class DbService : IDbService
                     }
                 }
             }
-
             resultInfo.Code = PublicConst.FlagYes;
             return resultInfo;
         }
@@ -259,7 +251,6 @@ public class DbService : IDbService
             return resultInfo;
         }
     }
-
     public ResultSerialCommInfo GetCommInfoList(HostInfo hostInfo, string commType)
     {
         var resultSerialCommInfo = new ResultSerialCommInfo();
@@ -314,7 +305,6 @@ public class DbService : IDbService
             return resultSerialCommInfo;
         }
     }
-
     public ResultInfo AddHardCamera(HardInfo hardInfo)
     {
         var resultInfo = new ResultInfo();
@@ -355,7 +345,6 @@ public class DbService : IDbService
             return resultInfo;
         }
     }
-
     public ResultInfo EditHardCamera(HardInfo hardInfo)
     {
         var resultInfo = new ResultInfo();
@@ -396,7 +385,6 @@ public class DbService : IDbService
             return resultInfo;
         }
     }
-
     public ResultInfo AddHeart(MainInfoBean mainInfoBean)
     {
         var resultInfo = new ResultInfo();
@@ -532,7 +520,6 @@ public class DbService : IDbService
             return resultInfo;
         }
     }
-
     private ResultInfo AddPersonDay(MainInfoBean mainInfoBean)
     {
         var resultInfo = new ResultInfo();
@@ -569,7 +556,6 @@ public class DbService : IDbService
             return resultInfo;
         }
     }
-
     private ResultInfo UpdatePersonDay(MainInfoBean mainInfoBean)
     {
         var resultInfo = new ResultInfo();
@@ -648,7 +634,6 @@ public class DbService : IDbService
             return resultInfo;
         }
     }
-
     public ResultInfo AddAlarm(CameraBean cameraBean)
     {
         var resultInfo = new ResultInfo();
@@ -869,5 +854,85 @@ public class DbService : IDbService
             resultInfo.Message = $"获取拍照记录异常：{ex.Message}";
             return resultInfo;
         }
-    }    
+    }  
+    public ResultInfo AddHost(HostInfo hostInfo,DbSetting dbSetting)
+    {
+        var resultInfo = new ResultInfo();
+        try
+        {
+            using (var conn = new MySqlConnection(dbSetting.GetConnectionString()))
+            {
+                conn.Open();
+                var sql = "INSERT INTO t_host (code, name,ip,port,flag) " +
+                             "VALUES (@code, @name,@ip,@port,@flag); SELECT LAST_INSERT_ID();";
+                using (var cmd = new MySqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@code", hostInfo.Code);
+                    cmd.Parameters.AddWithValue("@name", hostInfo.Name);
+                    cmd.Parameters.AddWithValue("@ip", hostInfo.Ip);
+                    cmd.Parameters.AddWithValue("@port", hostInfo.Port);
+                    cmd.Parameters.AddWithValue("@flag", PublicConst.FlagYes);
+                    var scalarResult = cmd.ExecuteScalar();
+                    if (scalarResult != null && scalarResult != DBNull.Value)
+                    {
+                        hostInfo.Bh = Convert.ToInt32(scalarResult);
+                        resultInfo.Tag = 1;
+                    }
+                }
+            }
+            if (resultInfo.Tag == 1)
+            {
+                resultInfo.Code = PublicConst.FlagYes;
+            }
+            else
+            {
+                resultInfo.Code = PublicConst.FlagNo;
+                resultInfo.Message = "插入工控机信息失败！";
+            }
+            return resultInfo;
+        }
+        catch (Exception ex)
+        {
+            resultInfo.Code = PublicConst.FlagNo;
+            resultInfo.Message = ex.Message;
+            return resultInfo;
+        }
+    }
+    public ResultInfo EditHost(HostInfo hostInfo,DbSetting dbSetting)
+    {
+        var resultInfo = new ResultInfo();
+        try
+        {
+            using (var conn = new MySqlConnection(dbSetting.GetConnectionString()))
+            {
+                conn.Open();
+                string sql = "update t_host set code=@code,name=@name,ip=@ip,port=@port where bh=@bh;";
+                using (var cmd = new MySqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@code", hostInfo.Code);
+                    cmd.Parameters.AddWithValue("@name", hostInfo.Name);
+                    cmd.Parameters.AddWithValue("@ip", hostInfo.Ip);
+                    cmd.Parameters.AddWithValue("@port", hostInfo.Port);
+                    cmd.Parameters.AddWithValue("@bh", hostInfo.Bh);
+                    resultInfo.Tag = cmd.ExecuteNonQuery();
+                }
+            }
+            if (resultInfo.Tag == 1)
+            {
+                resultInfo.Code = PublicConst.FlagYes;
+            }
+            else
+            {
+                resultInfo.Code = PublicConst.FlagNo;
+                resultInfo.Message = "更新工控机信息失败！";
+            }
+            return resultInfo;
+        }
+        catch (Exception ex)
+        {
+            resultInfo.Code = PublicConst.FlagNo;
+            resultInfo.Message = $"更新工控机信息异常：{ex.Message}";
+            return resultInfo;
+        }
+    }
 }

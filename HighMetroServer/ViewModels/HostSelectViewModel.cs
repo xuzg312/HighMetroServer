@@ -13,21 +13,25 @@ namespace HighMetroServer.ViewModels;
 public partial class HostSelectViewModel : ViewModelBase
 {
     private readonly IConfigService _configService;
-
     // 回调
     public event Action<HostSetting>? OnConfirm;
     public event Action? OnCancel;
-
+    public event Action? OnAdd;
+    
     [ObservableProperty]
     private ObservableCollection<HostModals> _hostModalsList = [];
+
+    [ObservableProperty] 
+    private bool _enableAdd;
     
     private HostModals? _selectedHost;
 
     [ObservableProperty]
     private string _messageText = "";
-    public HostSelectViewModel(IConfigService configService, ResultHostInfo resultHostInfo)
+    public HostSelectViewModel(IConfigService configService, ResultHostInfo resultHostInfo,bool enableAdd)
     {
         _configService = configService;
+        EnableAdd = enableAdd;
         if (resultHostInfo.ReturnInfo.Code.Equals(PublicConst.FlagYes))
         {
             List<HostInfo> hostList = resultHostInfo.HostList;
@@ -67,7 +71,6 @@ public partial class HostSelectViewModel : ViewModelBase
             MessageText = "❌ 请选择工控机！";
             return;
         }
-
         MessageText = "";
     }
     [RelayCommand]
@@ -84,7 +87,11 @@ public partial class HostSelectViewModel : ViewModelBase
             MessageText = "❌ 请选择工控机！";
         }
     }
-
+    [RelayCommand]
+    private void Add()
+    {
+        OnAdd?.Invoke();
+    }
     [RelayCommand]
     private void Cancel()
     {

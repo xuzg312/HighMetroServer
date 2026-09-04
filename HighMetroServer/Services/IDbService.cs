@@ -23,4 +23,6 @@ public interface IDbService
     ResultInfo AddCommInfo(SerialComm serialComm);
     ResultCamAlarmInfo QueryCamAlarm(CameraBean cameraBean,DataBaseQueryPage page );
     ResultInfo QueryCamAlarmCount(CameraBean cameraBean);
+    ResultInfo AddHost(HostInfo hostInfo,DbSetting dbSetting);
+    ResultInfo EditHost(HostInfo hostInfo,DbSetting dbSetting);
 }

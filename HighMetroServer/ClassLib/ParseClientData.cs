@@ -74,7 +74,7 @@ public static class ParseClientData
                 iPosition = 3;
                 tcpDataBean.HostBh = publicUntil.GetUshort(socketDataBlock.Content, iPosition);
                 break;
-            case 0XEF: //客户端获取拍照的图片；
+            case 0XEF: //客户端获取报警文件；
                 tcpDataBean = new TcpDataBean
                 {
                     TurnComm = false,

@@ -32,5 +32,8 @@
         <DataTemplate DataType="viewModels:CamAlarmRecordViewModel">
             <controls:CamAlarmRecordView /> <!-- 确保这里指向正确的 UserControl -->
         </DataTemplate>
+        <DataTemplate DataType="viewModels:EditHostViewModel">
+            <controls:EditHostView /> <!-- 确保这里指向正确的 UserControl -->
+        </DataTemplate>
     </Application.DataTemplates>
 </Application>

@@ -28,6 +28,8 @@ public partial class MainViewModel : ViewModelBase
     
     [ObservableProperty]
     private MainPageViewModel? _mainPageVm;
+
+    private readonly HostInfo _hostInfo;
     public MainViewModel(Window mainWindow)
     {
         _mainWindow = mainWindow;
@@ -35,6 +37,10 @@ public partial class MainViewModel : ViewModelBase
         _dbService = new DbService();
         IsMenuEnabled = false;
         _showOverlay = false;
+        _hostInfo = new HostInfo
+        {
+            Bh = -1,
+        };
         InitializeStartup();
     }
     private void InitializeStartup()
@@ -73,7 +79,8 @@ public partial class MainViewModel : ViewModelBase
                         if (resultInfo.Code.Equals(PublicConst.FlagYes))
                         {
                             //一路正确，直接启动；
-                            OnHostSuccess(hostSetting);
+                            _hostInfo.Bh=hostSetting.Bh;
+                            OnHostSuccess();
                             return;
                         }
                     }
@@ -96,7 +103,6 @@ public partial class MainViewModel : ViewModelBase
             ActivePopupVm = vm;
         }
     }
-    
     private void OnDbConfigSuccess(DbSetting setting)
     {
         _dbSetting = setting;
@@ -140,7 +146,8 @@ public partial class MainViewModel : ViewModelBase
         }
         if (resultInfo.Code.Equals(PublicConst.FlagYes))
         {
-            OnHostSuccess(hostSetting);
+            _hostInfo.Bh = hostSetting.Bh;
+            OnHostSuccess();
         }
         else
         {
@@ -148,9 +155,10 @@ public partial class MainViewModel : ViewModelBase
             var resultHostInfo = _dbService.GetHostList(_dbSetting!);
             Dispatcher.UIThread.Post(() =>
             {
-                var vm = new HostSelectViewModel(_configService, resultHostInfo);
-                vm.OnConfirm += OnHostSuccess;
+                var vm = new HostSelectViewModel(_configService, resultHostInfo,true);
+                vm.OnConfirm += OnHostSelectSuccess;
                 vm.OnCancel += ExitApplication;
+                vm.OnAdd += OnHostAdd;
                 if (ActivePopupVm is LoginViewModel oldLoginVm)
                 {
                     oldLoginVm.OnLoginSuccess -= OnLoginSuccess;
@@ -160,23 +168,50 @@ public partial class MainViewModel : ViewModelBase
             });
         }
     }
-    private void OnHostSuccess(HostSetting setting)
+    private void OnHostSelectSuccess(HostSetting setting)
     {
         Dispatcher.UIThread.Post(() =>
         {
             if (ActivePopupVm is HostSelectViewModel oldHostVm)
             {
-                oldHostVm.OnConfirm -= OnHostSuccess;
+                oldHostVm.OnConfirm -= OnHostSelectSuccess;
                 oldHostVm.OnCancel -= ExitApplication;
+                oldHostVm.OnAdd -= OnHostAdd;
             }
+            _hostInfo.Bh = setting.Bh;
+            OnHostSuccess();
         });
+    }
+    private void OnHostAdd()
+    {
+        _hostInfo.Bh = -1;
+        var resultInfo = new ResultInfo
+        {
+            Code = PublicConst.FlagYes
+        };
+        Dispatcher.UIThread.Post(() =>
+        {
+            var vm = new EditHostViewModel(_configService,_dbService,_dbSetting!,_hostInfo, resultInfo);
+            vm.OnSuccess += OnHostSuccess;
+            vm.OnCancel += ExitApplication;
+            if (ActivePopupVm is HostSelectViewModel oldHostSelectVm)
+            {
+                oldHostSelectVm.OnConfirm -= OnHostSelectSuccess;
+                oldHostSelectVm.OnCancel -= ExitApplication;
+                oldHostSelectVm.OnAdd -= OnHostAdd;
+            }
+            ActivePopupVm = vm;
+        }); 
+    }
+    private void OnHostSuccess()
+    {
         //保存数据库连接；
         var dataBaseConnect = DataBaseConnect.Instance;
         dataBaseConnect.SetDataBaseConn(_dbSetting!.GetConnectionString());
         //获取工控机；、主板1、主板2、硬盘摄像机；
         var hostInfo = new HostInfo
         {
-            Bh = setting.Bh
+            Bh = _hostInfo.Bh
         };
         var resultInfo = _dbService.GetHostInfo(hostInfo);
         if (resultInfo.Code.Equals(PublicConst.FlagYes))
@@ -197,7 +232,12 @@ public partial class MainViewModel : ViewModelBase
                 {
                     Dispatcher.UIThread.Post(() => 
                     {
-                       //所有参数都正常，打开主页面；
+                        if (ActivePopupVm is EditHostViewModel oldEditHostVm)
+                        {
+                            oldEditHostVm.OnSuccess -= OnHostSuccess;
+                            oldEditHostVm.OnCancel -= ExitApplication;
+                        }
+                        //所有参数都正常，打开主页面；
                         ParaSetupModules.HostInfo = hostInfo;
                         ParaSetupModules.CamInfo = hardInfo;
                         ParaSetupModules.SerialCommList = resultSerialCommInfo.SerialCommList;
@@ -214,6 +254,11 @@ public partial class MainViewModel : ViewModelBase
         //展示错误信息；
         Dispatcher.UIThread.Post(() =>
         {
+            if (ActivePopupVm is EditHostViewModel oldEditHostVm)
+            {
+                oldEditHostVm.OnSuccess -= OnHostSuccess;
+                oldEditHostVm.OnCancel -= ExitApplication;
+            }
             var vm = new LoadParaViewModel(resultInfo);
             vm.OnCancel += ExitApplication;
             ActivePopupVm = vm;
@@ -328,6 +373,76 @@ public partial class MainViewModel : ViewModelBase
             if (ActivePopupVm is CamAlarmRecordViewModel oldCamAlarmVm)
             {
                 oldCamAlarmVm.OnClose -= OnCamAlarmClose;
+            }
+            ActivePopupVm = null;
+            ShowOverlay = false;
+            IsMenuEnabled = true;
+        });
+    }
+    [RelayCommand]
+    private void HostChange()
+    {
+        //切换工控机；
+        var resultHostInfo = _dbService.GetHostList(_dbSetting!);
+        var vm = new HostSelectViewModel(_configService, resultHostInfo,false);
+        vm.OnConfirm += OnHostChangeSuccess;
+        vm.OnCancel += OnHostChangeCancel;
+        IsMenuEnabled = false;
+        ActivePopupVm = vm;
+        ShowOverlay = true;
+    }
+    private void OnHostChangeSuccess(HostSetting setting)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (ActivePopupVm is HostSelectViewModel vm)
+            {
+                vm.OnConfirm -= OnHostChangeSuccess;
+                vm.OnCancel -= OnHostChangeCancel;
+            }
+            ActivePopupVm = null;
+            ShowOverlay = false;
+            IsMenuEnabled = true;
+        });
+    }
+    private void OnHostChangeCancel()
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (ActivePopupVm is HostSelectViewModel vm)
+            {
+                vm.OnConfirm -= OnHostChangeSuccess;
+                vm.OnCancel -= OnHostChangeCancel;
+            }
+            ActivePopupVm = null;
+            ShowOverlay = false;
+            IsMenuEnabled = true;
+        });
+    }
+    [RelayCommand]
+    private void HostEdit()
+    {
+        //切换工控机；
+        var hostInfo = new HostInfo
+        {
+            Bh = ParaSetupModules.HostInfo!.Bh,
+        };
+        var resultInfo = _dbService.GetHostInfo(hostInfo);
+        var vm = new EditHostViewModel(_configService,_dbService,_dbSetting!,hostInfo, resultInfo);
+        vm.OnSuccess += OnHostEditSuccess;
+        vm.OnCancel += OnHostEditSuccess;
+        IsMenuEnabled = false;
+        ActivePopupVm = vm;
+        ShowOverlay = true;
+    }
+    private void OnHostEditSuccess()
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (ActivePopupVm is EditHostViewModel vm)
+            {
+                vm.OnSuccess -= OnHostEditSuccess;
+                vm.OnCancel -= OnHostEditSuccess;
             }
             ActivePopupVm = null;
             ShowOverlay = false;

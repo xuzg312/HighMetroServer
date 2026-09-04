@@ -11,8 +11,6 @@
         <IsAotCompatible>true</IsAotCompatible>
         <BuiltInComInteropSupport>false</BuiltInComInteropSupport>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
-        <DebugType>none</DebugType>
-        <DebugSymbols>false</DebugSymbols>
         <NoWarn>$(NoWarn);IL2104</NoWarn>
         <NoWarn>$(NoWarn);IL3053</NoWarn>
     </PropertyGroup>

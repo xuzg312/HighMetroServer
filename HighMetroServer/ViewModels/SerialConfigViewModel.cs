@@ -168,7 +168,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
                         var state = socketDataBlock.Content[iPosition];
                         if (state == 0X00)
                         {
-                            //动作；拍照；
+                            //动作:拍照；
                             //转发到TcpClient;
                             var tcpServer = ParaSetupModules.HostInfo!.TcpServer;
                             tcpServer?.SendMessage(socketDataBlock);
@@ -178,7 +178,10 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
                         }
                         else if (state == 0X01)
                         {
-                            //录像;
+                            //动作:录像;
+                            //转发到TcpClient;
+                            var tcpServer = ParaSetupModules.HostInfo!.TcpServer;
+                            tcpServer?.SendMessage(socketDataBlock);
                             cameraBean.Type = PublicConst.DoorStateCamera;
                             _= ReplyCameraInfo(socketDataBlock, cameraBean);
                             valid = true;
@@ -221,13 +224,11 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
                     mainInfoBean.Datetime = DateTime.Now.Date.ToString("yyyy-MM-dd HH:mm:ss");
                     resultInfo = ParaSetupModules.DbService!.SavePersonDay(mainInfoBean);
                 }
-
                 if (!resultInfo.Code.Equals(PublicConst.FlagYes))
                 {
                     var currDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                     ParaSetupModules.RaiseAscDataProdEvent($"{resultInfo.Message}【{currDate}】");
                 }
-
                 Dispatcher.UIThread.Post(() =>
                 {
                     MessageText1 = data[0];
