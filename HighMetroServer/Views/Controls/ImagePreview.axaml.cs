@@ -1,6 +1,5 @@
 ﻿using System;
 using Avalonia.Controls;
-using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.Messaging;
 using HighMetroServer.Message;

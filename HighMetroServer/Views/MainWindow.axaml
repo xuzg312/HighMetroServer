@@ -16,7 +16,9 @@
             <!-- 一级菜单：设备管理 -->
             <MenuItem Header="工控机管理">
                 <MenuItem Header="工控机维护" Command="{Binding HostEditCommand}" IsEnabled="{Binding IsMenuEnabled}" />
-                <MenuItem Header="工控机切换" Command="{Binding HostChangeCommand}" IsEnabled="{Binding IsMenuEnabled}" />
+                <MenuItem Header="工控机切换" Command="{Binding HostChangeCommand}" 
+                          IsEnabled="{Binding IsMenuEnabled}" 
+                          IsVisible="False"/>
             </MenuItem>
             <MenuItem Header="设备管理">
                 <MenuItem Header="摄像头维护" Command="{Binding CameraMaintainCommand}" IsEnabled="{Binding IsMenuEnabled}" />

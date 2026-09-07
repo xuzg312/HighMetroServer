@@ -260,7 +260,7 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
             ParaSetupModules.RaiseAscDataProdEvent($"发送串口数据异常！{ex.Message}【{currentTime}】");
         }
     }
-    public bool TestComm()
+    public ResultInfo TestComm()
     {
         try
         {
@@ -279,11 +279,18 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
             {
                 //忽略；
             }
-            return true;
+            return new ResultInfo
+            {
+                Code = PublicConst.FlagYes,
+            };
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            return false;
+            return new ResultInfo
+            {
+                Code = PublicConst.FlagNo,
+                Message = ex.Message,
+            };        
         }
     }
     public void Close()

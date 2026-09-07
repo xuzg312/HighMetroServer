@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -62,42 +63,59 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
             if (!_start)
             {
                 await Task.Delay(1000); 
-                Open();
+                await Task.Run(Open);
             }
         }
     }
     [RelayCommand(CanExecute = nameof(CanOpen))]
-    private void Open()
+    private async Task Open()
     {
+        await Task.Delay(100); 
         var camInfo = ParaSetupModules.CamInfo!;
         if (!camInfo.IsValid())
         {
-            MessageText = "摄像头参数配置不正确，如果已经配置过，请重新启动程序加载！";
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                MessageText = "摄像头参数配置不正确，如果已经配置过，请重新启动程序加载！";
+            });
             return;
         }
         if (HikPlatform.IsMac)
         {
-            MessageText = "MAC环境，不支持此操作，请切换到：Windows/Linux环境测试！";
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                MessageText = "MAC环境，不支持此操作，请切换到：Windows/Linux环境测试！";
+            });
             return;        
         }
         //初始化；
         var loadCamResult00 = _camRemoteLinkImpl.Init();
         if (!loadCamResult00.Code.Equals(PublicConst.FlagYes))
         {
-            MessageText = loadCamResult00.Message;
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                MessageText = loadCamResult00.Message;
+            });
             return;
         }
         //尝试登录;
         var loadCamResult = _camRemoteLinkImpl.Login(camInfo);
         if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
         {
-            MessageText = loadCamResult.Message;
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                MessageText = loadCamResult.Message;
+            });
             return;
         }
-        _start = true;
-        CamState = "【 摄像头连接状态：✅ 】";
-        OpenCommand.NotifyCanExecuteChanged();
-        CloseCommand.NotifyCanExecuteChanged();        
+
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            _start = true;
+            CamState = "【 摄像头连接状态：✅ 】";
+            OpenCommand.NotifyCanExecuteChanged();
+            CloseCommand.NotifyCanExecuteChanged();
+        });
     }
     [RelayCommand(CanExecute= nameof(CanClose))]
     private void Close()

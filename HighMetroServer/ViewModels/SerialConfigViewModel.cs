@@ -148,8 +148,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
                     if (socketDataBlock.Length >= 62)
                     {
                         //转发到TcpClient;
-                        var tcpServer = ParaSetupModules.HostInfo!.TcpServer;
-                        tcpServer?.SendMessage(socketDataBlock);
+                        _ = SendMessage(socketDataBlock);
                         //保存心跳;
                         _= ReplyHeartInfo(socketDataBlock);
                         valid = true;
@@ -170,8 +169,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
                         {
                             //动作:拍照；
                             //转发到TcpClient;
-                            var tcpServer = ParaSetupModules.HostInfo!.TcpServer;
-                            tcpServer?.SendMessage(socketDataBlock);
+                            _ = SendMessage(socketDataBlock);
                             cameraBean.Type = PublicConst.DoorStateCapture;
                             _= ReplyCaptureInfo(socketDataBlock, cameraBean);
                             valid = true;
@@ -180,8 +178,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
                         {
                             //动作:录像;
                             //转发到TcpClient;
-                            var tcpServer = ParaSetupModules.HostInfo!.TcpServer;
-                            tcpServer?.SendMessage(socketDataBlock);
+                            _ = SendMessage(socketDataBlock);
                             cameraBean.Type = PublicConst.DoorStateCamera;
                             _= ReplyCameraInfo(socketDataBlock, cameraBean);
                             valid = true;
@@ -196,10 +193,39 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
             ParaSetupModules.RaiseHexDataProdEvent(socketDataBlock);
         }
     }
+    //发送到client
+    private async Task SendMessage(SocketDataBlock socketDataBlock)
+    {
+        try
+        {
+            var tcpServer = ParaSetupModules.HostInfo!.TcpServer;
+            if (tcpServer != null)
+                await Task.Run(() => tcpServer.SendMessage(socketDataBlock));
+        }
+        catch (Exception ex)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                var currDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                MessageText = $"发送消息失败：{ex.Message}，【{currDate}】";
+            });
+        }
+    }
     //心跳；
     private async Task ReplyHeartInfo(SocketDataBlock socketDataBlock)
-    { 
-        await ReplyHeart(socketDataBlock);
+    {
+        try
+        {
+            await Task.Run(() => ReplyHeart(socketDataBlock));
+        }
+        catch (Exception ex)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                var currDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                MessageText = $"解析心跳数据失败：{ex.Message}，【{currDate}】";
+            });
+        }
     }
     private async Task ReplyHeart(SocketDataBlock socketDataBlock)
     { 
@@ -251,8 +277,19 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     }
     //拍照
     private async Task ReplyCaptureInfo(SocketDataBlock socketDataBlock, CameraBean cameraBean)
-    { 
-        await ReplyCapture(socketDataBlock,cameraBean);
+    {
+        try
+        {
+            await Task.Run(() => ReplyCapture(socketDataBlock, cameraBean));
+        }
+        catch (Exception ex)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                var currDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                MessageText = $"拍照异常：{ex.Message}，【{currDate}】";
+            });
+        }
     }
     private async Task ReplyCapture(SocketDataBlock socketDataBlock, CameraBean cameraBean)
     {
@@ -305,8 +342,19 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     }
     //录像
     private async Task ReplyCameraInfo(SocketDataBlock socketDataBlock, CameraBean cameraBean)
-    { 
-        await ReplyCamera(socketDataBlock,cameraBean);
+    {
+        try
+        {
+            await Task.Run(() => ReplyCamera(socketDataBlock, cameraBean));
+        }
+        catch (Exception ex)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                var currDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                MessageText = $"录像异常：{ex.Message}，【{currDate}】";
+            });
+        }
     }
     private async Task ReplyCamera(SocketDataBlock socketDataBlock, CameraBean cameraBean)
     {
@@ -368,37 +416,50 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
                 {
                     return;
                 }
-                await Task.Delay(2000); 
-                Open();
+                await Task.Delay(1000); 
+                await Task.Run(Open);
             }
         }
     }
     [RelayCommand(CanExecute = nameof(CanOpen))]
-    private void Open()
+    private async Task  Open()
     {
+        await Task.Delay(100); 
         if (!_buildServer)
         {
             if (_serial == 0)
             {
-                MessageText = "主板参数处理逻辑有误，请联系开发人员检查！";
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    MessageText = "主板参数处理逻辑有误，请联系开发人员检查！";
+                });
                 return;
             }
             if (SelectPortName is null || SelectedBaudRate is null || SelectedDataBits is null ||
                 SelectedStopBits is null || SelectedParity is null)
             {
-                MessageText = "主板参数未配置，请点击菜单【设备管理--主板维护】进行设置，设置后需要重新启动程序！";
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    MessageText = "主板参数未配置，请点击菜单【设备管理--主板维护】进行设置，设置后需要重新启动程序！";
+                });
                 return;
             }
             var serialCommList = ParaSetupModules.SerialCommList;
             if (serialCommList!.Count < _serial)
             {
-                MessageText = "主板内部处理逻辑有误，serial与主板列表不一致！";
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    MessageText = "主板内部处理逻辑有误，serial与主板列表不一致！";
+                });
                 return;
             }
             var serialCommInfo = serialCommList[_serial - 1];
             if (!serialCommInfo.IsValid())
             {
-                MessageText = "主板参数无效，如果已经配置过，请重新启动程序加载！";
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    MessageText = "主板参数无效，如果已经配置过，请重新启动程序加载！";
+                });
                 return;
             }
             //连接尝试串口
@@ -408,15 +469,19 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         }
         if (_commSerialImpl!.Open())
         {
-            CommState = "【 串口连接状态：✅ 】";
+            await Dispatcher.UIThread.InvokeAsync(() => { CommState = "【 串口连接状态：✅ 】"; });
             _start = true;
         }
         else
         {
-            CommState = "【 串口连接状态：❌ 】";
+            await Dispatcher.UIThread.InvokeAsync(() => { CommState = "【 串口连接状态：❌ 】"; });
         }
-        OpenCommand.NotifyCanExecuteChanged();
-        CloseCommand.NotifyCanExecuteChanged();    
+
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            OpenCommand.NotifyCanExecuteChanged();
+            CloseCommand.NotifyCanExecuteChanged();
+        });
     }
     [RelayCommand(CanExecute = nameof(CanClose))]
     private void Close()

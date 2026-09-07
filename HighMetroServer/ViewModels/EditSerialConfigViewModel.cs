@@ -144,12 +144,13 @@ public partial class EditSerialConfigViewModel : ViewModelBase
             StopBits=SelectedStopBits1!.Value
         };
         var commSerialImpl=new CommSerialImpl(0,serialCommInfo);
-        if (commSerialImpl.TestComm())
+        var resultInfo = commSerialImpl.TestComm();
+        if (resultInfo.Code.Equals(PublicConst.FlagYes))
         {
             MessageText1 = "串口打开正常！";
             return;
         }
-        MessageText1 = "串口打开失败！";
+        MessageText1 = $"串口打开失败：{resultInfo.Message}";
     }
     [RelayCommand]
     private void Save1()
@@ -191,12 +192,13 @@ public partial class EditSerialConfigViewModel : ViewModelBase
             StopBits=SelectedStopBits2!.Value
         };
         var commSerialImpl=new CommSerialImpl(0,serialCommInfo);
-        if (commSerialImpl.TestComm())
+        var resultInfo = commSerialImpl.TestComm();
+        if (resultInfo.Code.Equals(PublicConst.FlagYes))
         {
             MessageText2 = "串口打开正常！";
             return;
         }
-        MessageText2 = "串口打开失败！";
+        MessageText2 = $"串口打开失败：{resultInfo.Message}";
     }
     [RelayCommand]
     private void Save2()

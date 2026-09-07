@@ -64,14 +64,15 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
         {
             if (!_start)
             {
-                await Task.Delay(500); 
-                Open();
+                await Task.Delay(1000); 
+                await Task.Run(Open);
             }
         }
     }
     [RelayCommand(CanExecute = nameof(CanOpen))]
-    private void Open()
+    private async Task Open()
     {
+        await Task.Delay(100); 
         if (!_buildServer)
         {
             _hostInfo.BufferDataProdEvent += OnShowTcpServerDataProdEvent;
@@ -82,16 +83,22 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
         }
         if (_tcpServer!.Start())
         {
-            _start = true;
-            HostState = "【 TCP端口监听状态：✅ 】";
-            OpenCommand.NotifyCanExecuteChanged();
-            CloseCommand.NotifyCanExecuteChanged();
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                _start = true;
+                HostState = "【 TCP端口监听状态：✅ 】";
+                OpenCommand.NotifyCanExecuteChanged();
+                CloseCommand.NotifyCanExecuteChanged();
+            });
         }
         else
         {
-            _start = false;
-            OpenCommand.NotifyCanExecuteChanged();
-            CloseCommand.NotifyCanExecuteChanged();
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                _start = false;
+                OpenCommand.NotifyCanExecuteChanged();
+                CloseCommand.NotifyCanExecuteChanged();
+            });
             ParaSetupModules.RaiseAscDataProdEvent("启动Tcp-Server失败！");
         }
     }
@@ -122,88 +129,97 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
             return;
         }
         var socketDataBlock = socketDataEventArgs.Data;
-        //解析tcp-client消息，转发到对应的串口；
-        var currentTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        _ = ReceiveTcpData(socketDataBlock);
+    }
+    private async Task ReceiveTcpData(SocketDataBlock socketDataBlock)
+    {
         try
         {
-            var tcpDataBean = ParseClientData.ParseTcpClientData(socketDataBlock);
-            if (tcpDataBean == null)
-            {
-                //数据无效，显示到错误日志框；
-                ParaSetupModules.RaiseHexDataProdEvent(socketDataBlock);
-                return;
-            }
-            if (!tcpDataBean.TurnComm)
-            {
-                switch (tcpDataBean.Type)
-                {
-                    case PublicConst.IdentifyAll:
-                    case PublicConst.IdentifyHeart:
-                        //检测摄像机是否在线？
-                        var camInfo = ParaSetupModules.CamInfo!;
-                        var onLine = false;
-                        var camRemoteLinkImpl = camInfo.CamRemoteLinkImpl;
-                        if (camRemoteLinkImpl != null && camRemoteLinkImpl.GetUserId()>=0)
-                        {
-                            onLine = camRemoteLinkImpl.CheckOnLine();
-                        }
-                        //转发到TcpClient;
-                        var iPosition = 7;
-                        socketDataBlock.Content![iPosition] = (byte)(onLine ? 0XCE : 0XDE);
-                        //发送摄像机状态到客户端；
-                        _tcpServer!.IdentifyInfo(socketDataBlock, tcpDataBean);
-                        _hostInfo.RaiseClientConnEvent($"发送摄像机连接状态到客户端！【{currentTime}】");
-                        break;
-                    case PublicConst.IdentifyPhoto:
-                        var fileData = ParseClientData.GetPhotoFile(tcpDataBean);
-                        if (fileData != null)
-                        {
-                            _tcpServer!.SendPhotoFile(socketDataBlock, tcpDataBean, fileData);
-                            _hostInfo.RaiseClientConnEvent($"发送拍照图片到客户端！【{currentTime}】");
-                        }
-                        else
-                        {
-                            var value01 = $"文件【{{tcpDataBean.FileName}}】不存在！【{currentTime}】";
-                            _hostInfo.RaiseClientConnEvent(value01);
-                        }
-                        break;
-                    default:
-                        var value00 = $"工控机HostBh【{tcpDataBean.HostBh}】,请求功能码无效！【{currentTime}】";
-                        _hostInfo.RaiseClientConnEvent(value00);
-                        break;
-                }
-            }
-            else
-            {
-                //需要发送到串口；
-                //协议中去掉hostId
-                //接收到有效信息，转发到串口；
-                var bFind = false;
-                foreach (var item in ParaSetupModules.SerialCommList!)
-                {
-                    if (item.CommSerialImpl == null)
-                    {
-                        continue;
-                    }
-                    if (item.HostBh == tcpDataBean.HostBh && item.Id == tcpDataBean.Id)
-                    {
-                        //找到主板，向对应的串口发送数据；
-                        item.CommSerialImpl.SendMessage(socketDataBlock.Content!, 0, socketDataBlock.Length);
-                        _hostInfo.RaiseClientConnEvent($"主板ID【{tcpDataBean.Id}】：向对应的串口发送数据！【{currentTime}】");
-                        bFind = true;
-                    }
-                }
-                if (!bFind)
-                {
-                    //主板未找到，说明客户端关联的主板有误！
-                    var value00 = $"工控机HostBh【{tcpDataBean.HostBh}】,主板ID【{tcpDataBean.Id}】未找到！【{currentTime}】";
-                    _hostInfo.RaiseClientConnEvent(value00);
-                }
-            }
+            await Task.Run(() => ParseData(socketDataBlock));
         }
         catch (Exception ex)
         {
-            ParaSetupModules.RaiseAscDataProdEvent($"解析TCP数据异常：{ex.Message}【{currentTime}】");
+            var currentTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            ParaSetupModules.RaiseAscDataProdEvent($"解析TCP数据异常：{ex.Message}，【{currentTime}】");
+        }
+    }
+    private async Task ParseData(SocketDataBlock socketDataBlock)
+    {
+        await Task.Delay(10); 
+        //解析tcp-client消息，转发到对应的串口；
+        var currentTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        var tcpDataBean = ParseClientData.ParseTcpClientData(socketDataBlock);
+        if (tcpDataBean == null)
+        {
+            //数据无效，显示到错误日志框；
+            ParaSetupModules.RaiseHexDataProdEvent(socketDataBlock);
+            return;
+        }
+        if (!tcpDataBean.TurnComm)
+        {
+            //无需发送到串口；
+            switch (tcpDataBean.Type)
+            {
+                case PublicConst.IdentifyAll:
+                case PublicConst.IdentifyHeart:
+                    //检测摄像机是否在线？
+                    var camInfo = ParaSetupModules.CamInfo!;
+                    var onLine = false;
+                    var camRemoteLinkImpl = camInfo.CamRemoteLinkImpl;
+                    if (camRemoteLinkImpl != null && camRemoteLinkImpl.GetUserId()>=0)
+                    {
+                        onLine = camRemoteLinkImpl.CheckOnLine();
+                    }
+                    //转发到TcpClient;
+                    var iPosition = 7;
+                    socketDataBlock.Content![iPosition] = (byte)(onLine ? 0XCE : 0XDE);
+                    //发送摄像机状态到客户端；
+                    _tcpServer!.IdentifyInfo(socketDataBlock, tcpDataBean);
+                    _hostInfo.RaiseClientConnEvent($"发送摄像机连接状态到客户端！【{currentTime}】");
+                    break;
+                case PublicConst.IdentifyPhoto:
+                    var fileData = ParseClientData.GetPhotoFile(tcpDataBean);
+                    if (fileData != null)
+                    {
+                        _tcpServer!.SendPhotoFile(socketDataBlock, tcpDataBean, fileData);
+                        _hostInfo.RaiseClientConnEvent($"发送拍照图片到客户端！【{currentTime}】");
+                    }
+                    else
+                    {
+                        var value01 = $"文件【{{tcpDataBean.FileName}}】不存在！【{currentTime}】";
+                        _hostInfo.RaiseClientConnEvent(value01);
+                    }
+                    break;
+                default:
+                    var value00 = $"工控机HostBh【{tcpDataBean.HostBh}】,请求功能码无效！【{currentTime}】";
+                    _hostInfo.RaiseClientConnEvent(value00);
+                    break;
+            }
+            return;
+        }
+        //需要发送到串口；
+        //协议中去掉hostId
+        //接收到有效信息，转发到串口；
+        var bFind = false;
+        foreach (var item in ParaSetupModules.SerialCommList!)
+        {
+            if (item.CommSerialImpl == null)
+            {
+                continue;
+            }
+            if (item.HostBh == tcpDataBean.HostBh && item.Id == tcpDataBean.Id)
+            {
+                //找到主板，向对应的串口发送数据；
+                item.CommSerialImpl.SendMessage(socketDataBlock.Content!, 0, socketDataBlock.Length);
+                _hostInfo.RaiseClientConnEvent($"主板ID【{tcpDataBean.Id}】：向对应的串口发送数据！【{currentTime}】");
+                bFind = true;
+            }
+        }
+        if (!bFind)
+        {
+            //主板未找到，说明客户端关联的主板有误！
+            var value00 = $"工控机HostBh【{tcpDataBean.HostBh}】,主板ID【{tcpDataBean.Id}】未找到！【{currentTime}】";
+            _hostInfo.RaiseClientConnEvent(value00);
         }
     }
     private void OnClientConnEvent(object? obj, EventArgs arg)

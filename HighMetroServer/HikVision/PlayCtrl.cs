@@ -71,7 +71,7 @@ public static partial class PlayCtrl
     [LibraryImport("PlayCtrl")]
     public static partial int PlayM4_SetDecodeEngine(int nPort, int nEngine);
     
-    [DllImport("PlayCtrl.dll", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("PlayCtrl", CallingConvention = CallingConvention.Cdecl)]
     public static extern bool PlayM4_OpenFile(int nPort, String sFileName);
 
     [LibraryImport("PlayCtrl")]

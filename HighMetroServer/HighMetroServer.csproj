@@ -6,13 +6,19 @@
         <ApplicationManifest>app.manifest</ApplicationManifest>
 	    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <PublishReadyToRun>false</PublishReadyToRun>
-
+        <DebugType>none</DebugType>
+        <SelfContained>true</SelfContained>
         <PublishAot>true</PublishAot>
         <IsAotCompatible>true</IsAotCompatible>
+        <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+        <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
         <BuiltInComInteropSupport>false</BuiltInComInteropSupport>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         <NoWarn>$(NoWarn);IL2104</NoWarn>
         <NoWarn>$(NoWarn);IL3053</NoWarn>
+        <!--
+        <PublishSingleFile>true</PublishSingleFile>
+        -->
     </PropertyGroup>
     
     <ItemGroup>
