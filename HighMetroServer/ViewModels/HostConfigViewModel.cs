@@ -72,7 +72,6 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
     [RelayCommand(CanExecute = nameof(CanOpen))]
     private async Task Open()
     {
-        await Task.Delay(100); 
         if (!_buildServer)
         {
             _hostInfo.BufferDataProdEvent += OnShowTcpServerDataProdEvent;
