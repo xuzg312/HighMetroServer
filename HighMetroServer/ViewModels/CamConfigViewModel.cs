@@ -64,7 +64,7 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
     }
     private async Task StartOpen()
     {
-        await Task.Delay(1000); 
+        await Task.Delay(1000).ConfigureAwait(false); 
         await Open();
     }
     [RelayCommand(CanExecute = nameof(CanOpen))]

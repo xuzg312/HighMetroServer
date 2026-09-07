@@ -196,7 +196,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     //发送到client
     private async Task SendMessage(SocketDataBlock socketDataBlock)
     {
-        await Task.Delay(10); 
+        await Task.Delay(10).ConfigureAwait(false); 
         try
         {
             var tcpServer = ParaSetupModules.HostInfo!.TcpServer;
@@ -229,7 +229,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     }
     private async Task ReplyHeart(SocketDataBlock socketDataBlock)
     { 
-        await Task.Delay(10); 
+        await Task.Delay(10).ConfigureAwait(false); 
         await AsyncLock.WaitAsync();
         try
         {
@@ -294,7 +294,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     }
     private async Task ReplyCapture(SocketDataBlock socketDataBlock, CameraBean cameraBean)
     {
-        await Task.Delay(10); 
+        await Task.Delay(10).ConfigureAwait(false); 
         cameraBean.HostBh = ParaSetupModules.HostInfo!.Bh;
         var publicUntil = new PublicUntil();
         byte iPosition = 3;
@@ -360,7 +360,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     }
     private async Task ReplyCamera(SocketDataBlock socketDataBlock, CameraBean cameraBean)
     {
-        await Task.Delay(10); 
+        await Task.Delay(10).ConfigureAwait(false); 
         cameraBean.HostBh = ParaSetupModules.HostInfo!.Bh;
         var publicUntil = new PublicUntil();
         byte iPosition = 3;
@@ -421,7 +421,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     }
     private async Task StartOpen()
     {
-        await Task.Delay(1000); 
+        await Task.Delay(1000).ConfigureAwait(false); 
         await Open();
     }
     [RelayCommand(CanExecute = nameof(CanOpen))]
