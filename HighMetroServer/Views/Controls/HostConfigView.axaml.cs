@@ -31,7 +31,7 @@ public partial class HostConfigView : UserControl
     {
         try
         {
-            _ = HostConfigViewModelVm.Start();
+            HostConfigViewModelVm.Start();
         }
         catch (Exception)
         {

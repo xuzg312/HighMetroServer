@@ -58,16 +58,16 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
         Code = value.Code;
         Name = value.Name;
     }
-    public async Task Start()
+    public void Start()
     {
-        if (PublicConst.SelfStart == 1)
-        {
-            if (!_start)
-            {
-                await Task.Delay(1000); 
-                await Task.Run(Open);
-            }
-        }
+        if (PublicConst.SelfStart != 1 || _start)
+            return;
+        _= StartOpen();
+    }
+    private async Task StartOpen()
+    {
+        await Task.Delay(1000); 
+        await Open();
     }
     [RelayCommand(CanExecute = nameof(CanOpen))]
     private async Task Open()
@@ -135,7 +135,7 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
     {
         try
         {
-            await Task.Run(() => ParseData(socketDataBlock));
+            await ParseData(socketDataBlock);
         }
         catch (Exception ex)
         {

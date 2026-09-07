@@ -39,7 +39,7 @@ public partial class SerialConfigView : UserControl
             return;
         try
         {
-            _ = _viewModel.Start();
+            _viewModel.Start();
         }
         catch (Exception)
         {

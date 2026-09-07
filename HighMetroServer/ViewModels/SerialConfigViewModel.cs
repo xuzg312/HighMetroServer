@@ -196,11 +196,11 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     //发送到client
     private async Task SendMessage(SocketDataBlock socketDataBlock)
     {
+        await Task.Delay(10); 
         try
         {
             var tcpServer = ParaSetupModules.HostInfo!.TcpServer;
-            if (tcpServer != null)
-                await Task.Run(() => tcpServer.SendMessage(socketDataBlock));
+            tcpServer?.SendMessage(socketDataBlock);
         }
         catch (Exception ex)
         {
@@ -216,7 +216,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     {
         try
         {
-            await Task.Run(() => ReplyHeart(socketDataBlock));
+            await ReplyHeart(socketDataBlock);
         }
         catch (Exception ex)
         {
@@ -229,6 +229,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     }
     private async Task ReplyHeart(SocketDataBlock socketDataBlock)
     { 
+        await Task.Delay(10); 
         await AsyncLock.WaitAsync();
         try
         {
@@ -280,7 +281,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     {
         try
         {
-            await Task.Run(() => ReplyCapture(socketDataBlock, cameraBean));
+            await ReplyCapture(socketDataBlock, cameraBean);
         }
         catch (Exception ex)
         {
@@ -293,6 +294,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     }
     private async Task ReplyCapture(SocketDataBlock socketDataBlock, CameraBean cameraBean)
     {
+        await Task.Delay(10); 
         cameraBean.HostBh = ParaSetupModules.HostInfo!.Bh;
         var publicUntil = new PublicUntil();
         byte iPosition = 3;
@@ -345,7 +347,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     {
         try
         {
-            await Task.Run(() => ReplyCamera(socketDataBlock, cameraBean));
+            await ReplyCamera(socketDataBlock, cameraBean);
         }
         catch (Exception ex)
         {
@@ -358,6 +360,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     }
     private async Task ReplyCamera(SocketDataBlock socketDataBlock, CameraBean cameraBean)
     {
+        await Task.Delay(10); 
         cameraBean.HostBh = ParaSetupModules.HostInfo!.Bh;
         var publicUntil = new PublicUntil();
         byte iPosition = 3;
@@ -405,26 +408,25 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
             }
         }
     }
-    public async Task Start()
+    public void Start()
     {
-        if (PublicConst.SelfStart == 1)
+        if (PublicConst.SelfStart != 1 || _start)
+            return;
+        if (SelectPortName is null || SelectedBaudRate is null || SelectedDataBits is null ||
+            SelectedStopBits is null || SelectedParity is null)
         {
-            if (!_start)
-            {
-                if (SelectPortName is null || SelectedBaudRate is null || SelectedDataBits is null ||
-                    SelectedStopBits is null || SelectedParity is null)
-                {
-                    return;
-                }
-                await Task.Delay(1000); 
-                await Task.Run(Open);
-            }
+            return;
         }
+        _= StartOpen();
+    }
+    private async Task StartOpen()
+    {
+        await Task.Delay(1000); 
+        await Open();
     }
     [RelayCommand(CanExecute = nameof(CanOpen))]
-    private async Task  Open()
+    private async Task Open()
     {
-        await Task.Delay(100); 
         if (!_buildServer)
         {
             if (_serial == 0)

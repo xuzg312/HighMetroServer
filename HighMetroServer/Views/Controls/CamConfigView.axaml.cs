@@ -33,7 +33,7 @@ public partial class CamConfigView : UserControl
     {
         try
         {
-            _ = CamConfigViewModelVm.Start();
+            CamConfigViewModelVm.Start();
         }
         catch (Exception)
         {
