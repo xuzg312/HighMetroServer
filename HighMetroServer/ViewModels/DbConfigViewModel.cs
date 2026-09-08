@@ -55,7 +55,7 @@ public partial class DbConfigViewModel : ViewModelBase
             return; 
         }
         var setting = BuildSetting();
-        ResultInfo resultInfo = _dbService.TestConnection(setting);
+        var resultInfo = _dbService.TestConnection(setting);
         MessageText = resultInfo.Code.Equals(PublicConst.FlagYes) ? "✅ 数据库连接成功！" : "❌ 连接失败，请检查参数:"+resultInfo.Message;
     }
     [RelayCommand]

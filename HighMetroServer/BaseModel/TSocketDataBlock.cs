@@ -11,5 +11,6 @@ public class SocketDataBlock
     public int Value1Length { get; set; }
     public int Value2Length { get; set; }
     public string? Key { get; set; }
-    public EventHandler? BufferDataProdEvent;
+    public byte MessageType { get; set; }
+
 }

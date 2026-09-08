@@ -222,7 +222,7 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
             Value2 = _parseTotalCount,
             Value1Length = _receiveTotalBytes,
             Value2Length = _parseTotalBytes,
-            BufferDataProdEvent = serialCommInfo.GetBufferDataProdEvent()
+            MessageType = PublicConst.CommMessage,
         };
         //放入数据队列中；
         _iDataBufferPool!.DataEnqueue(socketDataBlock00);

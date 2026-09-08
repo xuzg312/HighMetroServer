@@ -31,4 +31,7 @@ public static class PublicConst
     public const byte TcpDataParseTask = 2;//Tcp数据解析后台任务个数；
 
     public const byte PageSize = 10;
+    
+    public const byte TcpMessage = 0X01;//TCP消息;
+    public const byte CommMessage = 0X02;//Comm消息;
 }

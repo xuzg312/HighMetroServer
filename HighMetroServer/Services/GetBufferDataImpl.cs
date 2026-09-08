@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using HighMetroServer.BaseModel;
 using HighMetroServer.Event;
 using HighMetroServer.Models;
 
@@ -56,7 +57,15 @@ public class GetBufferDataImpl : IGetBufferData
                 if (socketDataBlock != null)
                 {
                     //解析数据；
-                    socketDataBlock.BufferDataProdEvent?.Invoke(null, new SocketDataEventArgs(socketDataBlock));
+                    switch (socketDataBlock.MessageType)
+                    {
+                        case PublicConst.TcpMessage:
+                            ParaSetupModules.RaiseTcpServerBufferDataProdEvent(socketDataBlock);
+                            break;
+                        case PublicConst.CommMessage:
+                            ParaSetupModules.RaiseCommBufferDataProdEvent(socketDataBlock);
+                            break;
+                    }
                 }
                 else
                 {

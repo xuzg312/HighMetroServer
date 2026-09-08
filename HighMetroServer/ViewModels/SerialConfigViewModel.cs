@@ -88,10 +88,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         _serial = serial;
         _start = false;
         _buildServer = false;
-        foreach (var item in ParaSetupModules.SerialCommList!)
-        {
-            item.BufferDataProdEvent += OnBufferDataProdEvent;
-        }
+        ParaSetupModules.CommBufferDataProdEvent += OnBufferDataProdEvent;
         CommState = "【 串口连接状态：❌ 】";
         WeakReferenceMessenger.Default.Register(this);
     }

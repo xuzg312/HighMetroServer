@@ -57,7 +57,7 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
         catch (Exception)
         {
             CloseServer();
-            hostInfo.RaiseClientConnEvent("启动Server失败！");
+            ParaSetupModules.RaiseTcpClientConnEvent("启动Server失败！");
             return false;
         }
     }
@@ -204,7 +204,7 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
         var key = socketDataBlock.Key;
         if (string.IsNullOrEmpty(key))
         {
-            hostInfo.RaiseClientConnEvent($"{key}，消息中的工控机编号为空！【{currDateTime}】");
+            ParaSetupModules.RaiseTcpClientConnEvent($"{key}，消息中的工控机编号为空！【{currDateTime}】");
             return;
         }
         try
@@ -221,7 +221,7 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
             else
             {
                 comm.CloseClient();
-                hostInfo.RaiseClientConnEvent($"{socketDataBlock.Key}，工控机编号无效，强制下线！【{currDateTime}】");
+                ParaSetupModules.RaiseTcpClientConnEvent($"{socketDataBlock.Key}，工控机编号无效，强制下线！【{currDateTime}】");
             }
         }
         catch (Exception ex)
@@ -271,7 +271,7 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
             {
                 comm.CloseClient();
                 var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                hostInfo.RaiseClientConnEvent($"{socketDataBlock.Key}，工控机编号无效，强制下线！【{currDateTime}】");
+                ParaSetupModules.RaiseTcpClientConnEvent($"{socketDataBlock.Key}，工控机编号无效，强制下线！【{currDateTime}】");
             }
         }
         catch (Exception ex)

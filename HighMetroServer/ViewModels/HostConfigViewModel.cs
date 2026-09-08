@@ -74,8 +74,8 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
     {
         if (!_buildServer)
         {
-            _hostInfo.BufferDataProdEvent += OnShowTcpServerDataProdEvent;
-            _hostInfo.ClientConnEvent += OnClientConnEvent;
+            ParaSetupModules.TcpServerBufferDataProdEvent += OnShowTcpServerDataProdEvent;
+            ParaSetupModules.TcpClientConnEvent += OnClientConnEvent;
             _tcpServer = new TcpServerListenerImpl(_hostInfo, PublicConst.TcpDataParseTask); //建立2个消费者线程；
             _buildServer = true;
             _hostInfo.TcpServer= _tcpServer;
@@ -174,24 +174,24 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
                     socketDataBlock.Content![iPosition] = (byte)(onLine ? 0XCE : 0XDE);
                     //发送摄像机状态到客户端；
                     _tcpServer!.IdentifyInfo(socketDataBlock, tcpDataBean);
-                    _hostInfo.RaiseClientConnEvent($"发送摄像机连接状态到客户端！【{currentTime}】");
+                    ParaSetupModules.RaiseTcpClientConnEvent($"发送摄像机连接状态到客户端！【{currentTime}】");
                     break;
                 case PublicConst.IdentifyPhoto:
                     var fileData = ParseClientData.GetPhotoFile(tcpDataBean);
                     if (fileData != null)
                     {
                         _tcpServer!.SendPhotoFile(socketDataBlock, tcpDataBean, fileData);
-                        _hostInfo.RaiseClientConnEvent($"发送拍照图片到客户端！【{currentTime}】");
+                        ParaSetupModules.RaiseTcpClientConnEvent($"发送拍照图片到客户端！【{currentTime}】");
                     }
                     else
                     {
                         var value01 = $"文件【{{tcpDataBean.FileName}}】不存在！【{currentTime}】";
-                        _hostInfo.RaiseClientConnEvent(value01);
+                        ParaSetupModules.RaiseTcpClientConnEvent(value01);
                     }
                     break;
                 default:
                     var value00 = $"工控机HostBh【{tcpDataBean.HostBh}】,请求功能码无效！【{currentTime}】";
-                    _hostInfo.RaiseClientConnEvent(value00);
+                    ParaSetupModules.RaiseTcpClientConnEvent(value00);
                     break;
             }
             return;
@@ -210,7 +210,7 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
             {
                 //找到主板，向对应的串口发送数据；
                 item.CommSerialImpl.SendMessage(socketDataBlock.Content!, 0, socketDataBlock.Length);
-                _hostInfo.RaiseClientConnEvent($"主板ID【{tcpDataBean.Id}】：向对应的串口发送数据！【{currentTime}】");
+                ParaSetupModules.RaiseTcpClientConnEvent($"主板ID【{tcpDataBean.Id}】：向对应的串口发送数据！【{currentTime}】");
                 bFind = true;
             }
         }
@@ -218,7 +218,7 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
         {
             //主板未找到，说明客户端关联的主板有误！
             var value00 = $"工控机HostBh【{tcpDataBean.HostBh}】,主板ID【{tcpDataBean.Id}】未找到！【{currentTime}】";
-            _hostInfo.RaiseClientConnEvent(value00);
+            ParaSetupModules.RaiseTcpClientConnEvent(value00);
         }
     }
     private void OnClientConnEvent(object? obj, EventArgs arg)

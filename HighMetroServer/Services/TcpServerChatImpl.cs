@@ -50,7 +50,7 @@ public class TcpServerChatImpl : IChildCommunication
         _receiveBuffer = [];
 
         _clientType = PublicConst.IdentifyNone;//未验证；
-        _hostInfo.RaiseClientConnEvent($"{_key}：客户端上线！【{currDateTime}】");
+        ParaSetupModules.RaiseTcpClientConnEvent($"{_key}：客户端上线！【{currDateTime}】");
         _readTask = Task.Run(() => SafeHandleClientLoop(_clientCts.Token), _clientCts.Token);
     }
     #endregion
@@ -64,7 +64,7 @@ public class TcpServerChatImpl : IChildCommunication
         {
             //主动取消监听，正常优雅关闭，不打错误日志
             var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-            _hostInfo.RaiseClientConnEvent($"{_key}：客户端下线！【{currDateTime}】");
+            ParaSetupModules.RaiseTcpClientConnEvent($"{_key}：客户端下线！【{currDateTime}】");
         }
         catch (Exception ex)
         {
@@ -87,14 +87,14 @@ public class TcpServerChatImpl : IChildCommunication
                 if (bytesRead == 0)
                 {
                     //client left;
-                    _hostInfo.RaiseClientConnEvent($"{_key}：主动下线！【{currDateTime}】");
+                    ParaSetupModules.RaiseTcpClientConnEvent($"{_key}：主动下线！【{currDateTime}】");
                     break;
                 }
                 var data00 = new byte[bytesRead];
                 Array.Copy(data, data00, bytesRead);
                 _receiveQueue.Enqueue(data00);
                 _semaphoreSlim.Release();
-                _hostInfo.RaiseClientConnEvent($"{_key}：收到客户端数据！【{currDateTime}】");
+                ParaSetupModules.RaiseTcpClientConnEvent($"{_key}：收到客户端数据！【{currDateTime}】");
             }
             catch (OperationCanceledException)
             {
@@ -103,13 +103,13 @@ public class TcpServerChatImpl : IChildCommunication
             catch (IOException)
             {
                 var currDateTime = DateTime.Now.ToString("yyyy‑MM‑dd HH:mm:ss");
-                _hostInfo.RaiseClientConnEvent($"{_key}：IO异常，强制下线！【{currDateTime}】");
+                ParaSetupModules.RaiseTcpClientConnEvent($"{_key}：IO异常，强制下线！【{currDateTime}】");
                 break;
             }
             catch (SocketException)
             {
                 var currDateTime = DateTime.Now.ToString("yyyy‑MM‑dd HH:mm:ss");
-                _hostInfo.RaiseClientConnEvent($"{_key}：Socket异常，强制下线！【{currDateTime}】");
+                ParaSetupModules.RaiseTcpClientConnEvent($"{_key}：Socket异常，强制下线！【{currDateTime}】");
                 break;
             }
             catch (Exception ex)
@@ -131,7 +131,7 @@ public class TcpServerChatImpl : IChildCommunication
         {
             CloseClient();
             var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-            _hostInfo.RaiseClientConnEvent($"{_key}：发送消息，客户端连接已断开！【{currDateTime}】");
+            ParaSetupModules.RaiseTcpClientConnEvent($"{_key}：发送消息，客户端连接已断开！【{currDateTime}】");
             return false;
         }
         // 异步锁，保证同一时刻只有一处进入写逻辑，解决并发WriteAsync错乱
@@ -158,19 +158,19 @@ public class TcpServerChatImpl : IChildCommunication
         catch (OperationCanceledException)
         {
             CloseClient();
-            _hostInfo.RaiseClientConnEvent($"{_key}：发送消息会话取消！【{currTime}】");
+            ParaSetupModules.RaiseTcpClientConnEvent($"{_key}：发送消息会话取消！【{currTime}】");
             return false;
         }
         catch (IOException)
         {
             CloseClient();
-            _hostInfo.RaiseClientConnEvent($"{_key}：发送消息IO异常，强制下线！【{currTime}】");
+            ParaSetupModules.RaiseTcpClientConnEvent($"{_key}：发送消息IO异常，强制下线！【{currTime}】");
             return false;
         }
         catch (SocketException)
         {
             CloseClient();
-            _hostInfo.RaiseClientConnEvent($"{_key}：发送消息Socket异常，强制下线！【{currTime}】");
+            ParaSetupModules.RaiseTcpClientConnEvent($"{_key}：发送消息Socket异常，强制下线！【{currTime}】");
             return false;
         }
         catch (Exception ex)
@@ -264,7 +264,7 @@ public class TcpServerChatImpl : IChildCommunication
             Content = frame,
             Length = totalFrameLen,
             Key = _key,
-            BufferDataProdEvent = _hostInfo.GetBufferDataProdEvent()
+            MessageType = PublicConst.TcpMessage,
         };
         //放入数据队列中；
         _iDataBufferPool.DataEnqueue(socketDataBlock00);

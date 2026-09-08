@@ -28,20 +28,5 @@ public class SerialCommInfo
                Parity>=0 &&
                StopBits>0;
     }
-    //接收数据；
-    private EventHandler? _bufferDataProdEvent;
-    public event EventHandler? BufferDataProdEvent
-    {
-        add => _bufferDataProdEvent ??= value;
-        remove => _bufferDataProdEvent -= value;
-    }
-    public EventHandler? GetBufferDataProdEvent()
-    {
-        return _bufferDataProdEvent;
-    }
-    public void RaiseBufferDataProdEvent(SocketDataBlock socketDataBlock)
-    {
-        _bufferDataProdEvent?.Invoke(null, new SocketDataEventArgs(socketDataBlock));
-    }
     public CommSerialImpl? CommSerialImpl{ get; set; }
 }

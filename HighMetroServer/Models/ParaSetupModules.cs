@@ -24,10 +24,6 @@ public static class ParaSetupModules
     {
         _ascDataProdEvent?.Invoke(null, new StringEventArgs(message));
     }
-    public static EventHandler? GetAscDataProdEvent()
-    {
-        return _ascDataProdEvent;
-    }
     //展示十六进制消息；
     private static EventHandler? _hexDataProdEvent;
     public static event EventHandler? HexDataProdEvent
@@ -38,5 +34,38 @@ public static class ParaSetupModules
     public static void RaiseHexDataProdEvent(SocketDataBlock socketDataBlock)
     {
         _hexDataProdEvent?.Invoke(null, new SocketDataEventArgs(socketDataBlock));
+    }
+    //接收数据；
+    private static EventHandler? _tcpServerBufferDataProdEvent;
+    public static event EventHandler? TcpServerBufferDataProdEvent
+    {
+        add => _tcpServerBufferDataProdEvent ??= value;
+        remove => _tcpServerBufferDataProdEvent -= value;
+    }
+    public static void RaiseTcpServerBufferDataProdEvent(SocketDataBlock socketDataBlock)
+    {
+        _tcpServerBufferDataProdEvent?.Invoke(null, new SocketDataEventArgs(socketDataBlock));
+    }
+    //展示客户端连接消息;
+    private static EventHandler? _tcpClientConnEvent;
+    public static event EventHandler? TcpClientConnEvent
+    {
+        add => _tcpClientConnEvent ??= value;
+        remove => _tcpClientConnEvent -= value;
+    }
+    public static void RaiseTcpClientConnEvent(string message)
+    {
+        _tcpClientConnEvent?.Invoke(null, new StringEventArgs(message));
+    }
+    //展示COMM连接消息;
+    private static EventHandler? _commBufferDataProdEvent;
+    public static event EventHandler? CommBufferDataProdEvent
+    {
+        add => _commBufferDataProdEvent ??= value;
+        remove => _commBufferDataProdEvent -= value;
+    }
+    public static void RaiseCommBufferDataProdEvent(SocketDataBlock socketDataBlock)
+    {
+        _commBufferDataProdEvent?.Invoke(null, new SocketDataEventArgs(socketDataBlock));
     }
 }
