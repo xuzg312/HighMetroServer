@@ -16,9 +16,6 @@
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         <NoWarn>$(NoWarn);IL2104</NoWarn>
         <NoWarn>$(NoWarn);IL3053</NoWarn>
-        <!--
-        <PublishSingleFile>true</PublishSingleFile>
-        -->
     </PropertyGroup>
     
     <ItemGroup>
