@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace HighMetroServer.BaseModel;
+﻿namespace HighMetroServer.BaseModel;
 
 public class SocketDataBlock
 {
