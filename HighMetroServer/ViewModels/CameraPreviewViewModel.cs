@@ -400,14 +400,6 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
         {
             //忽略；
         }
-        try
-        {
-            _showUiTask?.Wait(500);
-        }
-        catch (Exception)
-        {
-            //忽略;
-        }
         while (_frameQueue.TryDequeue(out var frame))
         {
             try

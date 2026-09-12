@@ -338,23 +338,7 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
             }
         }
         _getBufferDataImplList.Clear();
-        try
-        {
-            _acceptLoopTask?.Wait(500);
-        }
-        catch
-        {
-            //忽略；
-        }
         _acceptLoopTask = null;
-        try
-        {
-            _readTask?.Wait(500);
-        }
-        catch (Exception)
-        {
-            //忽略;
-        }
         _readTask = null;
         try
         {

@@ -330,14 +330,6 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
         {
             //忽略；
         }
-        try
-        {
-            _parseBackgroundTask?.Wait(TaskWaitTimeoutMs);
-        }
-        catch (Exception)
-        {
-            //忽略;
-        }
         _parseBackgroundTask = null;
         _parseCts = null;
         try

@@ -316,14 +316,6 @@ public partial class PlayVideoViewModel : ObservableObject
             //忽略；
         }
         _camRemoteLinkImpl.Close();
-        try
-        {
-            _showUiTask?.Wait(500);
-        }
-        catch (Exception)
-        {
-            //忽略;
-        }
         while (_frameQueue.TryDequeue(out var frame))
         {
             try
