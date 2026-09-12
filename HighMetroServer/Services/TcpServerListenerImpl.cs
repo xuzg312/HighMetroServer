@@ -45,7 +45,7 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
             _getBufferDataImplList.Clear();
             for (var i = 0; i < threadCount; i++)
             {
-                _getBufferDataImplList.Add(new GetBufferDataImpl(_iDataBufferPool));
+                _getBufferDataImplList.Add(new GetBufferDataImpl(_iDataBufferPool,PublicConst.TcpMessage));
             }
             // 后台循环接受客户端
             _acceptLoopTask = Task.Run(() => AcceptClientLoop(_ctsServer.Token), _ctsServer.Token);
@@ -110,7 +110,6 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
             {
                 var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                 ParaSetupModules.RaiseAscDataProdEvent($"等待客户端连接异常：{ex.Message}【{currDateTime}】");
-                await Task.Delay(100, token);
             }
         }
     }
@@ -163,7 +162,9 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
             }
             for (var i = 1; i < parseCount; i++)
             {
-                await _semaphoreSlim.WaitAsync(0,token); 
+                var acquired = await _semaphoreSlim.WaitAsync(0,token); 
+                if (!acquired)
+                    break;
             }
         }
     }

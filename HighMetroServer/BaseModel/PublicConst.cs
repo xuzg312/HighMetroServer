@@ -27,8 +27,8 @@ public static class PublicConst
     public const string DoorStateCamera = "录像";
 
     public const byte SelfStart = 1;//开机自启动；
-    public const byte CommDataParseTask = 3;//串口数据解析后台任务个数；
-    public const byte TcpDataParseTask = 2;//Tcp数据解析后台任务个数；
+    public const byte CommDataParseTask = 1;//串口数据解析后台任务个数；
+    public const byte TcpDataParseTask = 1;//Tcp数据解析后台任务个数；
 
     public const byte PageSize = 10;
     

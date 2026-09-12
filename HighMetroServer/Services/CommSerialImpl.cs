@@ -57,7 +57,7 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
             _getBufferDataImplList.Clear();
             for (var i = 0; i < threadCount; i++)
             {
-                _getBufferDataImplList.Add(new GetBufferDataImpl(_iDataBufferPool));
+                _getBufferDataImplList.Add(new GetBufferDataImpl(_iDataBufferPool,PublicConst.CommMessage));
             }
             _parseCts = new CancellationTokenSource();
             //启动1个线程，进行数据包的拆分或合并；
@@ -138,22 +138,34 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
             try
             {
                 await _semaphoreSlim!.WaitAsync(token);
-                if (!_receiveQueue.TryDequeue(out var data))
-                    continue;
-                foreach (var b in data)
+                var parseCount = 0;
+                while (_receiveQueue.TryDequeue(out var data))
                 {
-                    _receiveBuffer.Enqueue(b);
+                    parseCount++;
+                    foreach (var b in data)
+                    {
+                        _receiveBuffer.Enqueue(b);
+                    }
+
+                    while (!token.IsCancellationRequested
+                           && TryParseOnePacket()) ;
                 }
-                while (!token.IsCancellationRequested
-                       && TryParseOnePacket()) ;
+                for (var i = 1; i < parseCount; i++)
+                {
+                    var acquired = await _semaphoreSlim.WaitAsync(0, token);
+                    if (!acquired)
+                        break;
+                }
             }
             catch (OperationCanceledException)
             {
+                break;
             }
             catch (Exception ex)
             {
                 var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                 ParaSetupModules.RaiseAscDataProdEvent($"解析串口数据异常：{ex.Message}【{currDateTime}】");
+                await Task.Delay(100, token);
             }
         }
     }

@@ -133,6 +133,23 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
             return;
         }
         var socketDataBlock = socketDataEventArgs.Data;
+        _ = OnBufferDataProdLoop(socketDataBlock);
+    }
+    private async Task OnBufferDataProdLoop(SocketDataBlock socketDataBlock)
+    {
+        try
+        {
+            await OnBufferDataProd(socketDataBlock);
+        }
+        catch (Exception ex)
+        {
+            var currentTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            ParaSetupModules.RaiseAscDataProdEvent($"解析串口数据异常：{ex.Message}，【{currentTime}】");
+        }
+    }
+    private async Task OnBufferDataProd(SocketDataBlock socketDataBlock)
+    {
+        await Task.Delay(10);
         var valid = false;
         if (socketDataBlock.Length >= 11)
         {
