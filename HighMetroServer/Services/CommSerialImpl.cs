@@ -83,10 +83,13 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
             if (sender is not SerialPort sp || !sp.IsOpen)
                 return;
             var readBytesCount = sp.BytesToRead;
+
             if (readBytesCount <= 0)
                 return;
             if (readBytesCount > PublicConst.SockDataMaxLength)
             {
+                var discard = new byte[readBytesCount];
+                sp.Read(discard, 0, readBytesCount);
                 var currTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                 ParaSetupModules.RaiseAscDataProdEvent($"串口接收数据包超长，长度{readBytesCount}已丢弃！【{currTime}】");
                 return;
