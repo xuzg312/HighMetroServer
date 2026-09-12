@@ -37,7 +37,6 @@ public class GetBufferDataImpl : IGetBufferData
             TaskScheduler.Default);
     }
     #endregion
-    
     #region 获取数据池中数据；
     private void GetBufferSocketData(CancellationToken token)
     {
