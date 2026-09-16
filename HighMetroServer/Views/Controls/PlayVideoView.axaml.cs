@@ -18,7 +18,7 @@ public partial class PlayVideoView : Window,IRecipient<ClosePlayVideoViewMessage
     }
     public void LoadVideo(string filePath)
     {
-        _playViewModel.LoadVideo(filePath);
+        _= _playViewModel.LoadVideo(filePath);
         Title = filePath;
     }
     protected override void OnClosed(EventArgs e)
