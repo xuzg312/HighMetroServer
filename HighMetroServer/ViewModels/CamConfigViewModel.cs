@@ -88,17 +88,17 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
             return;        
         }
         //初始化；
-        var loadCamResult00 = _camRemoteLinkImpl.Init();
-        if (!loadCamResult00.Code.Equals(PublicConst.FlagYes))
+        var loadCamResult00 = await CamRemoteManager.SdkInitialize();
+        if (loadCamResult00<0)
         {
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                MessageText = loadCamResult00.Message;
+                MessageText = "摄像头初始化失败！";
             });
             return;
         }
         //尝试登录;
-        var loadCamResult = _camRemoteLinkImpl.Login(camInfo);
+        var loadCamResult = await _camRemoteLinkImpl.Login(camInfo);
         if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
         {
             await Dispatcher.UIThread.InvokeAsync(() =>
@@ -145,14 +145,13 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
         {
             _camRemoteLinkImpl.Logout();
         }
-        //释放摄像机资源；
-        _camRemoteLinkImpl.Clear();
+        CamRemoteManager.SdkCleanUp();
         _start = false;
     }
     public void Receive(AppCleanupMessage message)
     {
         WeakReferenceMessenger.Default.UnregisterAll(this);
         ClearResource();
-        Console.WriteLine("释放摄像头资源----Receive！");
+        Console.WriteLine("释放摄像头资源(CamConfigViewModel)----Receive！");
     }
 }

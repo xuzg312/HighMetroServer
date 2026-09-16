@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -81,7 +80,6 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     private int _serial;
     private CommSerialImpl? _commSerialImpl;
     private bool _buildServer;
-    private static readonly SemaphoreSlim AsyncLock = new (1, 1);
 
     public SerialConfigViewModel(int serial)
     {
@@ -244,50 +242,42 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     private async Task ReplyHeart(SocketDataBlock socketDataBlock)
     { 
         await Task.Delay(10).ConfigureAwait(false); 
-        await AsyncLock.WaitAsync();
-        try
+        var mainInfoBean = ParseMainBordData.ReplyHeartInfo(socketDataBlock);
+        if (mainInfoBean != null)
         {
-            var mainInfoBean = ParseMainBordData.ReplyHeartInfo(socketDataBlock);
-            if (mainInfoBean != null)
+            mainInfoBean.HostBh = ParaSetupModules.CamInfo!.HostBh;
+            var data = ParseMainBordData.ParsePack(mainInfoBean);
+            ResultInfo resultInfo;
+            if (mainInfoBean.A1gzm > 0 || mainInfoBean.A2gzm > 0 || mainInfoBean.B1gzm > 0 ||
+                mainInfoBean.B2gzm > 0)
             {
-                mainInfoBean.HostBh = ParaSetupModules.CamInfo!.HostBh;
-                var data = ParseMainBordData.ParsePack(mainInfoBean);
-                ResultInfo resultInfo;
-                if (mainInfoBean.A1gzm > 0 || mainInfoBean.A2gzm > 0 || mainInfoBean.B1gzm > 0 ||
-                    mainInfoBean.B2gzm > 0)
-                {
-                    //异常的心跳，保存到数据库;
-                    resultInfo = ParaSetupModules.DbService!.AddHeart(mainInfoBean);
-                }
-                else
-                {
-                    //正常心跳，数据库更新次数，每天一条记录；
-                    mainInfoBean.Datetime = DateTime.Now.Date.ToString("yyyy-MM-dd HH:mm:ss");
-                    resultInfo = ParaSetupModules.DbService!.SavePersonDay(mainInfoBean);
-                }
-                if (!resultInfo.Code.Equals(PublicConst.FlagYes))
-                {
-                    var currDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                    ParaSetupModules.RaiseAscDataProdEvent($"{resultInfo.Message}【{currDate}】");
-                }
-                Dispatcher.UIThread.Post(() =>
-                {
-                    MessageText1 = data[0];
-                    MessageText2 = data[1];
-                    MessageText3 = data[2];
-                    MessageText4 = data[3];
-                    var currDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                    MessageText = $"收到主板【{_serial}】的心跳数据！【{currDate}】";
-                });
+                //异常的心跳，保存到数据库;
+                resultInfo = ParaSetupModules.DbService!.AddHeart(mainInfoBean);
             }
             else
             {
-                ParaSetupModules.RaiseHexDataProdEvent(socketDataBlock);
+                //正常心跳，数据库更新次数，每天一条记录；
+                mainInfoBean.Datetime = DateTime.Now.Date.ToString("yyyy-MM-dd HH:mm:ss");
+                resultInfo = ParaSetupModules.DbService!.SavePersonDay(mainInfoBean);
             }
+            if (!resultInfo.Code.Equals(PublicConst.FlagYes))
+            {
+                var currDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                ParaSetupModules.RaiseAscDataProdEvent($"{resultInfo.Message}【{currDate}】");
+            }
+            Dispatcher.UIThread.Post(() =>
+            {
+                MessageText1 = data[0];
+                MessageText2 = data[1];
+                MessageText3 = data[2];
+                MessageText4 = data[3];
+                var currDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                MessageText = $"收到主板【{_serial}】的心跳数据！【{currDate}】";
+            });
         }
-        finally
+        else
         {
-            AsyncLock.Release();
+            ParaSetupModules.RaiseHexDataProdEvent(socketDataBlock);
         }
     }
     //拍照
@@ -314,7 +304,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         byte iPosition = 3;
         //设备id
         cameraBean.Id = publicUntil.GetUshort(socketDataBlock.Content!, iPosition);
-        cameraBean.DateTime = DateTime.Now;//.ToString("yyyy-MM-dd HH:mm:ss");
+        cameraBean.DateTime = DateTime.Now;
         //次数；
         iPosition = 8;
         cameraBean.Serial = publicUntil.GetUshort(socketDataBlock.Content!, iPosition);
@@ -380,7 +370,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         byte iPosition = 3;
         //设备id
         cameraBean.Id = publicUntil.GetUshort(socketDataBlock.Content!, iPosition);
-        cameraBean.DateTime = DateTime.Now; //.ToString("yyyy-MM-dd HH:mm:ss");
+        cameraBean.DateTime = DateTime.Now; 
         //次数；
         iPosition = 8;
         cameraBean.Serial = publicUntil.GetUshort(socketDataBlock.Content!, iPosition);
@@ -492,7 +482,6 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         {
             await Dispatcher.UIThread.InvokeAsync(() => { CommState = "【 串口连接状态：❌ 】"; });
         }
-
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
             OpenCommand.NotifyCanExecuteChanged();

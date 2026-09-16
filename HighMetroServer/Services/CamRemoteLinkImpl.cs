@@ -15,31 +15,15 @@ public class CamRemoteLinkImpl
     private int _playHandle = -1;
     private int _iPort = -1;
     private int _playPort = -1;
-    private static bool _initSign;
     private RealDataCallBack? _realDataCallback;
     private PlayCtrl.DeccbFun? _decodeCallback;
     private PlayCtrl.DeccbFun? _playDecodeCallBack;
-    private readonly object _dirLockObj = new();
-    private static readonly SemaphoreSlim AsyncLock = new SemaphoreSlim(1, 1);
+    private readonly SemaphoreSlim _asyncLock = new SemaphoreSlim(1, 1);
     public int GetUserId() => _userId;
-    public LoadCamResult Init()
+    public async Task<LoadCamResult> Login(HardInfo hardInfo)
     {
-        var value = 1;
-        if (!_initSign)
-        {
-            value = HikSdk.NET_DVR_Init();
-            if (value >= 0)
-                _initSign = true;
-        }
-        var loadCamResult = new LoadCamResult
-        {
-            Code = value>=0? PublicConst.FlagYes : PublicConst.FlagNo
-        };
-        return loadCamResult;
-    }
-    public LoadCamResult Login(HardInfo hardInfo)
-    {
-        if (!_initSign)
+        var initSdk= await CamRemoteManager.SdkInitialize();
+        if (initSdk<0)
         {
             return new LoadCamResult
             {
@@ -55,40 +39,54 @@ public class CamRemoteLinkImpl
                 Message = "已处于登录状态，拒绝重复登录！",
             };
         }
-        //登录设备；
-        var loginInfo = new ChcNetSdk.NetDvrUserLoginInfo();
-
-        //设备IP地址或者域名
-        var byIp = Encoding.Default.GetBytes(hardInfo.Ip);
-        loginInfo.sDeviceAddress = new byte[129];
-        byIp.CopyTo(loginInfo.sDeviceAddress, 0);
-
-        //设备用户名
-        var byUserName = Encoding.Default.GetBytes(hardInfo.UserName);
-        loginInfo.sUserName = new byte[64];
-        byUserName.CopyTo(loginInfo.sUserName, 0);
-
-        //设备密码
-        var byPassword = Encoding.Default.GetBytes(hardInfo.PassWord);
-        loginInfo.sPassword = new byte[64];
-        byPassword.CopyTo(loginInfo.sPassword, 0);
-
-        loginInfo.wPort = (ushort)hardInfo.Port;//设备服务端口号
-        loginInfo.bUseAsynLogin = false; //是否异步登录：0- 否，1- 是 
-
-        var deviceInfo = new ChcNetSdk.NetDvrDeviceinfoV40();
-
-        //登录设备 Login the device
-        _userId = HikSdk.NET_DVR_Login_V40(ref loginInfo, ref deviceInfo);
-        if (_userId >= 0)
+        await _asyncLock.WaitAsync();
+        try
         {
+            if (_userId>=0 || _playHandle>=0)
+            {
+                return new LoadCamResult
+                {
+                    Code = PublicConst.FlagNo,
+                    Message = "已处于登录状态，拒绝重复登录！",
+                };
+            }
+            //登录设备；
+            var loginInfo = new ChcNetSdk.NetDvrUserLoginInfo();
+
+            //设备IP地址或者域名
+            var byIp = Encoding.Default.GetBytes(hardInfo.Ip);
+            loginInfo.sDeviceAddress = new byte[129];
+            byIp.CopyTo(loginInfo.sDeviceAddress, 0);
+
+            //设备用户名
+            var byUserName = Encoding.Default.GetBytes(hardInfo.UserName);
+            loginInfo.sUserName = new byte[64];
+            byUserName.CopyTo(loginInfo.sUserName, 0);
+
+            //设备密码
+            var byPassword = Encoding.Default.GetBytes(hardInfo.PassWord);
+            loginInfo.sPassword = new byte[64];
+            byPassword.CopyTo(loginInfo.sPassword, 0);
+
+            loginInfo.wPort = (ushort)hardInfo.Port; //设备服务端口号
+            loginInfo.bUseAsynLogin = false; //是否异步登录：0- 否，1- 是 
+
+            var deviceInfo = new ChcNetSdk.NetDvrDeviceinfoV40();
+
+            //登录设备 Login the device
+            _userId = HikSdk.NET_DVR_Login_V40(ref loginInfo, ref deviceInfo);
+            if (_userId < 0)
+                return HikSdkGetLastError();
             var loadCamResult = new LoadCamResult
             {
                 Code = PublicConst.FlagYes,
             };
             return loadCamResult;
+        }        
+        finally
+        {
+            _asyncLock.Release();
         }
-        return HikSdkGetLastError();
     }
     public async Task<LoadCamResult> CaptureJpegPicture(CameraBean cameraBean,string baseDirectory)
     {
@@ -101,22 +99,26 @@ public class CamRemoteLinkImpl
             };
         }
         var bufferPtr = IntPtr.Zero;
-        await AsyncLock.WaitAsync();
         var dateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        await _asyncLock.WaitAsync();
         try
         {
+            if (_userId < 0)
+            {
+                return new LoadCamResult()
+                {
+                    Code = PublicConst.FlagNo,
+                    Message = "UserId无效！"
+                };
+            }
             var dateFolder = DateTime.Now.ToString("yyyy-MM-dd");
             var camIdFolder = cameraBean.Id.ToString();
             var dayDir = Path.Combine(baseDirectory, dateFolder);
-            lock (_dirLockObj)
-            {
-                if (!Directory.Exists(dayDir))
-                    Directory.CreateDirectory(dayDir);
-
-                var targetDir = Path.Combine(dayDir, camIdFolder);
-                if (!Directory.Exists(targetDir))
-                    Directory.CreateDirectory(targetDir);
-            }
+            if (!Directory.Exists(dayDir))
+                Directory.CreateDirectory(dayDir);
+            var targetDir = Path.Combine(dayDir, camIdFolder);
+            if (!Directory.Exists(targetDir))
+                Directory.CreateDirectory(targetDir);
             #region 3. 生成带毫秒唯一文件名，避免同秒覆盖
             var now = DateTime.Now;
             var timeStr = $"{now.Hour:D2}-{now.Minute:D2}-{now.Second:D2}-{now.Millisecond:D3}";
@@ -139,15 +141,12 @@ public class CamRemoteLinkImpl
                 bufferPtr,
                 PublicConst.MaxBufferSize,
                 ref actualSize);
-            // SDK调用失败校验
             if (nativeRet < 0 || actualSize <= 0)
             {
                 return HikSdkGetLastError();
             }
-            // 拷贝非托管内存
             var jpegBytes = new byte[actualSize];
             Marshal.Copy(bufferPtr, jpegBytes, 0, (int)actualSize);
-            // 写入文件，单独捕获IO异常
             SafeWriteFile(fullSavePath, jpegBytes);
             return new LoadCamResult
             {
@@ -157,7 +156,6 @@ public class CamRemoteLinkImpl
         }
         catch (Exception ex)
         {
-            // 兜底所有未知异常
             return new LoadCamResult
             {
                 Code = PublicConst.FlagNo,
@@ -166,12 +164,11 @@ public class CamRemoteLinkImpl
         }
         finally
         {
-            // 强制释放非托管堆内存，防止内存泄漏
             if (bufferPtr != IntPtr.Zero)
             {
                 Marshal.FreeHGlobal(bufferPtr);
             }
-            AsyncLock.Release();
+            _asyncLock.Release();
         }
     }
     public async Task<LoadCamResult> PlayCam(CameraBean cameraBean,string baseDirectory)
@@ -184,31 +181,35 @@ public class CamRemoteLinkImpl
                 Message = "UserId无效！"
             };
         }
-        if (_playHandle >= 0)
-        {
-            return new LoadCamResult()
-            {
-                Code = PublicConst.FlagNo,
-                Message = "PlayHandle>=0，此次操作被拒绝！"
-            };
-        }
-        // 静态锁防止多线程并发创建目录冲突
-        await AsyncLock.WaitAsync();
         var dateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        await _asyncLock.WaitAsync();
         try
         {
+            if (_userId < 0)
+            {
+                return new LoadCamResult()
+                {
+                    Code = PublicConst.FlagNo,
+                    Message = "UserId无效！"
+                };
+            }
+            if (_playHandle >= 0)
+            {
+                return new LoadCamResult()
+                {
+                    Code = PublicConst.FlagNo,
+                    Message = "PlayHandle>=0，此次操作被拒绝！"
+                };
+            }
             var dateFolder = DateTime.Now.ToString("yyyy-MM-dd");
             var camIdFolder = cameraBean.Id.ToString();
             var dayDir = Path.Combine(baseDirectory, dateFolder);
-            lock (_dirLockObj)
-            {
-                if (!Directory.Exists(dayDir))
-                    Directory.CreateDirectory(dayDir);
+            if (!Directory.Exists(dayDir))
+                Directory.CreateDirectory(dayDir);
 
-                var targetDir = Path.Combine(dayDir, camIdFolder);
-                if (!Directory.Exists(targetDir))
-                    Directory.CreateDirectory(targetDir);
-            }
+            var targetDir = Path.Combine(dayDir, camIdFolder);
+            if (!Directory.Exists(targetDir))
+                Directory.CreateDirectory(targetDir);
             #region 3. 生成带毫秒唯一文件名，避免同秒覆盖
             var now = DateTime.Now;
             var timeStr = $"{now.Hour:D2}-{now.Minute:D2}-{now.Second:D2}-{now.Millisecond:D3}";
@@ -250,7 +251,7 @@ public class CamRemoteLinkImpl
                 {
                     HikSdk.NET_DVR_StopSaveRealData(_playHandle);
                     // 额外等待一小段时间，确保文件句柄完全释放
-                    await Task.Delay(TimeSpan.FromMilliseconds(500));
+                    await Task.Delay(TimeSpan.FromMilliseconds(200));
                     HikSdk.NET_DVR_StopRealPlay(_playHandle);
                     _playHandle = -1;
                 }
@@ -258,7 +259,6 @@ public class CamRemoteLinkImpl
         }
         catch (Exception ex)
         {
-            // 兜底所有未知异常
             return new LoadCamResult
             {
                 Code = PublicConst.FlagNo,
@@ -267,17 +267,16 @@ public class CamRemoteLinkImpl
         }
         finally
         {
-            // 强制释放非托管堆内存，防止内存泄漏
             if (_playHandle>=0)
             {
                 HikSdk.NET_DVR_StopSaveRealData(_playHandle);
                 HikSdk.NET_DVR_StopRealPlay(_playHandle);
                 _playHandle = -1;
             }
-            AsyncLock.Release();
+            _asyncLock.Release();
         }
     }
-    public LoadCamResult DebugCaptureJpegPicture()
+    public async Task<LoadCamResult> DebugCaptureJpegPicture()
     {
         if (_userId < 0)
         {
@@ -287,8 +286,17 @@ public class CamRemoteLinkImpl
                 Message = "UserId无效！"
             };
         }
+        await _asyncLock.WaitAsync();
         try
         {
+            if (_userId < 0)
+            {
+                return new LoadCamResult()
+                {
+                    Code = PublicConst.FlagNo,
+                    Message = "UserId无效！"
+                };
+            }
             var lChannel = 1;
             var lpJpegPara = new ChcNetSdk.NetDvrJpegpara
             {
@@ -309,6 +317,7 @@ public class CamRemoteLinkImpl
             {
                 return HikSdkGetLastError();
             }
+
             // 拷贝非托管内存
             var jpegBytes = new byte[actualSize];
             Marshal.Copy(bufferPtr, jpegBytes, 0, (int)actualSize);
@@ -326,12 +335,14 @@ public class CamRemoteLinkImpl
                 Message = $"抓拍未知异常：{ex.Message}"
             };
         }
+        finally
+        {
+            _asyncLock.Release();
+        }
     }
-    public LoadCamResult StartPreview(
+    public async Task<LoadCamResult> StartPreview(
         RealDataCallBack realDataCallBack,PlayCtrl.DeccbFun decodeCallback)
     {
-        _realDataCallback = realDataCallBack;
-        _decodeCallback = decodeCallback;
         if (_userId < 0)
         {
             return new LoadCamResult()
@@ -340,83 +351,122 @@ public class CamRemoteLinkImpl
                 Message = "UserId无效！"
             };
         }
-        if (_playHandle >= 0)
+        await _asyncLock.WaitAsync();
+        try
         {
-            return new LoadCamResult()
+            if (_userId < 0)
             {
-                Code = PublicConst.FlagNo,
-                Message = "PlayHandle>=0，此次操作被拒绝！"
+                return new LoadCamResult()
+                {
+                    Code = PublicConst.FlagNo,
+                    Message = "UserId无效！"
+                };
+            }
+            if (_playHandle >= 0)
+            {
+                return new LoadCamResult()
+                {
+                    Code = PublicConst.FlagNo,
+                    Message = "PlayHandle>=0，此次操作被拒绝！"
+                };
+            }
+            if (_iPort >= 0)
+            {
+                return new LoadCamResult()
+                {
+                    Code = PublicConst.FlagNo,
+                    Message = "IPort>=0，此次操作被拒绝！"
+                };
+            }
+            _realDataCallback = realDataCallBack;
+            _decodeCallback = decodeCallback;
+            //获取播放句柄 Get the port to play
+            var value = PlayCtrl.PlayM4_GetPort(ref _iPort);
+            if (value < 0)
+                return PlayM4GetLastError();
+            //设置流播放模式 Set the stream mode: real-time stream mode
+            value = PlayCtrl.PlayM4_SetStreamOpenMode(_iPort, 0);
+            if (value < 0)
+                return PlayM4GetLastError();
+            //打开码流，送入头数据 Open stream
+            value = PlayCtrl.PlayM4_OpenStream(_iPort, IntPtr.Zero, 0, CamConst.BufPoolSize);
+            if (value < 0)
+                return PlayM4GetLastError();
+            //设置显示缓冲区个数 Set the display buffer number
+            value = PlayCtrl.PlayM4_SetDisplayBuf(_iPort, CamConst.DisplayBufNumber);
+            if (value < 0)
+                return PlayM4GetLastError();
+            //设置解码回调函数，获取解码后音视频原始数据 Set callback function of decoded data
+            value = PlayCtrl.PlayM4_SetDecCallBackExMend(_iPort, _decodeCallback, IntPtr.Zero, 0, IntPtr.Zero);
+            if (value < 0)
+                return PlayM4GetLastError();
+            value = PlayCtrl.PlayM4_SetDecodeEngine(_iPort, 0);
+            if (value < 0)
+                return PlayM4GetLastError();
+            var playInfo = new ChcNetSdk.NetDvrPreviewInfo
+            {
+                hPlayWnd = IntPtr.Zero,
+                lChannel = 1,
+                dwStreamType = 1,
+                dwLinkMode = 0,
+                bBlocked = false,
+                dwDisplayBufNum = 1,
+                byProtoType = 0,
+                byPreviewMode = 0,
+            };
+            // 开启预览，传入码流回调
+            _playHandle = HikSdk.NET_DVR_RealPlay_V40(_userId, ref playInfo, _realDataCallback, nint.Zero);
+            if (_playHandle < 0)
+                return HikSdkGetLastError();
+            value = PlayCtrl.PlayM4_Play(_iPort, nint.Zero); //传 IntPtr.Zero 表示软解码，触发回调
+            if (value < 0)
+                return PlayM4GetLastError();
+            return new LoadCamResult
+            {
+                Code = PublicConst.FlagYes,
             };
         }
-        if (_iPort >= 0)
+        finally
         {
-            return new LoadCamResult()
-            {
-                Code = PublicConst.FlagNo,
-                Message = "IPort>=0，此次操作被拒绝！"
-            };
+            _asyncLock.Release();
         }
-        //获取播放句柄 Get the port to play
-        var value = PlayCtrl.PlayM4_GetPort(ref _iPort);
-        if(value<0)
-            return PlayM4GetLastError();
-        //设置流播放模式 Set the stream mode: real-time stream mode
-        value = PlayCtrl.PlayM4_SetStreamOpenMode(_iPort, 0);
-        if(value<0)
-            return PlayM4GetLastError();
-        //打开码流，送入头数据 Open stream
-        value = PlayCtrl.PlayM4_OpenStream(_iPort, IntPtr.Zero, 0, CamConst.BufPoolSize);
-        if(value<0)
-            return PlayM4GetLastError();
-        //设置显示缓冲区个数 Set the display buffer number
-        value = PlayCtrl.PlayM4_SetDisplayBuf(_iPort, CamConst.DisplayBufNumber);
-        if(value<0)
-            return PlayM4GetLastError(); 
-        //设置解码回调函数，获取解码后音视频原始数据 Set callback function of decoded data
-        value = PlayCtrl.PlayM4_SetDecCallBackExMend(_iPort, _decodeCallback, IntPtr.Zero, 0,IntPtr.Zero);
-        if(value<0)
-            return PlayM4GetLastError();
-        value = PlayCtrl.PlayM4_SetDecodeEngine(_iPort, 0);
-        if(value<0)
-            return PlayM4GetLastError();
-        var playInfo = new ChcNetSdk.NetDvrPreviewInfo
-        {
-            hPlayWnd = IntPtr.Zero,
-            lChannel = 1,          
-            dwStreamType = 1,      
-            dwLinkMode = 0,       
-            bBlocked = false,     
-            dwDisplayBufNum = 1,   
-            byProtoType = 0,       
-            byPreviewMode = 0,     
-        };
-        // 开启预览，传入码流回调
-        _playHandle = HikSdk.NET_DVR_RealPlay_V40(_userId, ref playInfo, _realDataCallback, nint.Zero);
-        if (_playHandle < 0)
-            return HikSdkGetLastError();
-        value = PlayCtrl.PlayM4_Play(_iPort, nint.Zero); //传 IntPtr.Zero 表示软解码，触发回调
-        if(value<0)
-            return PlayM4GetLastError();
-        
-        return new LoadCamResult
-        {
-            Code = PublicConst.FlagYes,
-        };
     }
-    public LoadCamResult PreviewInputData(nint pBuffer, uint dwBufSize)
+    public async Task<LoadCamResult> PreviewInputData(nint pBuffer, uint dwBufSize)
     {
-        var value = PlayCtrl.PlayM4_InputData(_iPort, pBuffer, dwBufSize);
-        if(value<0)
-            return PlayM4GetLastError();
-        return new LoadCamResult
+        if (_iPort < 0)
         {
-            Code = PublicConst.FlagYes
-        };
+            return new LoadCamResult()
+            {
+                Code = PublicConst.FlagNo,
+                Message = "IPort<0，状态无效！"
+            };
+        }
+        await _asyncLock.WaitAsync();
+        try
+        {
+            if (_iPort < 0)
+            {
+                return new LoadCamResult()
+                {
+                    Code = PublicConst.FlagNo,
+                    Message = "IPort<0，状态无效！"
+                };
+            }
+            var value = PlayCtrl.PlayM4_InputData(_iPort, pBuffer, dwBufSize);
+            if (value < 0)
+                return PlayM4GetLastError();
+            return new LoadCamResult
+            {
+                Code = PublicConst.FlagYes
+            };
+        }finally{
+            _asyncLock.Release();
+        }
     }
-    public LoadCamResult PlayOpenMp4(string fileName,
+    public async Task<LoadCamResult> PlayOpenMp4(string fileName,
         PlayCtrl.DeccbFun decodeCallback,PlayCtrl.FileEndCallBack fileEndCallBack)
     {
-        _playDecodeCallBack = decodeCallback;
+        await _asyncLock.WaitAsync();
         try
         {
             if (_playPort < 0)
@@ -428,11 +478,12 @@ public class CamRemoteLinkImpl
                     return PlayM4GetLastError();
                 }
             }
+            _playDecodeCallBack = decodeCallback;
             var value = PlayCtrl.PlayM4_SetDecCallBackExMend(_playPort, _playDecodeCallBack, IntPtr.Zero, 0,
                 IntPtr.Zero);
             if (value < 0)
                 return PlayM4GetLastError();
-            value = PlayCtrl.PlayM4_SetFileEndCallback(_playPort, fileEndCallBack,IntPtr.Zero);
+            value = PlayCtrl.PlayM4_SetFileEndCallback(_playPort, fileEndCallBack, IntPtr.Zero);
             if (value < 0)
                 return PlayM4GetLastError();
             var ret = PlayCtrl.PlayM4_OpenFile(_playPort, fileName);
@@ -451,78 +502,83 @@ public class CamRemoteLinkImpl
                 Message = ex.Message,
             };
         }
-    }
-    public LoadCamResult PlayPlayMp4()
-    {
-        if (_playPort < 0)
+        finally
         {
+            _asyncLock.Release();
+        }
+    }
+    public async Task<LoadCamResult> PlayPlayMp4()
+    {
+        await _asyncLock.WaitAsync();
+        try
+        {
+            if (_playPort < 0)
+            {
+                return new LoadCamResult
+                {
+                    Code = PublicConst.FlagNo,
+                    Message = "PlayPort无效！",
+                };
+            }
+
+            var value = PlayCtrl.PlayM4_Play(_playPort, nint.Zero); //传 IntPtr.Zero 表示软解码，触发回调
+            if (value < 0)
+                return PlayM4GetLastError();
             return new LoadCamResult
             {
-                Code = PublicConst.FlagNo,
-                Message = "PlayPort无效！",
+                Code = PublicConst.FlagYes,
             };
+        }finally{
+            _asyncLock.Release();
         }
-        var value = PlayCtrl.PlayM4_Play(_playPort, nint.Zero); //传 IntPtr.Zero 表示软解码，触发回调
-        if (value < 0)
-            return PlayM4GetLastError();
-        return new LoadCamResult
-        {
-            Code = PublicConst.FlagYes,
-        };
     }
-    public LoadCamResult PlayPauseMp4(uint nPause)
+    public async Task<LoadCamResult> PlayPauseMp4(uint nPause)
     {
-        if (_playPort < 0)
+        await _asyncLock.WaitAsync();
+        try
         {
+            if (_playPort < 0)
+            {
+                return new LoadCamResult
+                {
+                    Code = PublicConst.FlagNo,
+                    Message = "PlayPort无效！",
+                };
+            }
+
+            var value = PlayCtrl.PlayM4_Pause(_playPort, nPause);
+            if (value < 0)
+                return PlayM4GetLastError();
             return new LoadCamResult
             {
-                Code = PublicConst.FlagNo,
-                Message = "PlayPort无效！",
+                Code = PublicConst.FlagYes,
             };
-        }
-        var value = PlayCtrl.PlayM4_Pause(_playPort, nPause); 
-        if (value < 0)
-            return PlayM4GetLastError();
-        return new LoadCamResult
-        {
-            Code = PublicConst.FlagYes,
-        };
+        }finally{
+            _asyncLock.Release();}
     }
-    public LoadCamResult StopPlayMp4()
+    public async Task<LoadCamResult> StopPlayMp4()
     {
-        if (_playPort < 0)
+        await _asyncLock.WaitAsync();
+        try
         {
+            if (_playPort < 0)
+            {
+                return new LoadCamResult
+                {
+                    Code = PublicConst.FlagNo,
+                    Message = "PlayPort无效！",
+                };
+            }
+
+            var value = PlayCtrl.PlayM4_Stop(_playPort);
+            if (value < 0)
+                return PlayM4GetLastError();
             return new LoadCamResult
             {
-                Code = PublicConst.FlagNo,
-                Message = "PlayPort无效！",
+                Code = PublicConst.FlagYes,
             };
-        }
-        var value = PlayCtrl.PlayM4_Stop(_playPort);
-        if (value < 0)
-            return PlayM4GetLastError();
-        return new LoadCamResult
-        {
-            Code = PublicConst.FlagYes,
-        };
-    }
-    public LoadCamResult SetPlayPos(uint position)
-    {
-        if (_playPort < 0)
-        {
-            return new LoadCamResult
-            {
-                Code = PublicConst.FlagNo,
-                Message = "PlayPort无效！",
-            };
-        }
-        var value = PlayCtrl.PlayM4_SetPlayPos(_playPort,position);
-        if (value < 0)
-            return PlayM4GetLastError();
-        return new LoadCamResult
-        {
-            Code = PublicConst.FlagYes,
-        };
+        }finally{
+            _asyncLock.Release();}
     }
     private void SafeWriteFile(string filePath, byte[] data)
     {
@@ -533,71 +589,65 @@ public class CamRemoteLinkImpl
     }
     public LoadCamResult Logout()
     {
-        if (!_initSign || _userId < 0)
+        _asyncLock.Wait();
+        try
         {
+            if (_iPort >= 0)
+            {
+                PlayCtrl.PlayM4_Stop(_iPort);
+                PlayCtrl.PlayM4_CloseStream(_iPort);
+                PlayCtrl.PlayM4_FreePort(_iPort);
+                _iPort = -1;
+            }
+
+            if (_playPort >= 0)
+            {
+                PlayCtrl.PlayM4_Stop(_playPort);
+                PlayCtrl.PlayM4_CloseFile(_playPort);
+                PlayCtrl.PlayM4_FreePort(_playPort);
+                _playPort = -1;
+            }
+
+            if (_playHandle >= 0)
+            {
+                HikSdk.NET_DVR_StopRealPlay(_playHandle);
+                _playHandle = -1;
+            }
+
+            if (_userId >= 0)
+            {
+                HikSdk.NET_DVR_Logout(_userId);
+                _userId = -1;
+            }
+
+            _realDataCallback = null;
+            _playDecodeCallBack = null;
+            _decodeCallback = null;
             return new LoadCamResult
             {
-                Code = PublicConst.FlagNo,
-                Message = $"逻辑错误，初始化标志：{_initSign}，登录UserId{_userId}",
+                Code = PublicConst.FlagYes,
             };
-        }
-        return Close();
+        }finally{
+            _asyncLock.Release();}
     }
-    public LoadCamResult Close()
-    {
-        if (_iPort >= 0)
-        {
-            PlayCtrl.PlayM4_Stop(_iPort);
-            PlayCtrl.PlayM4_CloseStream(_iPort);
-            PlayCtrl.PlayM4_FreePort(_iPort);
-            _iPort = -1;
-        }
-        if (_playPort >= 0)
-        {
-            PlayCtrl.PlayM4_Stop(_playPort);
-            PlayCtrl.PlayM4_CloseFile(_playPort);
-            PlayCtrl.PlayM4_FreePort(_playPort);
-            _playPort = -1;
-        }
-        if (_playHandle >= 0)
-        {
-            HikSdk.NET_DVR_StopRealPlay(_playHandle);
-            _playHandle = -1;
-        }
-        if (_userId >= 0)
-        {
-            HikSdk.NET_DVR_Logout(_userId);
-            _userId = -1;
-        }
-        _realDataCallback = null;
-        _playDecodeCallBack=null;
-        _decodeCallback = null;
-        return new LoadCamResult
-        {
-            Code = PublicConst.FlagYes,
-        };
-    }
-    public LoadCamResult Clear()
-    {
-        Close();
-        var value = 1;
-        if(_initSign)
-            value = HikSdk.NET_DVR_Cleanup();
-        var loadCamResult = new LoadCamResult
-        {
-            Code = value>=0? PublicConst.FlagYes : PublicConst.FlagNo
-        };
-        return loadCamResult;
-    }
-    public bool CheckOnLine()
+    public async Task<bool> CheckOnLine()
     {
         if (_userId < 0)
         {
             return false;
         }
-        // 检测在线
-        var value= HikSdk.NET_DVR_RemoteControl(_userId,20005,IntPtr.Zero,0);
-        return value >= 0;
+        await _asyncLock.WaitAsync();
+        try
+        {
+            if (_userId < 0)
+            {
+                return false;
+            }
+            // 检测在线
+            var value = HikSdk.NET_DVR_RemoteControl(_userId, 20005, IntPtr.Zero, 0);
+            return value >= 0;
+        }finally{
+            _asyncLock.Release();}
     }
     private LoadCamResult HikSdkGetLastError()
     {

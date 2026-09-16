@@ -1,14 +1,18 @@
 ﻿using System;
+using System.Threading.Tasks;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using HighMetroServer.BaseModel;
 using HighMetroServer.HikVision;
+using HighMetroServer.Message;
 using HighMetroServer.Models;
 using HighMetroServer.Services;
 
 namespace HighMetroServer.ViewModels;
 
-public partial class EditCamConfigViewModel : ViewModelBase
+public partial class EditCamConfigViewModel : ViewModelBase,IRecipient<AppCleanupMessage>
 {
     private readonly IDbService _dbService;
     public event Action? OnHardConfigSuccess;
@@ -49,9 +53,10 @@ public partial class EditCamConfigViewModel : ViewModelBase
         Password = hardInfo.PassWord;
         _hardInfo = hardInfo;
         _camRemoteLinkImpl = new CamRemoteLinkImpl();
+        WeakReferenceMessenger.Default.Register(this);
     }
     [RelayCommand]
-    private void TestConnection()
+    private async Task TestConnection()
     {
         if (!ValidateProperty())
         {
@@ -59,33 +64,33 @@ public partial class EditCamConfigViewModel : ViewModelBase
         }
         if (HikPlatform.IsMac)
         {
-            MessageText = "MAC环境，不支持此操作，请切换到：Windows/Linux环境测试！";
+            Dispatcher.UIThread.Post(() => { MessageText = "MAC环境，不支持此操作，请切换到：Windows/Linux环境测试！"; });
             return;        
         }
         //尝试连接摄像机；
         //初始化；
-        var loadCamResult00 = _camRemoteLinkImpl.Init();
-        if (!loadCamResult00.Code.Equals(PublicConst.FlagYes))
+        var loadCamResult00 = await CamRemoteManager.SdkInitialize();
+        if (loadCamResult00<0)
         {
-            MessageText = "摄像头初始化失败！";
+            Dispatcher.UIThread.Post(() => { MessageText = "摄像头初始化失败！"; });
             return;
         }
         var setting = BuildSetting();
         //尝试登录;
-        var loadCamResult = _camRemoteLinkImpl.Login(setting);
+        var loadCamResult = await _camRemoteLinkImpl.Login(setting);
         if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
         {
-            MessageText = loadCamResult.Message;
+            Dispatcher.UIThread.Post(() => { MessageText = loadCamResult.Message; });
             return;
         }
         //连接成功，退出登录；
         loadCamResult = _camRemoteLinkImpl.Logout();
         if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
         {
-            MessageText = "断开摄像头失败！";
+            Dispatcher.UIThread.Post(() => { MessageText = "断开摄像头失败！"; });
             return;
         }
-        MessageText = "连接摄像头正常 ✅ ！";
+        Dispatcher.UIThread.Post(() => { MessageText = "连接摄像头正常 ✅ ！"; });
     }
     [RelayCommand]
     private void Confirm()
@@ -108,14 +113,15 @@ public partial class EditCamConfigViewModel : ViewModelBase
             MessageText = resultInfo.Message;
             return;
         }
-
-        _camRemoteLinkImpl.Close();
+        _camRemoteLinkImpl.Logout();
+        WeakReferenceMessenger.Default.UnregisterAll(this);
         OnHardConfigSuccess?.Invoke();
     }
     [RelayCommand]
     private void Cancel()
     {
-        _camRemoteLinkImpl.Clear();
+        _camRemoteLinkImpl.Logout();
+        WeakReferenceMessenger.Default.UnregisterAll(this);
         OnHardConfigCancel?.Invoke();
     }
     private HardInfo BuildSetting()
@@ -162,5 +168,11 @@ public partial class EditCamConfigViewModel : ViewModelBase
             return false;
         }
         return true;
+    }
+    public void Receive(AppCleanupMessage message)
+    {
+        WeakReferenceMessenger.Default.UnregisterAll(this);
+        _camRemoteLinkImpl.Logout();
+        Console.WriteLine("释放摄像头资源(EditCamConfigViewModel)----Receive！");
     }
 }

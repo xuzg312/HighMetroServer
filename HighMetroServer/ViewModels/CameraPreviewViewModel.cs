@@ -205,7 +205,7 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
         }, DispatcherPriority.Background);
     }
     [RelayCommand(CanExecute = nameof(CanOpen))]
-    private void Open()
+    private async Task Open()
     {
         if(!CheckValid())
             return;
@@ -216,40 +216,48 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
         }
         //尝试连接摄像机；
         //初始化；
-        var loadCamResult00 = _camRemoteLinkImpl.Init();
-        if (!loadCamResult00.Code.Equals(PublicConst.FlagYes))
+        var loadCamResult00 = await CamRemoteManager.SdkInitialize();
+        if (loadCamResult00<0)
         {
-            MessageText = "摄像头初始化失败！";
+            Dispatcher.UIThread.Post(() => { MessageText = "摄像头初始化失败！"; });
             return;
         }
         //尝试登录;
-        var loadCamResult = _camRemoteLinkImpl.Login(_hardInfo);
+        var loadCamResult = await _camRemoteLinkImpl.Login(_hardInfo);
         if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
         {
-            MessageText = loadCamResult.Message;
+            Dispatcher.UIThread.Post(() => { MessageText = loadCamResult.Message; });
             return;
         }
         //打开实时预览；
-        loadCamResult = _camRemoteLinkImpl.StartPreview(_realDataCallback!,_decodeCallback!);
+        loadCamResult = await _camRemoteLinkImpl.StartPreview(_realDataCallback!,_decodeCallback!);
         if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
         {
-            MessageText = loadCamResult.Message;
+            Dispatcher.UIThread.Post(() => { MessageText = loadCamResult.Message; });
             return;
         }
         _start = true;
-        CamState = "【 摄像头连接状态：✅ 】";
-        StatusText = string.Empty;
-        OpenCommand.NotifyCanExecuteChanged();
-        SnapCommand.NotifyCanExecuteChanged();
-        CloseCommand.NotifyCanExecuteChanged();
+        Dispatcher.UIThread.Post(() =>
+        {
+            CamState = "【 摄像头连接状态：✅ 】";
+            StatusText = string.Empty;
+            OpenCommand.NotifyCanExecuteChanged();
+            SnapCommand.NotifyCanExecuteChanged();
+            CloseCommand.NotifyCanExecuteChanged();
+        });
     }
     private void OnRealDataReceived(
+        int lRealHandle, uint dwDataType, nint pBuffer, uint dwBufSize, nint pUser)
+    {
+        _= OnRealData(lRealHandle, dwDataType, pBuffer, dwBufSize, pUser);
+    }
+    private async Task OnRealData(
         int lRealHandle, uint dwDataType, nint pBuffer, uint dwBufSize, nint pUser)
     {
         if (dwBufSize == 0) return;
         if(dwDataType != 1 && dwDataType != 2)
             return;
-        var loadCamResult = _camRemoteLinkImpl.PreviewInputData(pBuffer, dwBufSize);
+        var loadCamResult = await _camRemoteLinkImpl.PreviewInputData(pBuffer, dwBufSize);
         if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
         {
             Dispatcher.UIThread.Post(() => { MessageText = loadCamResult.Message; });
@@ -305,25 +313,31 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
         }
     }
     [RelayCommand(CanExecute = nameof(CanSnap))]
-    private void Snap()
+    private async Task Snap()
     {
-        var loadCamResult = _camRemoteLinkImpl.DebugCaptureJpegPicture(); 
-        (SnapshotSource as Bitmap)?.Dispose();
+        var loadCamResult = await _camRemoteLinkImpl.DebugCaptureJpegPicture();
+        await Dispatcher.UIThread.InvokeAsync(() => { (SnapshotSource as Bitmap)?.Dispose(); });
         if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
         {
-            SnapshotSource = null;
-            IsNoSnapshot = true;
-            SnapshotTip = $"拍照失败！{loadCamResult.Message}";
+            Dispatcher.UIThread.Post(() =>
+            {
+                SnapshotSource = null;
+                IsNoSnapshot = true;
+                SnapshotTip = $"拍照失败！{loadCamResult.Message}";
+            });
             return;
         }    
         using var ms = new MemoryStream(loadCamResult.ImageData);
-        SnapshotSource = new Bitmap(ms);
-        IsNoSnapshot = false;
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            SnapshotSource = new Bitmap(ms);
+            IsNoSnapshot = false;
+        });
     }
     [RelayCommand(CanExecute= nameof(CanClose))]
     private void Close()
     {
-        var loadCamResult = _camRemoteLinkImpl.Close();
+        var loadCamResult = _camRemoteLinkImpl.Logout();
         if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
         {
             MessageText = "退出登录失败！";
@@ -341,7 +355,7 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
     {
         if (_start)
         {
-            var loadCamResult = _camRemoteLinkImpl.Close();
+            var loadCamResult = _camRemoteLinkImpl.Logout();
             if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
             {
                 MessageText = "退出登录失败！";
@@ -387,7 +401,7 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
         Console.WriteLine("释放---摄像头调试----CameraPreviewViewModel！");
         if (_start)
         {
-            _camRemoteLinkImpl.Close();
+            _camRemoteLinkImpl.Logout();
         }
         if (_isClosed) 
             return;

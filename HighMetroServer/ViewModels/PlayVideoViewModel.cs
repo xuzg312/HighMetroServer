@@ -50,22 +50,22 @@ public partial class PlayVideoViewModel : ObservableObject
         _cts = new CancellationTokenSource();
         _showUiTask = Task.Run(() => SafeHandleLoop(_cts.Token), _cts.Token);
     }
-    public void LoadVideo(string filePath)
+    public async Task LoadVideo(string filePath)
     {
         if (!File.Exists(filePath))
         {
-            MessageText = "视频文件不存在！";
+            Dispatcher.UIThread.Post(() => { MessageText = "视频文件不存在！"; });
             return;
         }
         _filePath = filePath;
-        var loadCamResult = _camRemoteLinkImpl.PlayOpenMp4(_filePath,_decodeCallBack!,_fileEndCallBack!);
+        var loadCamResult = await _camRemoteLinkImpl.PlayOpenMp4(_filePath,_decodeCallBack!,_fileEndCallBack!);
         if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
         {
-            MessageText = loadCamResult.Message;
+            Dispatcher.UIThread.Post(() => { MessageText = loadCamResult.Message; });
             return;
         }
         _isValid = true;
-        MessageText = string.Empty;
+        Dispatcher.UIThread.Post(() => { MessageText = string.Empty; });
         NotifyCanExecuteChanged();
     }
     private async Task SafeHandleLoop(CancellationToken token)
@@ -149,11 +149,8 @@ public partial class PlayVideoViewModel : ObservableObject
                 }
                 catch (Exception ex)
                 {
-                    Dispatcher.UIThread.Post(() =>
-                    {
-                        if (!_isClosed)
-                            MessageText = $"渲染异常: {ex.Message}";
-                    });
+                    if (!_isClosed)
+                        Dispatcher.UIThread.Post(() => { MessageText = $"渲染异常: {ex.Message}"; });
                 }
                 finally
                 {
@@ -166,11 +163,8 @@ public partial class PlayVideoViewModel : ObservableObject
             }
             catch (Exception ex)
             {
-                Dispatcher.UIThread.Post(() =>
-                {
-                    if (!_isClosed)
-                        MessageText = $"循环任务异常: {ex.Message}";
-                });
+                if (!_isClosed)
+                    Dispatcher.UIThread.Post(() => { MessageText = $"循环任务异常: {ex.Message}"; });
             }
         }
     }
@@ -234,46 +228,48 @@ public partial class PlayVideoViewModel : ObservableObject
         });
     }
     [RelayCommand(CanExecute= nameof(CanPlay))]
-    private void Play()
+    private async Task Play()
     {
         if (_playState==PlayBackState.Ended)
         {
-            var loadCamResult00 = _camRemoteLinkImpl.StopPlayMp4();
+            var loadCamResult00 = await _camRemoteLinkImpl.StopPlayMp4();
             if (!loadCamResult00.Code.Equals(PublicConst.FlagYes))
             {
-                MessageText = loadCamResult00.Message;
+                Dispatcher.UIThread.Post(() => { MessageText = loadCamResult00.Message; });
                 return;
             }
             _playState = PlayBackState.Idle;
         }
-        var loadCamResult = _playState == PlayBackState.Paused? _camRemoteLinkImpl.PlayPauseMp4(0) : _camRemoteLinkImpl.PlayPlayMp4();
+        var loadCamResult = _playState == PlayBackState.Paused? 
+            await _camRemoteLinkImpl.PlayPauseMp4(0) : 
+            await _camRemoteLinkImpl.PlayPlayMp4();
         if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
         {
-            MessageText = loadCamResult.Message;
+            Dispatcher.UIThread.Post(() => { MessageText = loadCamResult.Message; });
             return;
         }
         _playState = PlayBackState.Playing;
         NotifyCanExecuteChanged();
     }
     [RelayCommand(CanExecute = nameof(CanStop))]
-    private void Pause()
+    private async Task Pause()
     {
-        var loadCamResult = _camRemoteLinkImpl.PlayPauseMp4(1);
+        var loadCamResult = await _camRemoteLinkImpl.PlayPauseMp4(1);
         if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
         {
-            MessageText = loadCamResult.Message;
+            Dispatcher.UIThread.Post(() => { MessageText = loadCamResult.Message; });
             return;
         }
         _playState=PlayBackState.Paused;
         NotifyCanExecuteChanged();
     }
     [RelayCommand(CanExecute = nameof(CanStop))]
-    private void Stop()
+    private async Task Stop()
     {
-        var loadCamResult = _camRemoteLinkImpl.StopPlayMp4();
+        var loadCamResult = await _camRemoteLinkImpl.StopPlayMp4();
         if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
         {
-            MessageText = loadCamResult.Message;
+            Dispatcher.UIThread.Post(() => { MessageText = loadCamResult.Message; });
             return;
         }
         _playState=PlayBackState.Idle;
@@ -315,7 +311,7 @@ public partial class PlayVideoViewModel : ObservableObject
         {
             //忽略；
         }
-        _camRemoteLinkImpl.Close();
+        _camRemoteLinkImpl.Logout();
         while (_frameQueue.TryDequeue(out var frame))
         {
             try

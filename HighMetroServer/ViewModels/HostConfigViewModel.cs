@@ -167,7 +167,7 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
                     var camRemoteLinkImpl = camInfo.CamRemoteLinkImpl;
                     if (camRemoteLinkImpl != null && camRemoteLinkImpl.GetUserId()>=0)
                     {
-                        onLine = camRemoteLinkImpl.CheckOnLine();
+                        onLine = await camRemoteLinkImpl.CheckOnLine();
                     }
                     //转发到TcpClient;
                     var iPosition = 7;
