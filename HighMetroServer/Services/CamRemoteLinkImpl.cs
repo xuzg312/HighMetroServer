@@ -459,7 +459,9 @@ public class CamRemoteLinkImpl
             {
                 Code = PublicConst.FlagYes
             };
-        }finally{
+        }
+        finally
+        {
             _asyncLock.Release();
         }
     }
@@ -528,7 +530,9 @@ public class CamRemoteLinkImpl
             {
                 Code = PublicConst.FlagYes,
             };
-        }finally{
+        }
+        finally
+        {
             _asyncLock.Release();
         }
     }
@@ -553,8 +557,11 @@ public class CamRemoteLinkImpl
             {
                 Code = PublicConst.FlagYes,
             };
-        }finally{
-            _asyncLock.Release();}
+        }
+        finally
+        {
+            _asyncLock.Release();
+        }
     }
     public async Task<LoadCamResult> StopPlayMp4()
     {
@@ -577,8 +584,11 @@ public class CamRemoteLinkImpl
             {
                 Code = PublicConst.FlagYes,
             };
-        }finally{
-            _asyncLock.Release();}
+        }
+        finally
+        {
+            _asyncLock.Release();
+        }
     }
     private void SafeWriteFile(string filePath, byte[] data)
     {
@@ -627,8 +637,11 @@ public class CamRemoteLinkImpl
             {
                 Code = PublicConst.FlagYes,
             };
-        }finally{
-            _asyncLock.Release();}
+        }
+        finally
+        {
+            _asyncLock.Release();
+        }
     }
     public async Task<bool> CheckOnLine()
     {
@@ -646,8 +659,11 @@ public class CamRemoteLinkImpl
             // 检测在线
             var value = HikSdk.NET_DVR_RemoteControl(_userId, 20005, IntPtr.Zero, 0);
             return value >= 0;
-        }finally{
-            _asyncLock.Release();}
+        }
+        finally
+        {
+            _asyncLock.Release();
+        }
     }
     private LoadCamResult HikSdkGetLastError()
     {
