@@ -28,7 +28,7 @@ public class CamRemoteLinkImpl
             return new LoadCamResult
             {
                 Code = PublicConst.FlagNo,
-                Message = "摄像头初始化失败！",
+                Message = "Login:摄像头初始化失败！",
             };
         }
         if (_userId>=0 || _playHandle>=0)
@@ -36,20 +36,21 @@ public class CamRemoteLinkImpl
             return new LoadCamResult
             {
                 Code = PublicConst.FlagNo,
-                Message = "已处于登录状态，拒绝重复登录！",
+                Message = "Login:已处于登录状态，拒绝重复登录！",
             };
         }
         await _asyncLock.WaitAsync();
         try
         {
-            if (_userId>=0 || _playHandle>=0)
+            if (_userId >= 0 || _playHandle >= 0)
             {
                 return new LoadCamResult
                 {
                     Code = PublicConst.FlagNo,
-                    Message = "已处于登录状态，拒绝重复登录！",
+                    Message = "Login:已处于登录状态，拒绝重复登录！",
                 };
             }
+
             //登录设备；
             var loginInfo = new ChcNetSdk.NetDvrUserLoginInfo();
 
@@ -82,7 +83,15 @@ public class CamRemoteLinkImpl
                 Code = PublicConst.FlagYes,
             };
             return loadCamResult;
-        }        
+        }
+        catch (Exception ex)
+        {
+            return new LoadCamResult
+            {
+                Code = PublicConst.FlagNo,
+                Message = $"Login:{ex.Message}",
+            };
+        }
         finally
         {
             _asyncLock.Release();
@@ -95,7 +104,7 @@ public class CamRemoteLinkImpl
             return new LoadCamResult()
             {
                 Code = PublicConst.FlagNo,
-                Message = "UserId无效！"
+                Message = "CaptureJpegPicture:UserId无效！"
             };
         }
         var bufferPtr = IntPtr.Zero;
@@ -108,7 +117,7 @@ public class CamRemoteLinkImpl
                 return new LoadCamResult()
                 {
                     Code = PublicConst.FlagNo,
-                    Message = "UserId无效！"
+                    Message = "CaptureJpegPicture:UserId无效！"
                 };
             }
             var dateFolder = DateTime.Now.ToString("yyyy-MM-dd");
@@ -159,7 +168,7 @@ public class CamRemoteLinkImpl
             return new LoadCamResult
             {
                 Code = PublicConst.FlagNo,
-                Message = $"抓拍未知异常：{ex.Message}【{dateTime}】"
+                Message = $"CaptureJpegPicture:抓拍未知异常：{ex.Message}【{dateTime}】"
             };
         }
         finally
@@ -178,7 +187,7 @@ public class CamRemoteLinkImpl
             return new LoadCamResult()
             {
                 Code = PublicConst.FlagNo,
-                Message = "UserId无效！"
+                Message = "PlayCam:UserId无效！"
             };
         }
         var dateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
@@ -190,7 +199,7 @@ public class CamRemoteLinkImpl
                 return new LoadCamResult()
                 {
                     Code = PublicConst.FlagNo,
-                    Message = "UserId无效！"
+                    Message = "PlayCam:UserId无效！"
                 };
             }
             if (_playHandle >= 0)
@@ -198,7 +207,7 @@ public class CamRemoteLinkImpl
                 return new LoadCamResult()
                 {
                     Code = PublicConst.FlagNo,
-                    Message = "PlayHandle>=0，此次操作被拒绝！"
+                    Message = "PlayCam:PlayHandle>=0，此次操作被拒绝！"
                 };
             }
             var dateFolder = DateTime.Now.ToString("yyyy-MM-dd");
@@ -262,7 +271,7 @@ public class CamRemoteLinkImpl
             return new LoadCamResult
             {
                 Code = PublicConst.FlagNo,
-                Message = $"抓拍未知异常：{ex.Message}【{dateTime}】"
+                Message = $"PlayCam:抓拍未知异常：{ex.Message}【{dateTime}】"
             };
         }
         finally
@@ -283,7 +292,7 @@ public class CamRemoteLinkImpl
             return new LoadCamResult()
             {
                 Code = PublicConst.FlagNo,
-                Message = "UserId无效！"
+                Message = "DebugCaptureJpegPicture:UserId无效！"
             };
         }
         await _asyncLock.WaitAsync();
@@ -294,7 +303,7 @@ public class CamRemoteLinkImpl
                 return new LoadCamResult()
                 {
                     Code = PublicConst.FlagNo,
-                    Message = "UserId无效！"
+                    Message = "DebugCaptureJpegPicture:UserId无效！"
                 };
             }
             var lChannel = 1;
@@ -332,7 +341,7 @@ public class CamRemoteLinkImpl
             return new LoadCamResult
             {
                 Code = PublicConst.FlagNo,
-                Message = $"抓拍未知异常：{ex.Message}"
+                Message = $"DebugCaptureJpegPicture:抓拍未知异常：{ex.Message}"
             };
         }
         finally
@@ -348,7 +357,7 @@ public class CamRemoteLinkImpl
             return new LoadCamResult()
             {
                 Code = PublicConst.FlagNo,
-                Message = "UserId无效！"
+                Message = "StartPreview:UserId无效！"
             };
         }
         await _asyncLock.WaitAsync();
@@ -359,25 +368,28 @@ public class CamRemoteLinkImpl
                 return new LoadCamResult()
                 {
                     Code = PublicConst.FlagNo,
-                    Message = "UserId无效！"
+                    Message = "StartPreview:UserId无效！"
                 };
             }
+
             if (_playHandle >= 0)
             {
                 return new LoadCamResult()
                 {
                     Code = PublicConst.FlagNo,
-                    Message = "PlayHandle>=0，此次操作被拒绝！"
+                    Message = "StartPreview:PlayHandle>=0，此次操作被拒绝！"
                 };
             }
+
             if (_iPort >= 0)
             {
                 return new LoadCamResult()
                 {
                     Code = PublicConst.FlagNo,
-                    Message = "IPort>=0，此次操作被拒绝！"
+                    Message = "StartPreview:IPort>=0，此次操作被拒绝！"
                 };
             }
+
             _realDataCallback = realDataCallBack;
             _decodeCallback = decodeCallback;
             //获取播放句柄 Get the port to play
@@ -426,6 +438,14 @@ public class CamRemoteLinkImpl
                 Code = PublicConst.FlagYes,
             };
         }
+        catch (Exception ex)
+        {
+            return new LoadCamResult
+            {
+                Code = PublicConst.FlagNo,
+                Message = $"StartPreview:{ex.Message}",
+            };
+        }
         finally
         {
             _asyncLock.Release();
@@ -438,7 +458,7 @@ public class CamRemoteLinkImpl
             return new LoadCamResult()
             {
                 Code = PublicConst.FlagNo,
-                Message = "IPort<0，状态无效！"
+                Message = "PreviewInputData:IPort<0，状态无效！"
             };
         }
         await _asyncLock.WaitAsync();
@@ -449,7 +469,7 @@ public class CamRemoteLinkImpl
                 return new LoadCamResult()
                 {
                     Code = PublicConst.FlagNo,
-                    Message = "IPort<0，状态无效！"
+                    Message = "PreviewInputData:IPort<0，状态无效！"
                 };
             }
             var value = PlayCtrl.PlayM4_InputData(_iPort, pBuffer, dwBufSize);
@@ -458,6 +478,14 @@ public class CamRemoteLinkImpl
             return new LoadCamResult
             {
                 Code = PublicConst.FlagYes
+            };
+        }
+        catch (Exception ex)
+        {
+            return new LoadCamResult
+            {
+                Code = PublicConst.FlagNo,
+                Message = $"PreviewInputData:{ex.Message}",
             };
         }
         finally
@@ -501,7 +529,7 @@ public class CamRemoteLinkImpl
             return new LoadCamResult
             {
                 Code = PublicConst.FlagNo,
-                Message = ex.Message,
+                Message = $"PlayOpenMp4:{ex.Message}",
             };
         }
         finally
@@ -519,7 +547,7 @@ public class CamRemoteLinkImpl
                 return new LoadCamResult
                 {
                     Code = PublicConst.FlagNo,
-                    Message = "PlayPort无效！",
+                    Message = "PlayPlayMp4:PlayPort无效！",
                 };
             }
 
@@ -529,6 +557,14 @@ public class CamRemoteLinkImpl
             return new LoadCamResult
             {
                 Code = PublicConst.FlagYes,
+            };
+        }
+        catch (Exception ex)
+        {
+            return new LoadCamResult
+            {
+                Code = PublicConst.FlagNo,
+                Message = $"PlayPlayMp4:{ex.Message}",
             };
         }
         finally
@@ -546,7 +582,7 @@ public class CamRemoteLinkImpl
                 return new LoadCamResult
                 {
                     Code = PublicConst.FlagNo,
-                    Message = "PlayPort无效！",
+                    Message = "PlayPauseMp4:PlayPort无效！",
                 };
             }
 
@@ -556,6 +592,14 @@ public class CamRemoteLinkImpl
             return new LoadCamResult
             {
                 Code = PublicConst.FlagYes,
+            };
+        }
+        catch (Exception ex)
+        {
+            return new LoadCamResult
+            {
+                Code = PublicConst.FlagNo,
+                Message = $"PlayPauseMp4:{ex.Message}",
             };
         }
         finally
@@ -573,7 +617,7 @@ public class CamRemoteLinkImpl
                 return new LoadCamResult
                 {
                     Code = PublicConst.FlagNo,
-                    Message = "PlayPort无效！",
+                    Message = "StopPlayMp4:PlayPort无效！",
                 };
             }
 
@@ -583,6 +627,14 @@ public class CamRemoteLinkImpl
             return new LoadCamResult
             {
                 Code = PublicConst.FlagYes,
+            };
+        }
+        catch (Exception ex)
+        {
+            return new LoadCamResult
+            {
+                Code = PublicConst.FlagNo,
+                Message = $"StopPlayMp4:{ex.Message}",
             };
         }
         finally
@@ -671,7 +723,7 @@ public class CamRemoteLinkImpl
         var loadCamResult = new LoadCamResult
         {
             Code = PublicConst.FlagNo,
-            Message = "登录失败，错误代码：" + iLastErr,
+            Message = $"登录失败，错误代码：HikSdk【iLastErr】",
         };
         return loadCamResult;
     }
@@ -681,7 +733,7 @@ public class CamRemoteLinkImpl
         var loadCamResult = new LoadCamResult
         {
             Code = PublicConst.FlagNo,
-            Message = "登录失败，错误代码：" + iLastErr,
+            Message = $"登录失败，错误代码：PlayCtrl【iLastErr】",
         };
         return loadCamResult;
     }
