@@ -77,7 +77,7 @@ public class CamRemoteLinkImpl
             //登录设备 Login the device
             _userId = HikSdk.NET_DVR_Login_V40(ref loginInfo, ref deviceInfo);
             if (_userId < 0)
-                return HikSdkGetLastError();
+                return HikSdkGetLastError("Login");
             var loadCamResult = new LoadCamResult
             {
                 Code = PublicConst.FlagYes,
@@ -152,7 +152,7 @@ public class CamRemoteLinkImpl
                 ref actualSize);
             if (nativeRet < 0 || actualSize <= 0)
             {
-                return HikSdkGetLastError();
+                return HikSdkGetLastError("CaptureJpegPicture");
             }
             var jpegBytes = new byte[actualSize];
             Marshal.Copy(bufferPtr, jpegBytes, 0, (int)actualSize);
@@ -243,10 +243,10 @@ public class CamRemoteLinkImpl
             {
                 _playHandle = HikSdk.NET_DVR_RealPlay_V40(_userId, ref playInfo, null!, nint.Zero);
                 if (_playHandle < 0)
-                    return HikSdkGetLastError();
+                    return HikSdkGetLastError("PlayCam");
                 var startRet = HikSdk.NET_DVR_SaveRealData(_playHandle, fullSavePath);
                 if (startRet < 0)
-                    return HikSdkGetLastError();
+                    return HikSdkGetLastError("PlayCam");
                 // 等待10秒
                 await Task.Delay(TimeSpan.FromSeconds(CamConst.PlayCamTime));
                 return new LoadCamResult
@@ -324,7 +324,7 @@ public class CamRemoteLinkImpl
             // SDK调用失败校验
             if (nativeRet < 0 || actualSize <= 0)
             {
-                return HikSdkGetLastError();
+                return HikSdkGetLastError("DebugCaptureJpegPicture");
             }
 
             // 拷贝非托管内存
@@ -395,26 +395,26 @@ public class CamRemoteLinkImpl
             //获取播放句柄 Get the port to play
             var value = PlayCtrl.PlayM4_GetPort(ref _iPort);
             if (value < 0)
-                return PlayM4GetLastError();
+                return PlayM4GetLastError("StartPreview");
             //设置流播放模式 Set the stream mode: real-time stream mode
             value = PlayCtrl.PlayM4_SetStreamOpenMode(_iPort, 0);
             if (value < 0)
-                return PlayM4GetLastError();
+                return PlayM4GetLastError("StartPreview");
             //打开码流，送入头数据 Open stream
             value = PlayCtrl.PlayM4_OpenStream(_iPort, IntPtr.Zero, 0, CamConst.BufPoolSize);
             if (value < 0)
-                return PlayM4GetLastError();
+                return PlayM4GetLastError("StartPreview");
             //设置显示缓冲区个数 Set the display buffer number
             value = PlayCtrl.PlayM4_SetDisplayBuf(_iPort, CamConst.DisplayBufNumber);
             if (value < 0)
-                return PlayM4GetLastError();
+                return PlayM4GetLastError("StartPreview");
             //设置解码回调函数，获取解码后音视频原始数据 Set callback function of decoded data
             value = PlayCtrl.PlayM4_SetDecCallBackExMend(_iPort, _decodeCallback, IntPtr.Zero, 0, IntPtr.Zero);
             if (value < 0)
-                return PlayM4GetLastError();
+                return PlayM4GetLastError("StartPreview");
             value = PlayCtrl.PlayM4_SetDecodeEngine(_iPort, 0);
             if (value < 0)
-                return PlayM4GetLastError();
+                return PlayM4GetLastError("StartPreview");
             var playInfo = new ChcNetSdk.NetDvrPreviewInfo
             {
                 hPlayWnd = IntPtr.Zero,
@@ -429,10 +429,10 @@ public class CamRemoteLinkImpl
             // 开启预览，传入码流回调
             _playHandle = HikSdk.NET_DVR_RealPlay_V40(_userId, ref playInfo, _realDataCallback, nint.Zero);
             if (_playHandle < 0)
-                return HikSdkGetLastError();
+                return HikSdkGetLastError("StartPreview");
             value = PlayCtrl.PlayM4_Play(_iPort, nint.Zero); //传 IntPtr.Zero 表示软解码，触发回调
             if (value < 0)
-                return PlayM4GetLastError();
+                return PlayM4GetLastError("StartPreview");
             return new LoadCamResult
             {
                 Code = PublicConst.FlagYes,
@@ -474,7 +474,7 @@ public class CamRemoteLinkImpl
             }
             var value = PlayCtrl.PlayM4_InputData(_iPort, pBuffer, dwBufSize);
             if (value < 0)
-                return PlayM4GetLastError();
+                return PlayM4GetLastError("PreviewInputData");
             return new LoadCamResult
             {
                 Code = PublicConst.FlagYes
@@ -505,20 +505,20 @@ public class CamRemoteLinkImpl
                 if (value00 < 0)
                 {
                     _playPort = -1;
-                    return PlayM4GetLastError();
+                    return PlayM4GetLastError("PlayOpenMp4");
                 }
             }
             _playDecodeCallBack = decodeCallback;
             var value = PlayCtrl.PlayM4_SetDecCallBackExMend(_playPort, _playDecodeCallBack, IntPtr.Zero, 0,
                 IntPtr.Zero);
             if (value < 0)
-                return PlayM4GetLastError();
+                return PlayM4GetLastError("PlayOpenMp4");
             value = PlayCtrl.PlayM4_SetFileEndCallback(_playPort, fileEndCallBack, IntPtr.Zero);
             if (value < 0)
-                return PlayM4GetLastError();
+                return PlayM4GetLastError("PlayOpenMp4");
             var ret = PlayCtrl.PlayM4_OpenFile(_playPort, fileName);
             if (!ret)
-                return PlayM4GetLastError();
+                return PlayM4GetLastError("PlayOpenMp4");
             return new LoadCamResult
             {
                 Code = PublicConst.FlagYes,
@@ -553,7 +553,7 @@ public class CamRemoteLinkImpl
 
             var value = PlayCtrl.PlayM4_Play(_playPort, nint.Zero); //传 IntPtr.Zero 表示软解码，触发回调
             if (value < 0)
-                return PlayM4GetLastError();
+                return PlayM4GetLastError("PlayPlayMp4");
             return new LoadCamResult
             {
                 Code = PublicConst.FlagYes,
@@ -588,7 +588,7 @@ public class CamRemoteLinkImpl
 
             var value = PlayCtrl.PlayM4_Pause(_playPort, nPause);
             if (value < 0)
-                return PlayM4GetLastError();
+                return PlayM4GetLastError("PlayPauseMp4");
             return new LoadCamResult
             {
                 Code = PublicConst.FlagYes,
@@ -623,7 +623,7 @@ public class CamRemoteLinkImpl
 
             var value = PlayCtrl.PlayM4_Stop(_playPort);
             if (value < 0)
-                return PlayM4GetLastError();
+                return PlayM4GetLastError("StopPlayMp4");
             return new LoadCamResult
             {
                 Code = PublicConst.FlagYes,
@@ -717,23 +717,23 @@ public class CamRemoteLinkImpl
             _asyncLock.Release();
         }
     }
-    private LoadCamResult HikSdkGetLastError()
+    private LoadCamResult HikSdkGetLastError(string callFunction)
     {
         var iLastErr = HikSdk.NET_DVR_GetLastError();
         var loadCamResult = new LoadCamResult
         {
             Code = PublicConst.FlagNo,
-            Message = $"登录失败，错误代码：HikSdk【iLastErr】",
+            Message = $"登录失败，错误代码：{callFunction}:HikSdk【{iLastErr}】",
         };
         return loadCamResult;
     }
-    private LoadCamResult PlayM4GetLastError()
+    private LoadCamResult PlayM4GetLastError(string callFunction)
     {
         var iLastErr = PlayCtrl.PlayM4_GetLastError(_iPort);
         var loadCamResult = new LoadCamResult
         {
             Code = PublicConst.FlagNo,
-            Message = $"登录失败，错误代码：PlayCtrl【iLastErr】",
+            Message = $"登录失败，错误代码：{callFunction}:PlayCtrl【{iLastErr}】",
         };
         return loadCamResult;
     }
