@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Concurrent;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -252,10 +251,10 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
     private void OnRealDataReceived(
         int lRealHandle, uint dwDataType, nint pBuffer, uint dwBufSize, nint pUser)
     {
-        _= OnRealData(lRealHandle, dwDataType, pBuffer, dwBufSize, pUser);
+        _= OnRealData(dwDataType, pBuffer, dwBufSize);
     }
     private async Task OnRealData(
-        int lRealHandle, uint dwDataType, nint pBuffer, uint dwBufSize, nint pUser)
+        uint dwDataType, nint pBuffer, uint dwBufSize)
     {
         if (dwBufSize == 0) return;
         if(dwDataType != 1 && dwDataType != 2)
