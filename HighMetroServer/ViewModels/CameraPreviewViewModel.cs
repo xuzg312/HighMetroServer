@@ -77,6 +77,7 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
     private readonly CancellationTokenSource _cts;
     private Task? _showUiTask;
     private volatile bool _isClosed;
+    private bool _isSyncImage;
 
     public CameraPreviewViewModel(HardInfo hardInfo,ResultInfo resultInfo)
     {
@@ -170,12 +171,10 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
             uPtr = (IntPtr)uPtrRaw;
             vPtr = (IntPtr)vPtrRaw;
         }
-        // 在UI线程上更新WriteableBitmap
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
             if (_isClosed)
                 return;
-            // 初始化或重建Bitmap
             var useA = ReferenceEquals(PreviewSource, _wbA);
             var useSource = useA ? _wbB : _wbA;
             if (useSource == null || useSource.PixelSize.Width != w || useSource.PixelSize.Height != h)
@@ -202,6 +201,10 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
                 }
             }
             PreviewSource = useSource;
+            if (!_isSyncImage)
+                return;
+            SnapshotSource = useSource;
+            _isSyncImage = false;
         }, DispatcherPriority.Background);
     }
     [RelayCommand(CanExecute = nameof(CanOpen))]
@@ -315,6 +318,12 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
     [RelayCommand(CanExecute = nameof(CanSnap))]
     private async Task Snap()
     {
+        _isSyncImage = true;
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            IsNoSnapshot = false;
+        });
+        /*
         var loadCamResult = await _camRemoteLinkImpl.DebugCaptureJpegPicture();
         await Dispatcher.UIThread.InvokeAsync(() => { (SnapshotSource as Bitmap)?.Dispose(); });
         if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
@@ -333,6 +342,7 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
             SnapshotSource = new Bitmap(ms);
             IsNoSnapshot = false;
         });
+        */
     }
     [RelayCommand(CanExecute= nameof(CanClose))]
     private void Close()
