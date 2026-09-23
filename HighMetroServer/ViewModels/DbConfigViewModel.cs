@@ -67,7 +67,7 @@ public partial class DbConfigViewModel : ViewModelBase
         }
         var setting = BuildSetting();
         // 新增：测试数据库连接
-        ResultInfo resultInfo = _dbService.TestConnection(setting);
+        var resultInfo = _dbService.TestConnection(setting);
         if (!resultInfo.Code.Equals(PublicConst.FlagYes))
         {
             MessageText = "❌ 连接失败，请检查参数:"+resultInfo.Message;
@@ -77,7 +77,7 @@ public partial class DbConfigViewModel : ViewModelBase
         OnDbConfigSuccess?.Invoke(setting);
     }
     [RelayCommand]
-    private void Cancel(MainViewModel rootVm)
+    private void Cancel()
     {
         OnDbConfigCancel?.Invoke();
     }

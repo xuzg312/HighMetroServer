@@ -330,6 +330,46 @@ public partial class MainViewModel : ViewModelBase
         });
     }
     [RelayCommand]
+    private void DataBase()
+    {
+        // 读取本地数据库配置
+        var resultInfo = new ResultInfo
+        {
+            Code = PublicConst.FlagYes,
+        };
+        var dbSetting = _configService.LoadDbConfig();
+        var vm = new DbConfigViewModel(_configService, _dbService,dbSetting,resultInfo);
+        // 注册回调：数据库配置确认成功后打开登录窗口
+        vm.OnDbConfigSuccess += OnDataBaseSuccess;
+        vm.OnDbConfigCancel += OnDataBaseCancel;
+        IsMenuEnabled = false;
+        ActivePopupVm = vm;
+        ShowOverlay = true;
+    }
+    private void OnDataBaseSuccess(DbSetting dbSetting)
+    {
+        OnDataBaseClose();
+    }
+    private void OnDataBaseCancel()
+    {
+        OnDataBaseClose();
+    }
+
+    private void OnDataBaseClose()
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (ActivePopupVm is DbConfigViewModel oldDataBaseVm)
+            {
+                oldDataBaseVm.OnDbConfigSuccess -= OnDataBaseSuccess;
+                oldDataBaseVm.OnDbConfigCancel -= OnDataBaseCancel;
+            }
+            ActivePopupVm = null;
+            ShowOverlay = false;
+            IsMenuEnabled = true;
+        });
+    }
+    [RelayCommand]
     private void CameraDebug()
     {
         var hardInfo = new HardInfo

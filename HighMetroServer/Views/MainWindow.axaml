@@ -24,6 +24,9 @@
                 <MenuItem Header="摄像头维护" Command="{Binding CameraMaintainCommand}" IsEnabled="{Binding IsMenuEnabled}" />
                 <MenuItem Header="主板维护" Command="{Binding BoardMaintainCommand}" IsEnabled="{Binding IsMenuEnabled}" />
             </MenuItem>
+            <MenuItem Header="数据库管理">
+                <MenuItem Header="数据库维护" Command="{Binding DataBaseCommand}" IsEnabled="{Binding IsMenuEnabled}" />
+            </MenuItem>
             <MenuItem Header="设备调试">
                 <MenuItem Header="摄像头调试" Command="{Binding CameraDebugCommand}" IsEnabled="{Binding IsMenuEnabled}" />
             </MenuItem>
