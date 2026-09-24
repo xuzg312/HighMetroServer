@@ -1,4 +1,6 @@
 using System;
+using System.Diagnostics;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -488,6 +490,41 @@ public partial class MainViewModel : ViewModelBase
             ShowOverlay = false;
             IsMenuEnabled = true;
         });
+    }
+    [RelayCommand]
+    private void Exit()
+    {
+        var vm = new ExitConfirmViewModel();
+        vm.OnConfirm += OnConfirmExit;
+        vm.OnCancel += OnCancelExit;
+        IsMenuEnabled = false;
+        ActivePopupVm = vm;
+        ShowOverlay = true;
+    }
+    private void OnConfirmExit()
+    {
+        _= OnExit(true);
+    }
+    private void OnCancelExit()
+    {
+        _= OnExit(false);
+    }
+    private async Task OnExit(bool exit)
+    {
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            if (ActivePopupVm is EditHostViewModel vm)
+            {
+                vm.OnSuccess -= OnHostEditSuccess;
+                vm.OnCancel -= OnHostEditSuccess;
+            }
+            ActivePopupVm = null;
+            ShowOverlay = false;
+            IsMenuEnabled = true;
+        });
+        if(!exit)
+            return;
+        ExitApplication();
     }
     private void ExitApplication()
     {

@@ -34,6 +34,7 @@
             <MenuItem Header="日志管理">
                 <MenuItem Header="报警查询" Command="{Binding OpenPhotoQueryCommand}" IsEnabled="{Binding IsMenuEnabled}" />
             </MenuItem>
+            <MenuItem Header="退出系统" Command="{Binding ExitCommand}" IsEnabled="{Binding IsMenuEnabled}" />
         </Menu>
         <Grid Grid.Row="1">
             <!-- 底层主页面 -->
