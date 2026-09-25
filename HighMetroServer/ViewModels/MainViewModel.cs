@@ -513,10 +513,10 @@ public partial class MainViewModel : ViewModelBase
     {
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
-            if (ActivePopupVm is EditHostViewModel vm)
+            if (ActivePopupVm is ExitConfirmViewModel vm)
             {
-                vm.OnSuccess -= OnHostEditSuccess;
-                vm.OnCancel -= OnHostEditSuccess;
+                vm.OnConfirm -= OnConfirmExit;
+                vm.OnCancel -= OnCancelExit;
             }
             ActivePopupVm = null;
             ShowOverlay = false;
