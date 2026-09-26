@@ -44,7 +44,7 @@ public partial class CamAlarmRecordViewModel(IDbService dbService) : ObservableO
     private void Query()
     {
         CurrentPage = 1;
-        BeginQuery();
+        _= BeginQuery();
     }
     [RelayCommand]
     private void OpenCalendar()
@@ -96,14 +96,14 @@ public partial class CamAlarmRecordViewModel(IDbService dbService) : ObservableO
     {
         if (CurrentPage <=1) return;
         CurrentPage--;
-        BeginQuery();
+        _= BeginQuery();
     }
     [RelayCommand]
     private void NextPage()
     {
         if (CurrentPage >= TotalPage) return;
         CurrentPage++;
-        BeginQuery();
+        _= BeginQuery();
     }
     private async Task BeginQuery()
     {

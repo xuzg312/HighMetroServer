@@ -64,7 +64,7 @@ public partial class MainPageViewModel : ViewModelBase
             serialCommInfo.Parity,
             serialCommInfo.StopBits
         );
-        if (ParaSetupModules.SerialCommList!.Count == 1)
+        if (ParaSetupModules.SerialCommList.Count == 1)
         {
             return;
         }

@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Threading;
@@ -226,64 +225,83 @@ public partial class MainViewModel : ViewModelBase
     }
     private async void OnHostSuccess()
     {
-        //保存数据库连接；
-        var dataBaseConnect = DataBaseConnect.Instance;
-        dataBaseConnect.SetDataBaseConn(_dbSetting!.GetConnectionString());
-        //获取工控机；、主板1、主板2、硬盘摄像机；
-        var hostInfo = new HostInfo
+        try
         {
-            Bh = _hostInfo.Bh
-        };
-        var resultInfo = await _dbService.GetHostInfo(hostInfo);
-        if (resultInfo.Code.Equals(PublicConst.FlagYes))
-        {
-            //获取摄像机；
-            var hardInfo = new HardInfo
+            //保存数据库连接；
+            var dataBaseConnect = DataBaseConnect.Instance;
+            dataBaseConnect.SetDataBaseConn(_dbSetting!.GetConnectionString());
+            //获取工控机；、主板1、主板2、硬盘摄像机；
+            var hostInfo = new HostInfo
             {
-                HostBh = hostInfo.Bh,
-                Type = PublicConst.PhotoCamera
+                Bh = _hostInfo.Bh
             };
-            resultInfo = await _dbService.GetHardCamera(hardInfo);
+            var resultInfo = await _dbService.GetHostInfo(hostInfo);
             if (resultInfo.Code.Equals(PublicConst.FlagYes))
             {
-                //获取主板，最多2个主板；
-                var resultSerialCommInfo = await _dbService.GetCommInfoList(hostInfo,PublicConst.Mainboard);
-                resultInfo = resultSerialCommInfo.ReturnInfo;
+                //获取摄像机；
+                var hardInfo = new HardInfo
+                {
+                    HostBh = hostInfo.Bh,
+                    Type = PublicConst.PhotoCamera
+                };
+                resultInfo = await _dbService.GetHardCamera(hardInfo);
                 if (resultInfo.Code.Equals(PublicConst.FlagYes))
                 {
-                    Dispatcher.UIThread.Post(() => 
+                    //获取主板，最多2个主板；
+                    var resultSerialCommInfo = await _dbService.GetCommInfoList(hostInfo, PublicConst.Mainboard);
+                    resultInfo = resultSerialCommInfo.ReturnInfo;
+                    if (resultInfo.Code.Equals(PublicConst.FlagYes))
                     {
-                        if (ActivePopupVm is EditHostViewModel oldEditHostVm)
+                        Dispatcher.UIThread.Post(() =>
                         {
-                            oldEditHostVm.OnSuccess -= OnHostSuccess;
-                            oldEditHostVm.OnCancel -= ExitApplication;
-                        }
-                        //所有参数都正常，打开主页面；
-                        ParaSetupModules.HostInfo = hostInfo;
-                        ParaSetupModules.CamInfo = hardInfo;
-                        ParaSetupModules.SerialCommList = resultSerialCommInfo.SerialCommList;
-                        ParaSetupModules.DbService = _dbService;
-                        MainPageVm = new MainPageViewModel();
-                        ActivePopupVm = null;
-                        ShowOverlay = false;
-                        IsMenuEnabled = true;
-                    });
-                    return;
+                            if (ActivePopupVm is EditHostViewModel oldEditHostVm)
+                            {
+                                oldEditHostVm.OnSuccess -= OnHostSuccess;
+                                oldEditHostVm.OnCancel -= ExitApplication;
+                            }
+
+                            //所有参数都正常，打开主页面；
+                            ParaSetupModules.HostInfo = hostInfo;
+                            ParaSetupModules.CamInfo = hardInfo;
+                            ParaSetupModules.SerialCommList = resultSerialCommInfo.SerialCommList;
+                            ParaSetupModules.DbService = _dbService;
+                            MainPageVm = new MainPageViewModel();
+                            ActivePopupVm = null;
+                            ShowOverlay = false;
+                            IsMenuEnabled = true;
+                        });
+                        return;
+                    }
                 }
             }
-        }
-        //展示错误信息；
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (ActivePopupVm is EditHostViewModel oldEditHostVm)
+            //展示错误信息；
+            Dispatcher.UIThread.Post(() =>
             {
-                oldEditHostVm.OnSuccess -= OnHostSuccess;
-                oldEditHostVm.OnCancel -= ExitApplication;
-            }
-            var vm = new LoadParaViewModel(resultInfo);
-            vm.OnCancel += ExitApplication;
-            ActivePopupVm = vm;
-        });
+                if (ActivePopupVm is EditHostViewModel oldEditHostVm)
+                {
+                    oldEditHostVm.OnSuccess -= OnHostSuccess;
+                    oldEditHostVm.OnCancel -= ExitApplication;
+                }
+
+                var vm = new LoadParaViewModel(resultInfo);
+                vm.OnCancel += ExitApplication;
+                ActivePopupVm = vm;
+            });
+        }
+        catch (Exception ex)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                var resultInfo = new ResultInfo
+                {
+                    Code = PublicConst.FlagNo,
+                    Message = ex.Message,
+                };
+                var vm = new LoadParaViewModel(resultInfo);
+                vm.OnCancel += ExitApplication;
+                ActivePopupVm = vm;
+            });
+        }
     }
     private bool _isMenuEnabled;
     public bool IsMenuEnabled
