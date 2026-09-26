@@ -252,13 +252,13 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
                 mainInfoBean.B2gzm > 0)
             {
                 //异常的心跳，保存到数据库;
-                resultInfo = ParaSetupModules.DbService!.AddHeart(mainInfoBean);
+                resultInfo = await ParaSetupModules.DbService!.AddHeart(mainInfoBean);
             }
             else
             {
                 //正常心跳，数据库更新次数，每天一条记录；
                 mainInfoBean.Datetime = DateTime.Now.Date.ToString("yyyy-MM-dd HH:mm:ss");
-                resultInfo = ParaSetupModules.DbService!.SavePersonDay(mainInfoBean);
+                resultInfo = await ParaSetupModules.DbService!.SavePersonDay(mainInfoBean);
             }
             if (!resultInfo.Code.Equals(PublicConst.FlagYes))
             {
@@ -318,7 +318,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
             {
                 cameraBean.Message = "拍照执行成功！";
                 Dispatcher.UIThread.Post(() => { MessageText = $"{cameraBean.Message}【{cameraBean.DateTime}】";});
-                var resultInfo = ParaSetupModules.DbService!.AddAlarm(cameraBean);
+                var resultInfo = await ParaSetupModules.DbService!.AddAlarm(cameraBean);
                 if (!resultInfo.Code.Equals(PublicConst.FlagYes))
                 {
                     ParaSetupModules.RaiseAscDataProdEvent($"{resultInfo.Message}【{cameraBean.DateTime}】");
@@ -328,7 +328,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
             {
                 cameraBean.Message = value.Message;
                 ParaSetupModules.RaiseAscDataProdEvent($"{value.Message}【{cameraBean.DateTime}】");
-                var resultInfo = ParaSetupModules.DbService!.AddError(cameraBean);
+                var resultInfo = await ParaSetupModules.DbService!.AddError(cameraBean);
                 if (!resultInfo.Code.Equals(PublicConst.FlagYes))
                 {
                     ParaSetupModules.RaiseAscDataProdEvent($"{resultInfo.Message}【{cameraBean.DateTime}】");
@@ -339,7 +339,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         {
             cameraBean.Message = "触发拍照，但未连接摄像头！";
             Dispatcher.UIThread.Post(() => { MessageText = $"{cameraBean.Message}【{cameraBean.DateTime}】";});
-            var resultInfo = ParaSetupModules.DbService!.AddError(cameraBean);
+            var resultInfo = await ParaSetupModules.DbService!.AddError(cameraBean);
             if (!resultInfo.Code.Equals(PublicConst.FlagYes))
             {
                 ParaSetupModules.RaiseAscDataProdEvent(resultInfo.Message);
@@ -384,7 +384,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
             {
                 cameraBean.Message = "录像执行成功！";
                 Dispatcher.UIThread.Post(() => { MessageText = $"{cameraBean.Message}【{cameraBean.DateTime}】";});
-                var resultInfo = ParaSetupModules.DbService!.AddAlarm(cameraBean);
+                var resultInfo = await ParaSetupModules.DbService!.AddAlarm(cameraBean);
                 if (!resultInfo.Code.Equals(PublicConst.FlagYes))
                 {
                     ParaSetupModules.RaiseAscDataProdEvent($"{resultInfo.Message}【{cameraBean.DateTime}】");
@@ -394,7 +394,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
             {
                 cameraBean.Message = value.Message;
                 ParaSetupModules.RaiseAscDataProdEvent($"{value.Message}【{cameraBean.DateTime}】");
-                var resultInfo = ParaSetupModules.DbService!.AddError(cameraBean);
+                var resultInfo = await ParaSetupModules.DbService!.AddError(cameraBean);
                 if (!resultInfo.Code.Equals(PublicConst.FlagYes))
                 {
                     ParaSetupModules.RaiseAscDataProdEvent($"{resultInfo.Message}【{cameraBean.DateTime}】");
@@ -405,7 +405,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         {
             cameraBean.Message = "触发录像，但未连接摄像头！";
             Dispatcher.UIThread.Post(() => { MessageText = $"{cameraBean.Message}【{cameraBean.DateTime}】";});
-            var resultInfo = ParaSetupModules.DbService!.AddError(cameraBean);
+            var resultInfo = await ParaSetupModules.DbService!.AddError(cameraBean);
             if (!resultInfo.Code.Equals(PublicConst.FlagYes))
             {
                 ParaSetupModules.RaiseAscDataProdEvent(resultInfo.Message);

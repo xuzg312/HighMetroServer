@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HighMetroServer.BaseModel;
@@ -58,7 +59,7 @@ public partial class EditHostViewModel : ViewModelBase
         Name = hostInfo.Name;
     }
     [RelayCommand]
-    private void Confirm()
+    private async Task Confirm()
     {
         MessageText = "";
         if (!ValidateProperty())
@@ -71,8 +72,8 @@ public partial class EditHostViewModel : ViewModelBase
         _hostInfo.Code = Code;
         _hostInfo.Name = Name;
         var resultInfo = _hostInfo.Bh == -1 
-            ? _dbService.AddHost(_hostInfo,_dbSetting) 
-            : _dbService.EditHost(_hostInfo,_dbSetting);
+            ? await _dbService.AddHost(_hostInfo,_dbSetting) 
+            : await _dbService.EditHost(_hostInfo,_dbSetting);
         if (!resultInfo.Code.Equals(PublicConst.FlagYes))
         {
             MessageText = resultInfo.Message;

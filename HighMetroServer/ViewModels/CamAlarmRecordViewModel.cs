@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -104,7 +105,7 @@ public partial class CamAlarmRecordViewModel(IDbService dbService) : ObservableO
         CurrentPage++;
         BeginQuery();
     }
-    private void BeginQuery()
+    private async Task BeginQuery()
     {
         RecordList.Clear();
         MessageText = string.Empty;
@@ -113,7 +114,7 @@ public partial class CamAlarmRecordViewModel(IDbService dbService) : ObservableO
             DateTime=QueryDate,
             HostBh = ParaSetupModules.HostInfo!.Bh,
         };
-        var resultInfo=dbService.QueryCamAlarmCount(cameraBean);
+        var resultInfo= await dbService.QueryCamAlarmCount(cameraBean);
         if (!resultInfo.Code.Equals(PublicConst.FlagYes))
         {
             MessageText=resultInfo.Message;
@@ -123,7 +124,7 @@ public partial class CamAlarmRecordViewModel(IDbService dbService) : ObservableO
         {
             TotalPage = (int)Math.Ceiling(resultInfo.Tag * 1.0 / PublicConst.PageSize);
             var page = new DataBaseQueryPage(PublicConst.PageSize, CurrentPage);
-            var resultCamAlarmInfo = dbService.QueryCamAlarm(cameraBean,page);
+            var resultCamAlarmInfo = await dbService.QueryCamAlarm(cameraBean,page);
             if (!resultCamAlarmInfo.ReturnInfo.Code.Equals(PublicConst.FlagYes))
             {
                 MessageText = resultCamAlarmInfo.ReturnInfo.Message;

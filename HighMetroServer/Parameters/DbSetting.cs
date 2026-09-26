@@ -1,3 +1,5 @@
+using MySqlConnector;
+
 namespace HighMetroServer.Parameters;
 
 public class DbSetting
@@ -10,17 +12,21 @@ public class DbSetting
     public string DbPassword { get; set; } = "";
     public string GetConnectionString()
     {
-        return "server=" + DbHost + 
-               ";port=" + DbPort+ 
-               ";user=" + DbUser + 
-               ";password=" + DbPassword + ";"+
-               "database="+DbDatabase+";"+
-               "charset=utf8mb4;" +
-               //"Pooling=true;"+         // 启用连接池（默认true）
-               //"MinimumPoolSize=5;"+    // 最小连接数（预热连接）
-               //"MaximumPoolSize=100;"+  // 最大连接数
-               "ConnectionTimeout=10;"+ // 连接超时（秒）
-               "ConnectionLifeTime=300;"; // 连接生命周期（秒）
+        var builder = new MySqlConnectionStringBuilder
+        {
+            Server = DbHost,
+            Port = (uint)DbPort,
+            UserID = DbUser,
+            Password = DbPassword,
+            Database = DbDatabase,
+            CharacterSet = "utf8mb4",
+            Pooling = true,
+            MinimumPoolSize = 2,
+            MaximumPoolSize = 20,
+            ConnectionTimeout = 10,
+            ConnectionIdleTimeout = 300
+        };
+        return builder.ConnectionString;
     }
     public bool IsValid()
     {

@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HighMetroServer.BaseModel;
@@ -48,18 +49,18 @@ public partial class DbConfigViewModel : ViewModelBase
         }
     }
     [RelayCommand]
-    private void TestConnection()
+    private async Task TestConnection()
     {
         if (!ValidateProperty())
         {
             return; 
         }
         var setting = BuildSetting();
-        var resultInfo = _dbService.TestConnection(setting);
+        var resultInfo = await _dbService.TestConnection(setting);
         MessageText = resultInfo.Code.Equals(PublicConst.FlagYes) ? "✅ 数据库连接成功！" : "❌ 连接失败，请检查参数:"+resultInfo.Message;
     }
     [RelayCommand]
-    private void Confirm()
+    private async Task Confirm()
     {
         if (!ValidateProperty())
         {
@@ -67,7 +68,7 @@ public partial class DbConfigViewModel : ViewModelBase
         }
         var setting = BuildSetting();
         // 新增：测试数据库连接
-        var resultInfo = _dbService.TestConnection(setting);
+        var resultInfo = await _dbService.TestConnection(setting);
         if (!resultInfo.Code.Equals(PublicConst.FlagYes))
         {
             MessageText = "❌ 连接失败，请检查参数:"+resultInfo.Message;

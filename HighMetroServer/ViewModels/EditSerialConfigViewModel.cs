@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HighMetroServer.BaseModel;
@@ -153,7 +154,7 @@ public partial class EditSerialConfigViewModel : ViewModelBase
         MessageText1 = $"串口打开失败：{resultInfo.Message}";
     }
     [RelayCommand]
-    private void Save1()
+    private async Task Save1()
     {
         if(!CheckComm1())
             return;
@@ -162,12 +163,12 @@ public partial class EditSerialConfigViewModel : ViewModelBase
         var serialComm = GetValue1();
         if (_serialCommList.Count == 0)
         {
-            resultInfo = _dbService.AddCommInfo(serialComm);
+            resultInfo = await _dbService.AddCommInfo(serialComm);
         }
         else
         {
             serialComm.Bh = _serialCommList[0].Bh;
-            resultInfo = _dbService.EditCommInfo(serialComm);
+            resultInfo = await _dbService.EditCommInfo(serialComm);
         }
         if (resultInfo.Code.Equals(PublicConst.FlagYes))
         {
@@ -201,7 +202,7 @@ public partial class EditSerialConfigViewModel : ViewModelBase
         MessageText2 = $"串口打开失败：{resultInfo.Message}";
     }
     [RelayCommand]
-    private void Save2()
+    private async Task Save2()
     {
         if(!CheckComm2())
             return;
@@ -209,12 +210,12 @@ public partial class EditSerialConfigViewModel : ViewModelBase
         ResultInfo resultInfo;
         if (_serialCommList.Count <= 1)
         {
-            resultInfo = _dbService.AddCommInfo(serialComm);
+            resultInfo = await _dbService.AddCommInfo(serialComm);
         }
         else
         {
             serialComm.Bh = _serialCommList[1].Bh;
-            resultInfo = _dbService.EditCommInfo(serialComm);
+            resultInfo = await _dbService.EditCommInfo(serialComm);
         }
         if (resultInfo.Code.Equals(PublicConst.FlagYes))
         {

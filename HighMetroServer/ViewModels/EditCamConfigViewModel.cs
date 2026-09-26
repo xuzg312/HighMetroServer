@@ -93,7 +93,7 @@ public partial class EditCamConfigViewModel : ViewModelBase,IRecipient<AppCleanu
         Dispatcher.UIThread.Post(() => { MessageText = "连接摄像头正常 ✅ ！"; });
     }
     [RelayCommand]
-    private void Confirm()
+    private async Task Confirm()
     {
         MessageText = "";
         if (!ValidateProperty())
@@ -106,8 +106,8 @@ public partial class EditCamConfigViewModel : ViewModelBase,IRecipient<AppCleanu
         _hardInfo.UserName = UserName;
         _hardInfo.PassWord = Password;
         var resultInfo = _hardInfo.Bh == 0 
-            ? _dbService.AddHardCamera(_hardInfo) 
-            : _dbService.EditHardCamera(_hardInfo);
+            ? await _dbService.AddHardCamera(_hardInfo) 
+            : await _dbService.EditHardCamera(_hardInfo);
         if (!resultInfo.Code.Equals(PublicConst.FlagYes))
         {
             MessageText = resultInfo.Message;

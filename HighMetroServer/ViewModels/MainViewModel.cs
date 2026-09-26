@@ -43,9 +43,9 @@ public partial class MainViewModel : ViewModelBase
         {
             Bh = -1,
         };
-        InitializeStartup();
+        _= InitializeStartup();
     }
-    private void InitializeStartup()
+    private async Task InitializeStartup()
     {
         // 读取本地数据库配置
         _dbSetting = _configService.LoadDbConfig();
@@ -53,7 +53,7 @@ public partial class MainViewModel : ViewModelBase
         if (_dbSetting.IsValid())
         {
             //数据库参数已配置，校验是否正确？
-            resultInfo = _dbService.TestConnection(_dbSetting);
+            resultInfo = await _dbService.TestConnection(_dbSetting);
         }
         else
         {
@@ -70,14 +70,14 @@ public partial class MainViewModel : ViewModelBase
             if (PublicConst.SelfStart == 1 && loginSetting.IsValid())
             {
                 //开机自启动；确认用户名、密码是否正确？
-                resultInfo = _dbService.VerifyUser(loginSetting,_dbSetting!);
+                resultInfo = await _dbService.VerifyUser(loginSetting,_dbSetting!);
                 if (resultInfo.Code.Equals(PublicConst.FlagYes))
                 {
                     var hostSetting = _configService.LoadHostConfig();
                     if (hostSetting.IsValid())
                     {
                         //确认工控机是否正确？
-                        resultInfo = _dbService.VerifyHost(hostSetting,_dbSetting!);
+                        resultInfo = await _dbService.VerifyHost(hostSetting,_dbSetting!);
                         if (resultInfo.Code.Equals(PublicConst.FlagYes))
                         {
                             //一路正确，直接启动；
@@ -122,50 +122,69 @@ public partial class MainViewModel : ViewModelBase
             ActivePopupVm = vm;
         });
     }
-    private void OnLoginSuccess(LoginSetting setting)
+    private async void OnLoginSuccess(LoginSetting setting)
     {
-        var userInfo = new UserInfo
+        try
         {
-            Username = setting.LoginUser,
-            Password = setting.LoginPassword
-        };
-        ParaSetupModules.UserInfo = userInfo;
-        var hostSetting = _configService.LoadHostConfig();
-        ResultInfo resultInfo;
-        if (hostSetting.IsValid())
-        {
-            //选择了工控机，确认是否正确？
-            resultInfo = _dbService.VerifyHost(hostSetting,_dbSetting!);
-        }
-        else
-        {
-            //工控机参数未配置，或者配置无效；
-            resultInfo = new ResultInfo
+            var userInfo = new UserInfo
             {
-                Code = PublicConst.FlagNo,
-                Message = ""
+                Username = setting.LoginUser,
+                Password = setting.LoginPassword
             };
+            ParaSetupModules.UserInfo = userInfo;
+            var hostSetting = _configService.LoadHostConfig();
+            ResultInfo resultInfo;
+            if (hostSetting.IsValid())
+            {
+                //选择了工控机，确认是否正确？
+                resultInfo = await _dbService.VerifyHost(hostSetting, _dbSetting!);
+            }
+            else
+            {
+                //工控机参数未配置，或者配置无效；
+                resultInfo = new ResultInfo
+                {
+                    Code = PublicConst.FlagNo,
+                    Message = ""
+                };
+            }
+
+            if (resultInfo.Code.Equals(PublicConst.FlagYes))
+            {
+                _hostInfo.Bh = hostSetting.Bh;
+                OnHostSuccess();
+            }
+            else
+            {
+                //未设置，或者异常，需要重新选择工控机；
+                var resultHostInfo = await _dbService.GetHostList(_dbSetting!);
+                Dispatcher.UIThread.Post(() =>
+                {
+                    var vm = new HostSelectViewModel(_configService, resultHostInfo, true);
+                    vm.OnConfirm += OnHostSelectSuccess;
+                    vm.OnCancel += ExitApplication;
+                    vm.OnAdd += OnHostAdd;
+                    if (ActivePopupVm is LoginViewModel oldLoginVm)
+                    {
+                        oldLoginVm.OnLoginSuccess -= OnLoginSuccess;
+                        oldLoginVm.OnLoginCancel -= ExitApplication;
+                    }
+                    ActivePopupVm = vm;
+                });
+            }
         }
-        if (resultInfo.Code.Equals(PublicConst.FlagYes))
+        catch (Exception ex)
         {
-            _hostInfo.Bh = hostSetting.Bh;
-            OnHostSuccess();
-        }
-        else
-        {
-            //未设置，或者异常，需要重新选择工控机；
-            var resultHostInfo = _dbService.GetHostList(_dbSetting!);
+            //展示错误信息；
             Dispatcher.UIThread.Post(() =>
             {
-                var vm = new HostSelectViewModel(_configService, resultHostInfo,true);
-                vm.OnConfirm += OnHostSelectSuccess;
-                vm.OnCancel += ExitApplication;
-                vm.OnAdd += OnHostAdd;
-                if (ActivePopupVm is LoginViewModel oldLoginVm)
+                var resultInfo = new ResultInfo
                 {
-                    oldLoginVm.OnLoginSuccess -= OnLoginSuccess;
-                    oldLoginVm.OnLoginCancel -= ExitApplication;
-                }
+                    Code = PublicConst.FlagNo,
+                    Message = ex.Message,
+                };
+                var vm = new LoadParaViewModel(resultInfo);
+                vm.OnCancel += ExitApplication;
                 ActivePopupVm = vm;
             });
         }
@@ -205,7 +224,7 @@ public partial class MainViewModel : ViewModelBase
             ActivePopupVm = vm;
         }); 
     }
-    private void OnHostSuccess()
+    private async void OnHostSuccess()
     {
         //保存数据库连接；
         var dataBaseConnect = DataBaseConnect.Instance;
@@ -215,7 +234,7 @@ public partial class MainViewModel : ViewModelBase
         {
             Bh = _hostInfo.Bh
         };
-        var resultInfo = _dbService.GetHostInfo(hostInfo);
+        var resultInfo = await _dbService.GetHostInfo(hostInfo);
         if (resultInfo.Code.Equals(PublicConst.FlagYes))
         {
             //获取摄像机；
@@ -224,11 +243,11 @@ public partial class MainViewModel : ViewModelBase
                 HostBh = hostInfo.Bh,
                 Type = PublicConst.PhotoCamera
             };
-            resultInfo = _dbService.GetHardCamera(hardInfo);
+            resultInfo = await _dbService.GetHardCamera(hardInfo);
             if (resultInfo.Code.Equals(PublicConst.FlagYes))
             {
                 //获取主板，最多2个主板；
-                var resultSerialCommInfo = _dbService.GetCommInfoList(hostInfo,PublicConst.Mainboard);
+                var resultSerialCommInfo = await _dbService.GetCommInfoList(hostInfo,PublicConst.Mainboard);
                 resultInfo = resultSerialCommInfo.ReturnInfo;
                 if (resultInfo.Code.Equals(PublicConst.FlagYes))
                 {
@@ -273,7 +292,7 @@ public partial class MainViewModel : ViewModelBase
         set => SetProperty(ref _isMenuEnabled, value);
     }
     [RelayCommand]
-    private void CameraMaintain()
+    private async Task CameraMaintain()
     {
         //获取摄像机；
         var hardInfo = new HardInfo
@@ -281,7 +300,7 @@ public partial class MainViewModel : ViewModelBase
             HostBh = ParaSetupModules.HostInfo!.Bh,
             Type = PublicConst.PhotoCamera
         };
-        var resultInfo = _dbService.GetHardCamera(hardInfo);
+        var resultInfo = await _dbService.GetHardCamera(hardInfo);
         var vm = new EditCamConfigViewModel(_dbService, hardInfo,resultInfo);
         vm.OnHardConfigSuccess += OnHardEnd;
         vm.OnHardConfigCancel += OnHardEnd;
@@ -304,14 +323,14 @@ public partial class MainViewModel : ViewModelBase
         });
     }
     [RelayCommand]
-    private void BoardMaintain()
+    private async Task BoardMaintain()
     {
         //主板维护;
         var hostInfo = new HostInfo
         {
             Bh = ParaSetupModules.HostInfo!.Bh
         };
-        var resultSerialCommInfo = _dbService.GetCommInfoList(hostInfo,PublicConst.Mainboard);
+        var resultSerialCommInfo = await _dbService.GetCommInfoList(hostInfo,PublicConst.Mainboard);
         var vm = new EditSerialConfigViewModel(_dbService, resultSerialCommInfo);
         vm.OnExit += OnBoardCancel;
         IsMenuEnabled = false;
@@ -372,14 +391,14 @@ public partial class MainViewModel : ViewModelBase
         });
     }
     [RelayCommand]
-    private void CameraDebug()
+    private async Task CameraDebug()
     {
         var hardInfo = new HardInfo
         {
             HostBh = ParaSetupModules.HostInfo!.Bh,
             Type = PublicConst.PhotoCamera
         };
-        var resultInfo = _dbService.GetHardCamera(hardInfo);
+        var resultInfo = await _dbService.GetHardCamera(hardInfo);
         var vm = new CameraPreviewViewModel(hardInfo,resultInfo);
         vm.OnClose += OnCamDebugClose;
         IsMenuEnabled = false;
@@ -422,10 +441,10 @@ public partial class MainViewModel : ViewModelBase
         });
     }
     [RelayCommand]
-    private void HostChange()
+    private async Task HostChange()
     {
         //切换工控机；
-        var resultHostInfo = _dbService.GetHostList(_dbSetting!);
+        var resultHostInfo = await _dbService.GetHostList(_dbSetting!);
         var vm = new HostSelectViewModel(_configService, resultHostInfo,false);
         vm.OnConfirm += OnHostChangeSuccess;
         vm.OnCancel += OnHostChangeCancel;
@@ -462,14 +481,14 @@ public partial class MainViewModel : ViewModelBase
         });
     }
     [RelayCommand]
-    private void HostEdit()
+    private async Task HostEdit()
     {
         //切换工控机；
         var hostInfo = new HostInfo
         {
             Bh = ParaSetupModules.HostInfo!.Bh,
         };
-        var resultInfo = _dbService.GetHostInfo(hostInfo);
+        var resultInfo = await _dbService.GetHostInfo(hostInfo);
         var vm = new EditHostViewModel(_configService,_dbService,_dbSetting!,hostInfo, resultInfo);
         vm.OnSuccess += OnHostEditSuccess;
         vm.OnCancel += OnHostEditSuccess;

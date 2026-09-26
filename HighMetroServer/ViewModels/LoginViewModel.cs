@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HighMetroServer.BaseModel;
@@ -34,7 +35,7 @@ public partial class LoginViewModel : ViewModelBase
         _dbSetting = dbSetting;
     }
     [RelayCommand]
-    private void Login()
+    private async Task Login()
     {
         // 清除旧的错误并验证所有属性
         if (!ValidateProperty())
@@ -42,7 +43,7 @@ public partial class LoginViewModel : ViewModelBase
             return; 
         }
         var setting = BuildSetting();
-        ResultInfo resultInfo = _dbService.VerifyUser(setting,_dbSetting);
+        var resultInfo = await _dbService.VerifyUser(setting,_dbSetting);
         if (resultInfo.Code.Equals(PublicConst.FlagYes))
         {
             _configService.SaveLoginConfig(setting);
