@@ -181,7 +181,8 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
             {
                 if (!child.IsStart())
                     continue;
-                if (child.GetClientType() == PublicConst.IdentifyAll)
+                if (child.GetClientType() == PublicConst.IdentifyAll ||
+                    child.GetClientType() == PublicConst.IdentifySelfCheck)
                 {
                     child.SendMessage(socketDataBlock.Content!, socketDataBlock.Length);
                 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -40,6 +41,9 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
 
     private bool _start;
     private readonly CamRemoteLinkImpl _camRemoteLinkImpl;
+    private Task? _heartTask;
+    private CancellationTokenSource? _ctsHeart;
+    private readonly SemaphoreSlim _sem = new SemaphoreSlim(1,1);
     public CamConfigViewModel()
     {
         _start = false;
@@ -47,6 +51,62 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
         _camRemoteLinkImpl = new CamRemoteLinkImpl();
         ParaSetupModules.CamInfo!.CamRemoteLinkImpl = _camRemoteLinkImpl;
         WeakReferenceMessenger.Default.Register(this);
+        _ctsHeart = new CancellationTokenSource();
+        _heartTask = Task.Run(() => HeartLoop(_ctsHeart.Token), _ctsHeart.Token);
+    }
+    private async Task HeartLoop(CancellationToken token)
+    {
+        try
+        {
+            await HeartLoopAsync(token);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            ParaSetupModules.RaiseAscDataProdEvent($"摄像头在线监听顶层异常：{ex.Message}【{currDateTime}】");
+        }
+    }
+    private async Task HeartLoopAsync(CancellationToken token)
+    {
+        while (!token.IsCancellationRequested)
+        {
+            await Task.Delay(30000, token);
+            await _sem.WaitAsync(token);
+            try
+            {
+                if (_start)
+                {
+                    //已经远程登录，校验是否在线？
+                    var onLine = await _camRemoteLinkImpl.CheckOnLine();
+                    if (!onLine)
+                    {
+                        //不在线，尝试重连；
+                        _camRemoteLinkImpl.Logout();
+                        await Open();
+                    }
+                }
+                else
+                {
+                    await Open();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                ParaSetupModules.RaiseAscDataProdEvent($"摄像头在线监听异常：{ex.Message}【{currDateTime}】");
+            }
+            finally
+            {
+                _sem.Release(); // 释放信号量锁
+            }
+        }
     }
     partial void OnConfigChanged(CamOptions? value)
     {
@@ -107,7 +167,6 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
             });
             return;
         }
-
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
             _start = true;
@@ -117,15 +176,23 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
         });
     }
     [RelayCommand(CanExecute= nameof(CanClose))]
-    private void Close()
+    private async Task Close()
     {
         //退出登录；
-        var loadCamResult = _camRemoteLinkImpl.Logout();
-        if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
+        await _sem.WaitAsync(_ctsHeart!.Token);
+        try
         {
-            MessageText = "退出登录失败！";
+            var loadCamResult = _camRemoteLinkImpl.Logout();
+            if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
+            {
+                MessageText = "退出登录失败！";
+            }
+            _start = false;
         }
-        _start = false;
+        finally
+        {
+            _sem.Release();
+        }
         CamState = "【 摄像头连接状态：❌ 】";
         OpenCommand.NotifyCanExecuteChanged();
         CloseCommand.NotifyCanExecuteChanged();
@@ -139,19 +206,46 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
     {
         return _start; 
     }
-    private void ClearResource()
+    private async Task ClearResource()
     {
-        if (_start)
+        await _sem.WaitAsync(_ctsHeart!.Token);
+        try
         {
-            _camRemoteLinkImpl.Logout();
+            if (_start)
+            {
+                _camRemoteLinkImpl.Logout();
+            }
+            try
+            {
+                await _ctsHeart!.CancelAsync();
+            }
+            catch
+            {
+                //忽略；
+            }
+
+            try
+            {
+                _ctsHeart?.Dispose();
+            }
+            catch
+            {
+                //忽略；
+            }
+            _ctsHeart = null;
+            _heartTask = null;
+            CamRemoteManager.SdkCleanUp();
+            _start = false;
         }
-        CamRemoteManager.SdkCleanUp();
-        _start = false;
+        finally
+        {
+            _sem.Release();
+        }
     }
     public void Receive(AppCleanupMessage message)
     {
         WeakReferenceMessenger.Default.UnregisterAll(this);
-        ClearResource();
         Console.WriteLine("释放摄像头资源(CamConfigViewModel)----Receive！");
+        _= ClearResource();
     }
 }

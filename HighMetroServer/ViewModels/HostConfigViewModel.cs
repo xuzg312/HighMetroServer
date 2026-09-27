@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -40,7 +42,11 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
     private readonly HostInfo _hostInfo;
     private TcpServerListenerImpl? _tcpServer;
     private bool _buildServer;
-    
+
+    private Task? _heartTask;
+    private CancellationTokenSource? _ctsHeart;
+    private readonly SemaphoreSlim _sem = new SemaphoreSlim(1,1);
+
     public HostConfigViewModel()
     {
         _start = false;
@@ -48,6 +54,116 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
         _hostInfo = ParaSetupModules.HostInfo!;
         HostState = "【 TCP端口监听状态：❌ 】";
         WeakReferenceMessenger.Default.Register(this);
+        _ctsHeart = new CancellationTokenSource();
+        _heartTask = Task.Run(() => HeartLoop(_ctsHeart.Token), _ctsHeart.Token);
+    }
+    private async Task HeartLoop(CancellationToken token)
+    {
+        try
+        {
+            await HeartLoopAsync(token);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            ParaSetupModules.RaiseAscDataProdEvent($"摄像头在线监听顶层异常：{ex.Message}【{currDateTime}】");
+        }
+    }
+    private async Task HeartLoopAsync(CancellationToken token)
+    {
+        while (!token.IsCancellationRequested)
+        {
+            await Task.Delay(5000, token);
+            await _sem.WaitAsync(token);
+            var isOnLine = false;
+            try
+            {
+                if (_start)
+                {
+                    isOnLine = await CheckIsLine(token);
+                }
+            }
+            finally
+            {
+                _sem.Release(); // 释放信号量锁
+            }
+            try
+            {
+                if (!_start)
+                {
+                    await Open();
+                }
+                else if (!isOnLine)
+                {
+                    await Close();
+                    await Open();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                ParaSetupModules.RaiseAscDataProdEvent($"摄像头在线监听异常：{ex.Message}【{currDateTime}】");
+            }
+        }
+    }
+    private async Task<bool> CheckIsLine(CancellationToken token)
+    {
+        using var client = new TcpClient();
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+        //cts.CancelAfter(20000);
+        try
+        {
+            await client.ConnectAsync(_hostInfo.Ip, _hostInfo.Port, cts.Token);
+            await using var ns = client.GetStream();
+            var publicUntil = new PublicUntil();
+            var iPosition = 0;
+            var data = new byte[11];
+            //帧头，2字节；
+            data[iPosition++] = 0XEB;
+            data[iPosition++] = 0XAA;
+            //长度，1字节；
+            data[iPosition++] = 0X07;
+            //工控机编号，2字节；
+            var id = (ushort)_hostInfo.Bh;
+            publicUntil.GetShort(id, data, iPosition);
+            iPosition += 2;
+            //主板ID，2字节；
+            data[iPosition++] = 0X00;
+            data[iPosition++] = 0X00;
+            //功能码，1字节；
+            data[iPosition++] = 0X55;
+            //备用；
+            data[iPosition++] = 0X99;
+            data[iPosition++] = 0X99;
+            //帧尾，1字节；
+            data[iPosition] = 0XED;
+            await ns.WriteAsync(data, cts.Token);
+            await ns.FlushAsync(cts.Token);
+            var resp = new byte[64];
+            var read = await ns.ReadAsync(resp, cts.Token);
+            await cts.CancelAsync();
+            client.Close();
+            if(read ==11 && resp[0]==0XEB && resp[1]==0XAA && resp[7]==0X55)
+            {
+                return true;
+            }
+            return false;
+        }
+        catch(Exception ex)
+        {
+            await cts.CancelAsync();
+            client.Close();
+            var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            ParaSetupModules.RaiseAscDataProdEvent($"检测TCPServer服务异常：{ex.Message}【{currDateTime}】");
+            return false;
+        }
     }
     partial void OnConfigChanged(HostOptions? value)
     {
@@ -102,11 +218,19 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
         }
     }
     [RelayCommand(CanExecute= nameof(CanClose))]
-    private void Close()
+    private async Task Close()
     {
         //关闭监听端口
-        _tcpServer!.CloseServer();
-        _start = false;
+        await _sem.WaitAsync(_ctsHeart!.Token);
+        try
+        {
+            _tcpServer!.CloseServer();
+            _start = false;
+        }        
+        finally
+        {
+            _sem.Release();
+        }
         HostState = "【 TCP端口监听状态：❌ 】";
         OpenCommand.NotifyCanExecuteChanged();
         CloseCommand.NotifyCanExecuteChanged();
@@ -189,6 +313,9 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
                         ParaSetupModules.RaiseTcpClientConnEvent(value01);
                     }
                     break;
+                case PublicConst.IdentifySelfCheck:
+                    _tcpServer!.IdentifyInfo(socketDataBlock, tcpDataBean);
+                    break;
                 default:
                     var value00 = $"工控机HostBh【{tcpDataBean.HostBh}】,请求功能码无效！【{currentTime}】";
                     ParaSetupModules.RaiseTcpClientConnEvent(value00);
@@ -230,14 +357,44 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
         var message = stringEventArgs.Message;
         Dispatcher.UIThread.Post(() => { MessageText = message; });
     }
-    private void ClearResource()
+    private async Task ClearResource()
     {
-        _tcpServer?.CloseServer();
+        await _sem.WaitAsync(_ctsHeart!.Token);
+        try
+        {
+            if (_start)
+            {
+                _tcpServer?.CloseServer();
+            }
+            try
+            {
+                await _ctsHeart!.CancelAsync();
+            }
+            catch
+            {
+                //忽略；
+            }
+            try
+            {
+                _ctsHeart?.Dispose();
+            }
+            catch
+            {
+                //忽略；
+            }
+            _ctsHeart = null;
+            _heartTask = null;
+            _start = false;
+        }
+        finally
+        {
+            _sem.Release();
+        }
     }
     public void Receive(AppCleanupMessage message)
     {
         WeakReferenceMessenger.Default.UnregisterAll(this);
-        ClearResource();
         Console.WriteLine("释放TCP资源！");
+        _= ClearResource();
     }
 }

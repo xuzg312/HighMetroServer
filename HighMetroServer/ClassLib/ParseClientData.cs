@@ -11,7 +11,7 @@ public static class ParseClientData
     {
          if (socketDataBlock.Length < 10 ||
             socketDataBlock.Content![0] != 0XEB ||
-            socketDataBlock.Content[1] == 0XAA)
+            socketDataBlock.Content[1] != 0XAA)
         {
             return null;
         }
@@ -83,6 +83,17 @@ public static class ParseClientData
                 //长度，1字节；
                 var fileLength = socketDataBlock.Content[2] -5;
                 tcpDataBean.FileName = Encoding.UTF8.GetString(socketDataBlock.Content, 8, fileLength);
+                //hostBh；
+                iPosition = 3;
+                tcpDataBean.HostBh = publicUntil.GetUshort(socketDataBlock.Content, iPosition);
+                break;
+            case 0X55: //Server端自检测；
+                Console.WriteLine("---------0X55");
+                tcpDataBean = new TcpDataBean
+                {
+                    TurnComm = false,
+                    Type = PublicConst.IdentifySelfCheck
+                };
                 //hostBh；
                 iPosition = 3;
                 tcpDataBean.HostBh = publicUntil.GetUshort(socketDataBlock.Content, iPosition);

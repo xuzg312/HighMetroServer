@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -81,6 +82,10 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     private CommSerialImpl? _commSerialImpl;
     private bool _buildServer;
 
+    private Task? _heartTask;
+    private CancellationTokenSource? _ctsHeart;
+    private readonly SemaphoreSlim _sem = new SemaphoreSlim(1,1);
+
     public SerialConfigViewModel(int serial)
     {
         _serial = serial;
@@ -89,6 +94,56 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         ParaSetupModules.CommBufferDataProdEvent += OnBufferDataProdEvent;
         CommState = "【 串口连接状态：❌ 】";
         WeakReferenceMessenger.Default.Register(this);
+        _ctsHeart = new CancellationTokenSource();
+        _heartTask = Task.Run(() => HeartLoop(_ctsHeart.Token), _ctsHeart.Token);
+    }
+    private async Task HeartLoop(CancellationToken token)
+    {
+        try
+        {
+            await HeartLoopAsync(token);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            ParaSetupModules.RaiseAscDataProdEvent($"摄像头在线监听顶层异常：{ex.Message}【{currDateTime}】");
+        }
+    }
+    private async Task HeartLoopAsync(CancellationToken token)
+    {
+        while (!token.IsCancellationRequested)
+        {
+            await Task.Delay(30000, token);
+            await _sem.WaitAsync(token);
+            try
+            {
+                if (_start)
+                {
+                    //TCPServer已打开，校验是否在线？增加心跳协议
+                    await Close();
+                }
+                else
+                {
+                    await Open();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                ParaSetupModules.RaiseAscDataProdEvent($"摄像头在线监听异常：{ex.Message}【{currDateTime}】");
+            }
+            finally
+            {
+                _sem.Release(); // 释放信号量锁
+            }
+        }
     }
     public void UpdateParams(int serial, SerialPortOptions? options)
     {
@@ -489,10 +544,18 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         });
     }
     [RelayCommand(CanExecute = nameof(CanClose))]
-    private void Close()
+    private async Task Close()
     {
-        _commSerialImpl!.Close();
-        _start = false;
+        await _sem.WaitAsync(_ctsHeart!.Token);
+        try
+        {
+            _commSerialImpl!.Close();
+            _start = false;
+        }
+        finally
+        {
+            _sem.Release();
+        }
         CommState = "【 串口连接状态：❌ 】";
         OpenCommand.NotifyCanExecuteChanged();
         CloseCommand.NotifyCanExecuteChanged();    
@@ -505,17 +568,44 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     {
         return _start; 
     }
-    private void ClearResource()
+    private async Task ClearResource()
     {
-        if(!_start)
-            return;
-        _commSerialImpl!.Close();
-        _start = false;
+        await _sem.WaitAsync(_ctsHeart!.Token);
+        try
+        {
+            if (_start)
+            {
+                _commSerialImpl!.Close();
+            }
+            try
+            {
+                await _ctsHeart!.CancelAsync();
+            }
+            catch
+            {
+                //忽略；
+            }
+            try
+            {
+                _ctsHeart?.Dispose();
+            }
+            catch
+            {
+                //忽略；
+            }
+            _ctsHeart = null;
+            _heartTask = null;
+            _start = false;
+        }
+        finally
+        {
+            _sem.Release();
+        }
     }
     public void Receive(AppCleanupMessage message)
     {
         Console.WriteLine("释放串口资源-----Receive！");
         WeakReferenceMessenger.Default.UnregisterAll(this);
-        ClearResource();
+        _= ClearResource();
     }
 }

@@ -63,11 +63,13 @@ public class TcpServerChatImpl : IChildCommunication
         catch (OperationCanceledException)
         {
             //主动取消监听，正常优雅关闭，不打错误日志
+            CloseClient();
             var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             ParaSetupModules.RaiseTcpClientConnEvent($"{_key}：客户端下线！【{currDateTime}】");
         }
         catch (Exception ex)
         {
+            CloseClient();
             var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             ParaSetupModules.RaiseAscDataProdEvent($"{_key}：接收循环顶层异常：{ex.Message}【{currDateTime}】");
         }
@@ -87,6 +89,7 @@ public class TcpServerChatImpl : IChildCommunication
                 if (bytesRead == 0)
                 {
                     //client left;
+                    CloseClient();
                     ParaSetupModules.RaiseTcpClientConnEvent($"{_key}：主动下线！【{currDateTime}】");
                     break;
                 }
@@ -98,22 +101,12 @@ public class TcpServerChatImpl : IChildCommunication
             }
             catch (OperationCanceledException)
             {
-                break;
-            }
-            catch (IOException)
-            {
-                var currDateTime = DateTime.Now.ToString("yyyy‑MM‑dd HH:mm:ss");
-                ParaSetupModules.RaiseTcpClientConnEvent($"{_key}：IO异常，强制下线！【{currDateTime}】");
-                break;
-            }
-            catch (SocketException)
-            {
-                var currDateTime = DateTime.Now.ToString("yyyy‑MM‑dd HH:mm:ss");
-                ParaSetupModules.RaiseTcpClientConnEvent($"{_key}：Socket异常，强制下线！【{currDateTime}】");
+                CloseClient();
                 break;
             }
             catch (Exception ex)
             {
+                CloseClient();
                 var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                 ParaSetupModules.RaiseAscDataProdEvent($"{_key}：异步接收异常 {ex.Message}，强制下线！【{currDateTime}】");                
                 break;
@@ -303,7 +296,7 @@ public class TcpServerChatImpl : IChildCommunication
             //忽略；
         }
         _readTask = null;
-        _dictionary.TryRemove(_key, out var _);
+        _dictionary.TryRemove(_key, out _);
         try
         {
             _client.Dispose();
