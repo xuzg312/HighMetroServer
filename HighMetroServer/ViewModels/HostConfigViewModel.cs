@@ -45,12 +45,13 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
 
     private Task? _heartTask;
     private CancellationTokenSource? _ctsHeart;
-    private readonly SemaphoreSlim _sem = new SemaphoreSlim(1,1);
-
+    private readonly SemaphoreSlim _sem = new (1,1);
+    private bool _manClose;
     public HostConfigViewModel()
     {
         _start = false;
         _buildServer = false;
+        _manClose = false;
         _hostInfo = ParaSetupModules.HostInfo!;
         HostState = "【 TCP端口监听状态：❌ 】";
         WeakReferenceMessenger.Default.Register(this);
@@ -76,31 +77,23 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
     {
         while (!token.IsCancellationRequested)
         {
-            await Task.Delay(5000, token);
+            await Task.Delay(PublicConst.HeartTcp, token);
             await _sem.WaitAsync(token);
-            var isOnLine = false;
             try
             {
+                if (_manClose)
+                    continue;
                 if (_start)
                 {
-                    isOnLine = await CheckIsLine(token);
+                    var isOnLine = await CheckIsLine(token);
+                    if (!isOnLine)
+                    {
+                        await CloseAsync();
+                        await OpenAsync(); 
+                    }
+                    continue;
                 }
-            }
-            finally
-            {
-                _sem.Release(); // 释放信号量锁
-            }
-            try
-            {
-                if (!_start)
-                {
-                    await Open();
-                }
-                else if (!isOnLine)
-                {
-                    await Close();
-                    await Open();
-                }
+                await OpenAsync();
             }
             catch (OperationCanceledException)
             {
@@ -111,13 +104,17 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
                 var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                 ParaSetupModules.RaiseAscDataProdEvent($"摄像头在线监听异常：{ex.Message}【{currDateTime}】");
             }
+            finally
+            {
+                _sem.Release(); 
+            }
         }
     }
     private async Task<bool> CheckIsLine(CancellationToken token)
     {
         using var client = new TcpClient();
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
-        //cts.CancelAfter(20000);
+        cts.CancelAfter(20000);
         try
         {
             await client.ConnectAsync(_hostInfo.Ip, _hostInfo.Port, cts.Token);
@@ -148,22 +145,87 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
             await ns.FlushAsync(cts.Token);
             var resp = new byte[64];
             var read = await ns.ReadAsync(resp, cts.Token);
-            await cts.CancelAsync();
-            client.Close();
-            if(read ==11 && resp[0]==0XEB && resp[1]==0XAA && resp[7]==0X55)
+            if (read == 11 && resp[0] == 0XEB && resp[1] == 0XAA && resp[7] == 0X55)
             {
                 return true;
             }
             return false;
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
-            await cts.CancelAsync();
-            client.Close();
             var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             ParaSetupModules.RaiseAscDataProdEvent($"检测TCPServer服务异常：{ex.Message}【{currDateTime}】");
             return false;
         }
+        finally
+        {
+            try
+            {
+                await cts.CancelAsync();
+            }
+            catch (Exception)
+            {
+                //忽略
+            }
+            try
+            {
+                client.Close();
+            }
+            catch (Exception)
+            {
+                //忽略
+            }
+        }
+    }
+    private async Task OpenAsync()
+    {
+        await OnOpen();
+    }
+    private async Task OnOpen()
+    {
+        if (!_buildServer)
+        {
+            ParaSetupModules.TcpServerBufferDataProdEvent += OnShowTcpServerDataProdEvent;
+            ParaSetupModules.TcpClientConnEvent += OnClientConnEvent;
+            _tcpServer = new TcpServerListenerImpl(_hostInfo, PublicConst.TcpDataParseTask); //建立2个消费者线程；
+            _buildServer = true;
+            _hostInfo.TcpServer = _tcpServer;
+        }
+        if (_tcpServer!.Start())
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                _start = true;
+                HostState = "【 TCP端口监听状态：✅ 】";
+                OpenCommand.NotifyCanExecuteChanged();
+                CloseCommand.NotifyCanExecuteChanged();
+            });
+        }
+        else
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                _start = false;
+                OpenCommand.NotifyCanExecuteChanged();
+                CloseCommand.NotifyCanExecuteChanged();
+            });
+            ParaSetupModules.RaiseAscDataProdEvent("启动Tcp-Server失败！");
+        }
+    }
+    private async Task CloseAsync()
+    {
+        await OnClose();
+    }
+    private async Task OnClose()
+    {
+        _tcpServer!.CloseServer();
+        _start = false;
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            HostState = "【 TCP端口监听状态：❌ 】";
+            OpenCommand.NotifyCanExecuteChanged();
+            CloseCommand.NotifyCanExecuteChanged();
+        });
     }
     partial void OnConfigChanged(HostOptions? value)
     {
@@ -188,54 +250,31 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
     [RelayCommand(CanExecute = nameof(CanOpen))]
     private async Task Open()
     {
-        if (!_buildServer)
+        await _sem.WaitAsync(_ctsHeart!.Token);
+        try
         {
-            ParaSetupModules.TcpServerBufferDataProdEvent += OnShowTcpServerDataProdEvent;
-            ParaSetupModules.TcpClientConnEvent += OnClientConnEvent;
-            _tcpServer = new TcpServerListenerImpl(_hostInfo, PublicConst.TcpDataParseTask); //建立2个消费者线程；
-            _buildServer = true;
-            _hostInfo.TcpServer= _tcpServer;
+            _manClose = false;
+            await OnOpen();
         }
-        if (_tcpServer!.Start())
+        finally
         {
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                _start = true;
-                HostState = "【 TCP端口监听状态：✅ 】";
-                OpenCommand.NotifyCanExecuteChanged();
-                CloseCommand.NotifyCanExecuteChanged();
-            });
-        }
-        else
-        {
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                _start = false;
-                OpenCommand.NotifyCanExecuteChanged();
-                CloseCommand.NotifyCanExecuteChanged();
-            });
-            ParaSetupModules.RaiseAscDataProdEvent("启动Tcp-Server失败！");
+            _sem.Release();
         }
     }
     [RelayCommand(CanExecute= nameof(CanClose))]
     private async Task Close()
     {
-        //关闭监听端口
         await _sem.WaitAsync(_ctsHeart!.Token);
         try
         {
-            _tcpServer!.CloseServer();
-            _start = false;
+            _manClose = true;
+            await OnClose();
         }        
         finally
         {
             _sem.Release();
         }
-        HostState = "【 TCP端口监听状态：❌ 】";
-        OpenCommand.NotifyCanExecuteChanged();
-        CloseCommand.NotifyCanExecuteChanged();
     }
-    // 执行条件：!_start （_start为false时按钮可用）
     private bool CanOpen()
     {
         return !_start; 
@@ -368,7 +407,7 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
             }
             try
             {
-                await _ctsHeart!.CancelAsync();
+                await _ctsHeart.CancelAsync();
             }
             catch
             {
@@ -376,7 +415,15 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
             }
             try
             {
-                _ctsHeart?.Dispose();
+                _ctsHeart.Dispose();
+            }
+            catch
+            {
+                //忽略；
+            }
+            try
+            {
+                await _heartTask!;
             }
             catch
             {

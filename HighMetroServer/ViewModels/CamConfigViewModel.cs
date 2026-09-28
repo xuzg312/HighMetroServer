@@ -43,10 +43,16 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
     private readonly CamRemoteLinkImpl _camRemoteLinkImpl;
     private Task? _heartTask;
     private CancellationTokenSource? _ctsHeart;
-    private readonly SemaphoreSlim _sem = new SemaphoreSlim(1,1);
+    private readonly SemaphoreSlim _sem = new (1,1);
+    private bool _manClose;
+    private bool _check;
+    private bool _isValid;
     public CamConfigViewModel()
     {
         _start = false;
+        _manClose = false;
+        _check = false;
+        _isValid = false;
         CamState = "【 摄像头连接状态：❌ 】";
         _camRemoteLinkImpl = new CamRemoteLinkImpl();
         ParaSetupModules.CamInfo!.CamRemoteLinkImpl = _camRemoteLinkImpl;
@@ -73,24 +79,27 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
     {
         while (!token.IsCancellationRequested)
         {
-            await Task.Delay(30000, token);
+            await Task.Delay(PublicConst.HeartCame, token);
             await _sem.WaitAsync(token);
             try
             {
+                if (_manClose)
+                    continue;
                 if (_start)
                 {
                     //已经远程登录，校验是否在线？
-                    var onLine = await _camRemoteLinkImpl.CheckOnLine();
+                    var onLine = await CheckIsLine();
                     if (!onLine)
                     {
                         //不在线，尝试重连；
-                        _camRemoteLinkImpl.Logout();
-                        await Open();
+                        await CloseAsync();
+                        await OpenAsync();
                     }
+                    continue;
                 }
-                else
+                if (CheckIsValid())
                 {
-                    await Open();
+                    await OpenAsync();
                 }
             }
             catch (OperationCanceledException)
@@ -108,27 +117,24 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
             }
         }
     }
-    partial void OnConfigChanged(CamOptions? value)
+    private async Task<bool> CheckIsLine()
     {
-        if (value is null)
-            return;
-        Ip = value.Ip;
-        Port = value.Port;
-        UserName = value.UserName;
+        return await _camRemoteLinkImpl.CheckOnLine();
     }
-    public void Start()
+    private bool CheckIsValid()
     {
-        if (PublicConst.SelfStart != 1 || _start)
-            return;
-        _= StartOpen();
+        if (_check)
+            return _isValid;
+        _check = true;
+        var camInfo = ParaSetupModules.CamInfo!;
+        _isValid = camInfo.IsValid() && !HikPlatform.IsMac;
+        return _isValid;
     }
-    private async Task StartOpen()
+    private async Task OpenAsync()
     {
-        await Task.Delay(1000).ConfigureAwait(false); 
-        await Open();
+        await OnOpen();
     }
-    [RelayCommand(CanExecute = nameof(CanOpen))]
-    private async Task Open()
+    private async Task OnOpen()
     {
         var camInfo = ParaSetupModules.CamInfo!;
         if (!camInfo.IsValid())
@@ -175,29 +181,72 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
             CloseCommand.NotifyCanExecuteChanged();
         });
     }
-    [RelayCommand(CanExecute= nameof(CanClose))]
-    private async Task Close()
+    private async Task CloseAsync()
     {
-        //退出登录；
-        await _sem.WaitAsync(_ctsHeart!.Token);
-        try
+        await OnClose();
+    }
+    private async Task OnClose()
+    {
+        var loadCamResult = _camRemoteLinkImpl.Logout();
+        await Dispatcher.UIThread.InvokeAsync(() =>
         {
-            var loadCamResult = _camRemoteLinkImpl.Logout();
             if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
             {
                 MessageText = "退出登录失败！";
             }
-            _start = false;
+            CamState = "【 摄像头连接状态：❌ 】";
+            OpenCommand.NotifyCanExecuteChanged();
+            CloseCommand.NotifyCanExecuteChanged();
+        });
+        _start = false;
+    }
+    partial void OnConfigChanged(CamOptions? value)
+    {
+        if (value is null)
+            return;
+        Ip = value.Ip;
+        Port = value.Port;
+        UserName = value.UserName;
+    }
+    public void Start()
+    {
+        if (PublicConst.SelfStart != 1 || _start)
+            return;
+        _= StartOpen();
+    }
+    private async Task StartOpen()
+    {
+        await Task.Delay(1000).ConfigureAwait(false); 
+        await Open();
+    }
+    [RelayCommand(CanExecute = nameof(CanOpen))]
+    private async Task Open()
+    {
+        await _sem.WaitAsync(_ctsHeart!.Token);
+        try
+        {
+            _manClose = false;
+            await OnOpen();
         }
         finally
         {
             _sem.Release();
         }
-        CamState = "【 摄像头连接状态：❌ 】";
-        OpenCommand.NotifyCanExecuteChanged();
-        CloseCommand.NotifyCanExecuteChanged();
     }
-    // 执行条件：!_start （_start为false时按钮可用）
+    [RelayCommand(CanExecute= nameof(CanClose))]
+    private async Task Close()
+    {
+        await _sem.WaitAsync(_ctsHeart!.Token);
+        try
+        {
+            _manClose = true;
+            await OnClose();
+        }
+        finally
+        {
+            _sem.Release();
+        }
+    }
     private bool CanOpen()
     {
         return !_start; 
@@ -217,16 +266,23 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
             }
             try
             {
-                await _ctsHeart!.CancelAsync();
+                await _ctsHeart.CancelAsync();
             }
             catch
             {
                 //忽略；
             }
-
             try
             {
-                _ctsHeart?.Dispose();
+                _ctsHeart.Dispose();
+            }
+            catch
+            {
+                //忽略；
+            }
+            try
+            {
+                await _heartTask!;
             }
             catch
             {

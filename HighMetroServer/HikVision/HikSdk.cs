@@ -57,4 +57,7 @@ public static partial class HikSdk
     
     [DllImport("HCNetSDK", CallingConvention = CallingConvention.Cdecl)]
     public static extern int NET_DVR_StopSaveRealData(Int32 lRealHandle);
+    
+    [DllImport("HCNetSDK", CallingConvention = CallingConvention.Cdecl)]
+    public static extern bool NET_DVR_SetReconnect(int dwInterval, bool bEnableRecon);
 }

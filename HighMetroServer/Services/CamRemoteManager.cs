@@ -18,6 +18,7 @@ public static class CamRemoteManager
             var ret = HikSdk.NET_DVR_Init();
             if(ret >=0)
             {
+                HikSdk.NET_DVR_SetReconnect(0, false);
                 _initialized = true;
             }
             return ret;

@@ -88,7 +88,6 @@ public static class ParseClientData
                 tcpDataBean.HostBh = publicUntil.GetUshort(socketDataBlock.Content, iPosition);
                 break;
             case 0X55: //Server端自检测；
-                Console.WriteLine("---------0X55");
                 tcpDataBean = new TcpDataBean
                 {
                     TurnComm = false,
