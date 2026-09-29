@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
@@ -11,6 +12,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using HighMetroServer.BaseModel;
 using HighMetroServer.ClassLib;
 using HighMetroServer.Event;
+using HighMetroServer.HikVision;
 using HighMetroServer.Message;
 using HighMetroServer.Models;
 using HighMetroServer.Parameters;
@@ -87,12 +89,15 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     private readonly SemaphoreSlim _sem = new (1,1);
     private bool _manClose;
     private DateTime _heartTime;
+    private MsgCallBack _callBackForPerson;
+
     public SerialConfigViewModel(int serial)
     {
         _serial = serial;
         _start = false;
         _manClose = false;
         _buildServer = false;
+        _callBackForPerson = OnCallBackForPerson;
         ParaSetupModules.CommBufferDataProdEvent += OnBufferDataProdEvent;
         CommState = "【 串口连接状态：❌ 】";
         WeakReferenceMessenger.Default.Register(this);
@@ -346,6 +351,17 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
                         } 
                     }
                 }
+                else if (socketDataBlock.Content[5] == 0X8F)
+                {
+                    //获取区域内的人数;
+                    var cameraBean = new CameraBean
+                    {
+                        Door = PublicConst.DireDoor,
+                        Type = PublicConst.DoorStatePerson,
+                    };
+                    _= CountQueryPersonInfo(socketDataBlock,cameraBean);
+                    valid = true;
+                }
             }
         }
         if (!valid)
@@ -560,6 +576,61 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
                 ParaSetupModules.RaiseAscDataProdEvent(resultInfo.Message);
             }
         }
+    }
+    private async Task CountQueryPersonInfo(SocketDataBlock socketDataBlock,CameraBean cameraBean)
+    {
+        try
+        {
+            await CountQueryPerson(socketDataBlock, cameraBean);
+        }
+        catch (Exception ex)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                var currDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                MessageText = $"统计人数异常：{ex.Message}，【{currDate}】";
+            });
+        }
+    }
+    private async Task CountQueryPerson(SocketDataBlock socketDataBlock,CameraBean  cameraBean)
+    {
+        await Task.Delay(10).ConfigureAwait(false);
+        cameraBean.HostBh = ParaSetupModules.HostInfo!.Bh;
+        var publicUntil = new PublicUntil();
+        byte iPosition = 3;
+        //设备id
+        cameraBean.Id = publicUntil.GetUshort(socketDataBlock.Content!, iPosition);
+        cameraBean.DateTime = DateTime.Now; 
+        var camInfo = ParaSetupModules.CamInfo;
+        var camRemoteLinkImpl = camInfo!.CamRemoteLinkImpl;
+        if (camRemoteLinkImpl != null && camRemoteLinkImpl.GetUserId() >= 0)
+        {
+            var value = await camRemoteLinkImpl.CountPerson(_callBackForPerson);
+            if (value.Code.Equals(PublicConst.FlagYes))
+                return;
+            cameraBean.Message = value.Message;
+        }
+        else
+        {
+            cameraBean.Message = "触发人数统计，但未连接摄像头！";
+        }
+        Dispatcher.UIThread.Post(() => { MessageText = $"{cameraBean.Message}【{cameraBean.DateTime}】";});
+        var resultInfo = await ParaSetupModules.DbService!.AddError(cameraBean);
+        if (!resultInfo.Code.Equals(PublicConst.FlagYes))
+        {
+            ParaSetupModules.RaiseAscDataProdEvent(resultInfo.Message);
+        }
+    }
+    private void OnCallBackForPerson(
+        int lCommand, 
+        ref ChcNetSdk.NetDvrAlarmer pAlarmer, 
+        IntPtr pAlarmInfo, 
+        uint dwBufLen, 
+        IntPtr pUser)
+    {
+        if (lCommand != 0X000) //COMM_ALARM_PDC)
+            return;
+        var peopleRegion = Marshal.PtrToStructure<ChcNetSdk.NetDvrAlarmer>(pAlarmInfo);
     }
     public void Start()
     {

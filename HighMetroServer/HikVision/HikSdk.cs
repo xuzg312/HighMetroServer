@@ -10,6 +10,12 @@ public delegate void RealDataCallBack(
     IntPtr pBuffer, 
     UInt32 dwBufSize, 
     IntPtr pUser);
+public delegate void MsgCallBack(
+    int lCommand, 
+    ref ChcNetSdk.NetDvrAlarmer pAlarmer, 
+    IntPtr pAlarmInfo, 
+    uint dwBufLen, 
+    IntPtr pUser);
 
 public static partial class HikSdk
 {
@@ -60,4 +66,15 @@ public static partial class HikSdk
     
     [DllImport("HCNetSDK", CallingConvention = CallingConvention.Cdecl)]
     public static extern bool NET_DVR_SetReconnect(int dwInterval, bool bEnableRecon);
+
+    [DllImport("HCNetSDK", CallingConvention = CallingConvention.Cdecl)]
+    public static extern bool NET_DVR_SetDVRMessageCallBack_V50(
+        int iIndex, MsgCallBack fMessageCallBack, IntPtr pUser);
+    
+    [DllImport("HCNetSDK", CallingConvention = CallingConvention.Cdecl)]
+    public static extern int NET_DVR_SetupAlarmChan_V41(
+        int lUserId, ref ChcNetSdk.NetDvrSetupAlarmParam lpSetupParam);
+
+    [DllImport("HCNetSDK", CallingConvention = CallingConvention.Cdecl)]
+    public static extern bool NET_DVR_CloseAlarmChan_V30(int lAlarmHandle);
 }
