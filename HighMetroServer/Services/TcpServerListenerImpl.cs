@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using HighMetroServer.BaseModel;
@@ -24,41 +25,49 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
     private Task? _acceptLoopTask;
     private Task? _readTask;
     private SemaphoreSlim? _semaphoreSlim;
+    private readonly SemaphoreSlim _sem = new (1,1);
     #endregion
     
     public bool Start()
     {
-        if (_start)
-        {
-            return true;
-        }
+        _sem.Wait();
         try
         {
-            _dictionary.Clear();
-            _ctsServer = new CancellationTokenSource();
-            _listener = new TcpListener(IPAddress.Any, hostInfo.Port);
-            _listener.Start();
-            _semaphoreSlim = new SemaphoreSlim(0);
-            //接收生产者串口数据；
-            _iDataBufferPool = new DataBufferPoolImpl();
-            //数据消费者
-            _getBufferDataImplList.Clear();
-            for (var i = 0; i < threadCount; i++)
+            if (_start)
             {
-                _getBufferDataImplList.Add(new GetBufferDataImpl(_iDataBufferPool,PublicConst.TcpMessage));
+                return true;
             }
-            // 后台循环接受客户端
-            _acceptLoopTask = Task.Run(() => AcceptClientLoop(_ctsServer.Token), _ctsServer.Token);
-            //启动1个线程，进行数据包的拆分或合并；
-            _readTask = Task.Run(() => ParseClientDataLoop(_ctsServer.Token), _ctsServer.Token);
-            _start = true;
-            return true;
-        }
-        catch (Exception)
+            try
+            {
+                _dictionary.Clear();
+                _ctsServer = new CancellationTokenSource();
+                _listener = new TcpListener(IPAddress.Any, hostInfo.Port);
+                _listener.Start();
+                _semaphoreSlim = new SemaphoreSlim(0);
+                //接收生产者串口数据；
+                _iDataBufferPool = new DataBufferPoolImpl();
+                //数据消费者
+                _getBufferDataImplList.Clear();
+                for (var i = 0; i < threadCount; i++)
+                {
+                    _getBufferDataImplList.Add(new GetBufferDataImpl(_iDataBufferPool, PublicConst.TcpMessage));
+                }
+                // 后台循环接受客户端
+                _acceptLoopTask = Task.Run(() => AcceptClientLoop(_ctsServer.Token), _ctsServer.Token);
+                //启动1个线程，进行数据包的拆分或合并；
+                _readTask = Task.Run(() => ParseClientDataLoop(_ctsServer.Token), _ctsServer.Token);
+                _start = true;
+                return true;
+            }
+            catch (Exception)
+            {
+                CloseServer();
+                ParaSetupModules.RaiseTcpClientConnEvent("启动Server失败！");
+                return false;
+            }
+        }finally
         {
-            CloseServer();
-            ParaSetupModules.RaiseTcpClientConnEvent("启动Server失败！");
-            return false;
+            _sem.Release();
         }
     }
     private async Task AcceptClientLoop(CancellationToken token)
@@ -69,11 +78,16 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
         }
         catch (OperationCanceledException)
         {
+            //忽略；
         }
         catch (Exception ex)
         {
             var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             ParaSetupModules.RaiseAscDataProdEvent($"TCP监听顶层异常：{ex.Message}【{currDateTime}】");
+        }
+        finally
+        {
+            CloseServer();
         }
     }
     #region 接收客户端连接事件；
@@ -89,7 +103,7 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
                     tcpClient.Dispose();
                     continue;
                 }
-                var key = endPoint.Address + "【" + hostInfo.Bh + "】";
+                var key = $"{endPoint.Address}:{endPoint.Port}:{hostInfo.Bh}";
                 IChildCommunication newChild = new TcpServerChatImpl(
                     tcpClient, 
                     hostInfo, 
@@ -122,7 +136,7 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
         }
         catch (OperationCanceledException)
         {
-            //正常关闭；
+            //忽略；
         }
         catch (Exception ex)
         {
@@ -169,7 +183,23 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
         }
     }
     #endregion
-
+    public void CheckHeart()
+    {
+        var snapshotList = _dictionary.Values.ToList();
+        foreach(var child in snapshotList)
+        {
+            try
+            {
+                if ((DateTime.Now - child.GetHeartTime()).TotalMinutes > PublicConst.HeartTcpInter)
+                    child.CloseClient();
+            }
+            catch(Exception ex)
+            {
+                var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                ParaSetupModules.RaiseAscDataProdEvent($"检测客户单心跳异常：{ex.Message}【{currDateTime}】");
+            }
+        }
+    }
     public void SendMessage(SocketDataBlock socketDataBlock)
     {
         if (!_start)
@@ -285,8 +315,17 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
     #region 关闭服务；
     public void CloseServer()
     {
-        if (!_start)
-            return;
+        _sem.Wait();
+        try
+        {
+            if (!_start)
+                return;
+            _start = false;
+        }
+        finally
+        {
+            _sem.Release();
+        }
         try
         {
             _listener?.Stop();
@@ -350,7 +389,6 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
             //忽略异常；
         }
         _semaphoreSlim = null;
-        _start = false;
     }
     #endregion
 }

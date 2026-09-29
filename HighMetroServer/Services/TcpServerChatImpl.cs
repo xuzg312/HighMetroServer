@@ -25,10 +25,12 @@ public class TcpServerChatImpl : IChildCommunication
     private readonly CancellationTokenSource _clientCts;
     private bool _start;
     private Task? _readTask;
+    private DateTime _heartTime;
     private const byte PacketHead1 = 0xEB;
     private const byte PacketHead2 = 0xAA;
     private const byte PacketTail = 0xED;
     private readonly SemaphoreSlim _semaphoreSlim;
+    private readonly SemaphoreSlim _sem = new (1,1);
     #endregion
 
     #region 构造函数；
@@ -43,6 +45,7 @@ public class TcpServerChatImpl : IChildCommunication
         _semaphoreSlim = semaphoreSlim;
         _clientCts = CancellationTokenSource.CreateLinkedTokenSource(serverToken);
         _start = true;
+        _heartTime=DateTime.Now;
         
         var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
         _key = key;
@@ -62,16 +65,16 @@ public class TcpServerChatImpl : IChildCommunication
         }
         catch (OperationCanceledException)
         {
-            //主动取消监听，正常优雅关闭，不打错误日志
-            CloseClient();
-            var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-            ParaSetupModules.RaiseTcpClientConnEvent($"{_key}：客户端下线！【{currDateTime}】");
+            //忽略；
         }
         catch (Exception ex)
         {
-            CloseClient();
             var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             ParaSetupModules.RaiseAscDataProdEvent($"{_key}：接收循环顶层异常：{ex.Message}【{currDateTime}】");
+        }
+        finally
+        {
+            CloseClient();
         }
     }
     #region 单个客户端接收数据
@@ -85,11 +88,11 @@ public class TcpServerChatImpl : IChildCommunication
             try
             {
                 var bytesRead = await stream.ReadAsync(data, token);
-                var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                _heartTime=DateTime.Now;
+                var currDateTime = _heartTime.ToString("yyyy-MM-dd HH:mm:ss");
                 if (bytesRead == 0)
                 {
                     //client left;
-                    CloseClient();
                     ParaSetupModules.RaiseTcpClientConnEvent($"{_key}：主动下线！【{currDateTime}】");
                     break;
                 }
@@ -101,12 +104,10 @@ public class TcpServerChatImpl : IChildCommunication
             }
             catch (OperationCanceledException)
             {
-                CloseClient();
                 break;
             }
             catch (Exception ex)
             {
-                CloseClient();
                 var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                 ParaSetupModules.RaiseAscDataProdEvent($"{_key}：异步接收异常 {ex.Message}，强制下线！【{currDateTime}】");                
                 break;
@@ -277,8 +278,17 @@ public class TcpServerChatImpl : IChildCommunication
     #region 断开连接；
     public void CloseClient()
     {
-        if (!_start)
-            return;
+        _sem.Wait();
+        try
+        {
+            if (!_start)
+                return;
+            _start = false;
+        }
+        finally
+        {
+            _sem.Release();
+        }
         try
         {
             _clientCts.Cancel();
@@ -306,11 +316,11 @@ public class TcpServerChatImpl : IChildCommunication
             //忽略；
         }
         _client = null!;
-        _start = false;
     }
     #endregion
     public bool IsStart() { return _start;  }
     public byte GetClientType() { return _clientType; }
     public int GetHostBh() { return _hostInfo.Bh; }
     public void SetClientType(byte clientType) { _clientType = clientType; }
+    public DateTime GetHeartTime() { return _heartTime; }
 }

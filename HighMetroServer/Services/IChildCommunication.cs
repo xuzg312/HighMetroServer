@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 
 namespace HighMetroServer.Services;
 
@@ -11,4 +12,5 @@ public interface IChildCommunication
     byte GetClientType();
     int GetHostBh();
     void SetClientType(byte clientType);
+    DateTime GetHeartTime();
 }

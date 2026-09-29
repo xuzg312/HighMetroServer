@@ -36,8 +36,9 @@ public static class PublicConst
     public const byte TcpMessage = 0X01;//TCP消息;
     public const byte CommMessage = 0X02;//Comm消息;
 
-    public const int HeartTcp = 5*60*1000;
-    public const int HeartComm = 5*60*1000;
-    public const int HeartCame = 5*60*1000;
-    public const int HeartCommInter = 1;
+    public const int HeartTcp = 1*10*1000;//检测周期；单位：秒；
+    public const int HeartComm = 5*60*1000;//检测周期；单位：秒；
+    public const int HeartCame = 5*60*1000;//检测周期；单位：秒；
+    public const int HeartCommInter = 1;//主板空闲时间内无数据回传，断开重连接；单位：分钟；
+    public const int HeartTcpInter = 2;//客户端空闲时间内无消息，强制关闭；单位：分钟；
 }

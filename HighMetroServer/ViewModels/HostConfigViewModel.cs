@@ -85,6 +85,7 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
                     continue;
                 if (_start)
                 {
+                    _tcpServer!.CheckHeart();
                     var isOnLine = await CheckIsLine(token);
                     if (!isOnLine)
                     {
@@ -112,9 +113,9 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
     }
     private async Task<bool> CheckIsLine(CancellationToken token)
     {
-        using var client = new TcpClient();
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
         cts.CancelAfter(20000);
+        using var client = new TcpClient();
         try
         {
             await client.ConnectAsync(_hostInfo.Ip, _hostInfo.Port, cts.Token);
@@ -145,36 +146,16 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
             await ns.FlushAsync(cts.Token);
             var resp = new byte[64];
             var read = await ns.ReadAsync(resp, cts.Token);
-            if (read == 11 && resp[0] == 0XEB && resp[1] == 0XAA && resp[7] == 0X55)
-            {
-                return true;
-            }
-            return false;
+            return read == 11
+                   && resp[0] == 0XEB
+                   && resp[1] == 0XAA
+                   && resp[7] == 0X55;
         }
         catch (Exception ex)
         {
             var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             ParaSetupModules.RaiseAscDataProdEvent($"检测TCPServer服务异常：{ex.Message}【{currDateTime}】");
             return false;
-        }
-        finally
-        {
-            try
-            {
-                await cts.CancelAsync();
-            }
-            catch (Exception)
-            {
-                //忽略
-            }
-            try
-            {
-                client.Close();
-            }
-            catch (Exception)
-            {
-                //忽略
-            }
         }
     }
     private async Task OpenAsync()
@@ -287,9 +268,7 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
     private void OnShowTcpServerDataProdEvent(object? obj, EventArgs arg)
     {
         if (arg is not SocketDataEventArgs socketDataEventArgs)
-        {
             return;
-        }
         var socketDataBlock = socketDataEventArgs.Data;
         _ = ReceiveTcpData(socketDataBlock);
     }
