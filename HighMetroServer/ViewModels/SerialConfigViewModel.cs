@@ -473,6 +473,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         //次数；
         iPosition = 8;
         cameraBean.Serial = publicUntil.GetUshort(socketDataBlock.Content!, iPosition);
+        
         var camInfo = ParaSetupModules.CamInfo;
         var camRemoteLinkImpl = camInfo!.CamRemoteLinkImpl;
         if (camRemoteLinkImpl!=null && camRemoteLinkImpl.GetUserId()>=0)
