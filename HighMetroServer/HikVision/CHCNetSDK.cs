@@ -165,35 +165,6 @@ public class ChcNetSdk
 		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 215)]
 		public byte[] byRes;
 	}
-	//报警设备信息
-	[StructLayout(LayoutKind.Sequential)]
-	public struct NetDvrAlarmer
-	{
-		public byte byUserIDValid;/* userid是否有效 0-无效，1-有效 */
-		public byte bySerialValid;/* 序列号是否有效 0-无效，1-有效 */
-		public byte byVersionValid;/* 版本号是否有效 0-无效，1-有效 */
-		public byte byDeviceNameValid;/* 设备名字是否有效 0-无效，1-有效 */
-		public byte byMacAddrValid; /* MAC地址是否有效 0-无效，1-有效 */
-		public byte byLinkPortValid;/* login端口是否有效 0-无效，1-有效 */
-		public byte byDeviceIPValid;/* 设备IP是否有效 0-无效，1-有效 */
-		public byte bySocketIPValid;/* socket ip是否有效 0-无效，1-有效 */
-		public int lUserID; /* NET_DVR_Login()返回值, 布防时有效 */
-		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 48)]
-		public byte[] sSerialNumber;/* 序列号 */
-		public uint dwDeviceVersion;/* 版本信息 高16位表示主版本，低16位表示次版本*/
-		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)]
-		public byte[] sDeviceName;/* 设备名字 */
-		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 6)]
-		public byte[] byMacAddr;/* MAC地址 */
-		public ushort wLinkPort; /* link port */
-		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 128)]
-		public byte[] sDeviceIP;/* IP地址 */
-		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 128)]
-		public byte[] sSocketIP;/* 报警主动上传时的socket IP地址 */
-		public byte byIpProtocol; /* Ip协议 0-IPV4, 1-IPV6 */
-		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 11)]
-		public byte[] byRes2;
-	}
 	[StructLayout(LayoutKind.Sequential)]
 	public struct NetDvrSetupAlarmParam
 	{
@@ -217,5 +188,94 @@ public class ChcNetSdk
 		//bit2 - 人脸比对(报警类型为COMM_SNAP_MATCH_ALARM)中图片数据上传类型：0 - 二进制传输，1 - URL传输
 		//bit3 - 异常行为识别(报警类型为COMM_ALARM_RULE)中图片数据上传类型：0 - 二进制传输，1 - URL传输，本字段设备是否支持，对应软硬件能力集中<isSupportBehaviorUploadByCloudStorageURL>节点是否返回且为true
 		public byte byCustomCtrl;//Bit0- 表示支持副驾驶人脸子图上传: 0-不上传,1-上传
+	}
+	[StructLayout(LayoutKind.Sequential)]
+	public struct NetDvrPdcAlramInfo
+	{
+		public uint dwSize;           // PDC人流量报警上传结构体大小
+		public byte byMode;            // 0 单帧统计结果 1最小时间段统计结果  
+		public byte byChannel;           // 报警上传通道号
+		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 2)]
+		public byte[] byRes1;         // 保留字节   
+		public NetVcaDevInfo struDevInfo;		        //前端设备信息
+		public UnionPdcparam uStatModeParam;
+		public uint dwLeaveNum;        // 离开人数
+		public uint dwEnterNum;        // 进入人数			
+		public byte byBrokenNetHttp;     //断网续传标志位，0-不是重传数据，1-重传数据
+		public byte byRes3;
+		public ushort wDevInfoIvmsChannelEx;     //与NET_VCA_DEV_INFO里的byIvmsChannel含义相同，能表示更大的值。老客户端用byIvmsChannel能继续兼容，但是最大到255。新客户端版本请使用wDevInfoIvmsChannelEx
+		public uint dwPassingNum;        // 经过人数（进入区域后徘徊没有触发进入、离开的人数）
+		public uint dwChildLeaveNum;        // 小孩离开人数
+		public uint dwChildEnterNum;        // 小孩进入人数
+		public uint dwDuplicatePeople;        // 重复人数
+		public uint dwXmlLen;//XML透传数据长度, 即EventNotificationAlert XML Block的数据长度
+		public IntPtr pXmlBuf; // XML报警信息指针,其XML对应到EventNotificationAlert XML Block
+		[MarshalAsAttribute(UnmanagedType.ByValArray, SizeConst = 8)]
+		public byte[] byRes2;           // 保留字节
+	}
+	[StructLayout(LayoutKind.Sequential)]
+	public struct NetVcaDevInfo
+	{
+		public NetDvrIpaddr struDevIP;//前端设备地址，
+		public ushort wPort;//前端设备端口号， 
+		public byte byChannel;//前端设备通道，
+		public byte byIvmsChannel;// 保留字节
+	}
+	[StructLayout(LayoutKind.Sequential)]
+	public struct UnionPdcparam
+	{
+		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 140)]
+		public byte[] byRes;
+	}
+	[StructLayout(LayoutKind.Sequential)]
+	public struct NetDvrIpaddr
+	{
+		/// char[16]
+		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
+		public byte[] sIpV4;
+		/// BYTE[128]
+		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 128)]
+		public byte[] byIPv6;
+		public void Init()
+		{
+			sIpV4 = new byte[16];
+			byIPv6 = new byte[128];
+		}
+	}
+	[StructLayout(LayoutKind.Sequential)]
+	public struct NetDvrAlarmer
+	{
+		public byte byUserIDValid;/* userid是否有效 0-无效，1-有效 */
+		public byte bySerialValid;/* 序列号是否有效 0-无效，1-有效 */
+		public byte byVersionValid;/* 版本号是否有效 0-无效，1-有效 */
+		public byte byDeviceNameValid;/* 设备名字是否有效 0-无效，1-有效 */
+		public byte byMacAddrValid; /* MAC地址是否有效 0-无效，1-有效 */
+		public byte byLinkPortValid;/* login端口是否有效 0-无效，1-有效 */
+		public byte byDeviceIPValid;/* 设备IP是否有效 0-无效，1-有效 */
+		public byte bySocketIPValid;/* socket ip是否有效 0-无效，1-有效 */
+		public int lUserID; /* NET_DVR_Login()返回值, 布防时有效 */
+		[MarshalAsAttribute(UnmanagedType.ByValArray, SizeConst = 48)]
+		public byte[] sSerialNumber;/* 序列号 */
+		public uint dwDeviceVersion;/* 版本信息 高16位表示主版本，低16位表示次版本*/
+		[MarshalAsAttribute(UnmanagedType.ByValArray, SizeConst = 32)]
+		public byte[] sDeviceName;/* 设备名字 */
+		[MarshalAsAttribute(UnmanagedType.ByValArray, SizeConst = 6)]
+		public byte[] byMacAddr;/* MAC地址 */
+		public ushort wLinkPort; /* link port */
+		[MarshalAsAttribute(UnmanagedType.ByValArray, SizeConst = 128)]
+		public byte[] sDeviceIP;/* IP地址 */
+		[MarshalAsAttribute(UnmanagedType.ByValArray, SizeConst = 128)]
+		public byte[] sSocketIP;/* 报警主动上传时的socket IP地址 */
+		public byte byIpProtocol; /* Ip协议 0-IPV4, 1-IPV6 */
+		[MarshalAsAttribute(UnmanagedType.ByValArray, SizeConst = 11)]
+		public byte[] byRes2;
+	}
+	[StructLayout(LayoutKind.Sequential)]
+	public struct UnionStatFrame
+	{
+		public uint dwRelativeTime;     // 相对时标
+		public uint dwAbsTime;          // 绝对时标
+		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 92)]
+		public byte[] byRes;
 	}
 }

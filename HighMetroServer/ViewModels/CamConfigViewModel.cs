@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Concurrent;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
@@ -6,6 +8,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using HighMetroServer.BaseModel;
+using HighMetroServer.ClassLib;
 using HighMetroServer.HikVision;
 using HighMetroServer.Message;
 using HighMetroServer.Models;
@@ -13,7 +16,9 @@ using HighMetroServer.Services;
 
 namespace HighMetroServer.ViewModels;
 
-public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanupMessage>
+public partial class CamConfigViewModel : ObservableObject,
+    IRecipient<AppCleanupMessage>,
+    IRecipient<CamMessage>
 {
     [ObservableProperty]
     private CamOptions? _config;
@@ -47,18 +52,127 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
     private bool _manClose;
     private bool _check;
     private bool _isValid;
+    private readonly MsgCallBack _callBackForPerson;
+    private readonly PersonInfo _personInfo;
+    private readonly ConcurrentQueue<ChcNetSdk.NetDvrPdcAlramInfo> _receiveQueue = [];
+    private readonly SemaphoreSlim _semaphoreSlim;
+    private Task? _personTask;
+    private readonly uint _recInfoSize = (uint)Marshal.SizeOf<ChcNetSdk.NetDvrPdcAlramInfo>();
     public CamConfigViewModel()
     {
         _start = false;
         _manClose = false;
         _check = false;
         _isValid = false;
-        CamState = "【 摄像头连接状态：❌ 】";
+        CamState = "【 摄像头连接状态：✘ 】";
+        _personInfo = new PersonInfo();
+        _semaphoreSlim = new SemaphoreSlim(0);
         _camRemoteLinkImpl = new CamRemoteLinkImpl();
+        _callBackForPerson = OnCallBackForPerson;
         ParaSetupModules.CamInfo!.CamRemoteLinkImpl = _camRemoteLinkImpl;
-        WeakReferenceMessenger.Default.Register(this);
+        WeakReferenceMessenger.Default.Register<AppCleanupMessage>(this);
+        WeakReferenceMessenger.Default.Register<CamMessage>(this);
         _ctsHeart = new CancellationTokenSource();
         _heartTask = Task.Run(() => HeartLoop(_ctsHeart.Token), _ctsHeart.Token);
+        _personTask = Task.Run(() => PersonLoop(_ctsHeart.Token), _ctsHeart.Token);
+    }
+    //布防回调；
+    private void OnCallBackForPerson(
+        int lCommand, 
+        ref ChcNetSdk.NetDvrAlarmer pAlarmer, 
+        IntPtr pAlarmInfo, 
+        uint dwBufLen, 
+        IntPtr pUser)
+    {
+        if (lCommand != PublicConst.CommAlarmPdc)
+            return;
+        if (pAlarmInfo == IntPtr.Zero) 
+            return;
+        if (dwBufLen <_recInfoSize)
+            return;
+        var recInfo = Marshal.PtrToStructure<ChcNetSdk.NetDvrPdcAlramInfo>(pAlarmInfo);
+        if(recInfo.byMode != 0)
+            return;
+        _receiveQueue.Enqueue(recInfo);
+        _semaphoreSlim.Release();
+    }
+    private async Task ReplyCapture(CameraBean cameraBean)
+    {
+        var camRemoteLinkImpl =_camRemoteLinkImpl;
+        if (camRemoteLinkImpl.GetUserId()>=0)
+        {
+            //动作：拍照；
+            var value = await camRemoteLinkImpl.CaptureJpegPicture(cameraBean,SystemInfo.PhotoDir); 
+            if (value.Code.Equals(PublicConst.FlagYes))
+            {
+                cameraBean.Message = "拍照执行成功！";
+                Dispatcher.UIThread.Post(() => { MessageText = $"{cameraBean.Message}【{cameraBean.DateTime}】";});
+                var resultInfo = await ParaSetupModules.DbService!.AddAlarm(cameraBean);
+                if (!resultInfo.Code.Equals(PublicConst.FlagYes))
+                {
+                    ParaSetupModules.RaiseAscDataProdEvent($"{resultInfo.Message}【{cameraBean.DateTime}】");
+                }
+            }
+            else
+            {
+                cameraBean.Message = value.Message;
+                ParaSetupModules.RaiseAscDataProdEvent($"{value.Message}【{cameraBean.DateTime}】");
+                var resultInfo = await ParaSetupModules.DbService!.AddError(cameraBean);
+                if (!resultInfo.Code.Equals(PublicConst.FlagYes))
+                {
+                    ParaSetupModules.RaiseAscDataProdEvent($"{resultInfo.Message}【{cameraBean.DateTime}】");
+                }
+            }
+        }
+        else
+        {
+            cameraBean.Message = "触发拍照，但未连接摄像头！";
+            Dispatcher.UIThread.Post(() => { MessageText = $"{cameraBean.Message}【{cameraBean.DateTime}】";});
+            var resultInfo = await ParaSetupModules.DbService!.AddError(cameraBean);
+            if (!resultInfo.Code.Equals(PublicConst.FlagYes))
+            {
+                ParaSetupModules.RaiseAscDataProdEvent(resultInfo.Message);
+            }
+        }
+    }
+    private async Task ReplyCamera(CameraBean cameraBean)
+    {
+        var camRemoteLinkImpl =_camRemoteLinkImpl;
+        if (camRemoteLinkImpl.GetUserId()>=0)
+        {
+            //动作：录像；
+            var value = await camRemoteLinkImpl.PlayCam(cameraBean,SystemInfo.PhotoDir); 
+            if (value.Code.Equals(PublicConst.FlagYes))
+            {
+                cameraBean.Message = "录像执行成功！";
+                Dispatcher.UIThread.Post(() => { MessageText = $"{cameraBean.Message}【{cameraBean.DateTime}】";});
+                var resultInfo = await ParaSetupModules.DbService!.AddAlarm(cameraBean);
+                if (!resultInfo.Code.Equals(PublicConst.FlagYes))
+                {
+                    ParaSetupModules.RaiseAscDataProdEvent($"{resultInfo.Message}【{cameraBean.DateTime}】");
+                }
+            }
+            else
+            {
+                cameraBean.Message = value.Message;
+                ParaSetupModules.RaiseAscDataProdEvent($"{value.Message}【{cameraBean.DateTime}】");
+                var resultInfo = await ParaSetupModules.DbService!.AddError(cameraBean);
+                if (!resultInfo.Code.Equals(PublicConst.FlagYes))
+                {
+                    ParaSetupModules.RaiseAscDataProdEvent($"{resultInfo.Message}【{cameraBean.DateTime}】");
+                }
+            }
+        }
+        else
+        {
+            cameraBean.Message = "触发录像，但未连接摄像头！";
+            Dispatcher.UIThread.Post(() => { MessageText = $"{cameraBean.Message}【{cameraBean.DateTime}】";});
+            var resultInfo = await ParaSetupModules.DbService!.AddError(cameraBean);
+            if (!resultInfo.Code.Equals(PublicConst.FlagYes))
+            {
+                ParaSetupModules.RaiseAscDataProdEvent(resultInfo.Message);
+            }
+        }
     }
     private async Task HeartLoop(CancellationToken token)
     {
@@ -173,10 +287,20 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
             });
             return;
         }
+        //布防；
+        loadCamResult = await _camRemoteLinkImpl.SetupAlarm(_callBackForPerson);
+        if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                MessageText = loadCamResult.Message;
+            });
+            return;
+        }
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
             _start = true;
-            CamState = "【 摄像头连接状态：✅ 】";
+            CamState = "【 摄像头连接状态：✔ 】";
             OpenCommand.NotifyCanExecuteChanged();
             CloseCommand.NotifyCanExecuteChanged();
         });
@@ -194,7 +318,7 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
             {
                 MessageText = "退出登录失败！";
             }
-            CamState = "【 摄像头连接状态：❌ 】";
+            CamState = "【 摄像头连接状态：✘ 】";
             OpenCommand.NotifyCanExecuteChanged();
             CloseCommand.NotifyCanExecuteChanged();
         });
@@ -218,6 +342,45 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
     {
         await Task.Delay(1000).ConfigureAwait(false); 
         await Open();
+    }
+    private async Task PersonLoop(CancellationToken token)
+    {
+        try
+        {
+            await PersonLoopAsync(token);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            ParaSetupModules.RaiseAscDataProdEvent($"人数实时监听顶层异常：{ex.Message}【{currDateTime}】");
+        }
+    }
+    private async Task PersonLoopAsync(CancellationToken token)
+    {
+        while (!token.IsCancellationRequested)
+        {
+            await _semaphoreSlim.WaitAsync(token);
+            if (!_receiveQueue.TryDequeue(out var data))
+            {
+                var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                ParaSetupModules.RaiseAscDataProdEvent($"获取布防消息失败！【{currDateTime}】");
+                continue;
+            }
+            _personInfo.Enter = data.dwEnterNum;
+            _personInfo.Leave = data.dwLeaveNum;
+            _personInfo.Pass = data.dwPassingNum;
+            
+            var dwUnionSize = (uint)Marshal.SizeOf(data.uStatModeParam);
+            var ptrPdcUnion = Marshal.AllocHGlobal((Int32)dwUnionSize);
+            Marshal.StructureToPtr(data.uStatModeParam, ptrPdcUnion, false);
+
+            var recStatFrame = Marshal.PtrToStructure<ChcNetSdk.UnionStatFrame>(ptrPdcUnion);
+            _personInfo.RelativeTime = recStatFrame.dwRelativeTime;
+            _personInfo.AbsTime = recStatFrame.dwAbsTime;
+        }
     }
     [RelayCommand(CanExecute = nameof(CanOpen))]
     private async Task Open()
@@ -288,14 +451,35 @@ public partial class CamConfigViewModel : ObservableObject,IRecipient<AppCleanup
             {
                 //忽略；
             }
+            try
+            {
+                await _personTask!;
+            }
+            catch
+            {
+                //忽略；
+            }
             _ctsHeart = null;
             _heartTask = null;
+            _personTask = null;
             CamRemoteManager.SdkCleanUp();
             _start = false;
         }
         finally
         {
             _sem.Release();
+        }
+    }
+    public void Receive(CamMessage message)
+    {
+        switch (message.Type)
+        {
+            case PublicConst.CamPhoto:
+                _ = ReplyCapture(message.CameraBean);
+                break;
+            case PublicConst.CamCamera:
+                _ = ReplyCamera(message.CameraBean);
+                break;   
         }
     }
     public void Receive(AppCleanupMessage message)

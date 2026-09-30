@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
@@ -12,7 +11,6 @@ using CommunityToolkit.Mvvm.Messaging;
 using HighMetroServer.BaseModel;
 using HighMetroServer.ClassLib;
 using HighMetroServer.Event;
-using HighMetroServer.HikVision;
 using HighMetroServer.Message;
 using HighMetroServer.Models;
 using HighMetroServer.Parameters;
@@ -89,7 +87,6 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     private readonly SemaphoreSlim _sem = new (1,1);
     private bool _manClose;
     private DateTime _heartTime;
-    private MsgCallBack _callBackForPerson;
 
     public SerialConfigViewModel(int serial)
     {
@@ -97,9 +94,8 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         _start = false;
         _manClose = false;
         _buildServer = false;
-        _callBackForPerson = OnCallBackForPerson;
         ParaSetupModules.CommBufferDataProdEvent += OnBufferDataProdEvent;
-        CommState = "【 串口连接状态：❌ 】";
+        CommState = "【 串口连接状态：✘ 】";
         WeakReferenceMessenger.Default.Register(this);
         _ctsHeart = new CancellationTokenSource();
         _heartTask = Task.Run(() => HeartLoop(_ctsHeart.Token), _ctsHeart.Token);
@@ -213,11 +209,11 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         {
             _start = true;
             _heartTime = DateTime.Now;
-            await Dispatcher.UIThread.InvokeAsync(() => { CommState = "【 串口连接状态：✅ 】"; });
+            await Dispatcher.UIThread.InvokeAsync(() => { CommState = "【 串口连接状态：✔ 】"; });
         }
         else
         {
-            await Dispatcher.UIThread.InvokeAsync(() => { CommState = "【 串口连接状态：❌ 】"; });
+            await Dispatcher.UIThread.InvokeAsync(() => { CommState = "【 串口连接状态：✘ 】"; });
         }
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
@@ -236,7 +232,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         _heartTime = DateTime.Now;
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
-            CommState = "【 串口连接状态：❌ 】";
+            CommState = "【 串口连接状态：✘ 】";
             OpenCommand.NotifyCanExecuteChanged();
             CloseCommand.NotifyCanExecuteChanged();
         });
@@ -312,7 +308,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
                     {
                         _heartTime = DateTime.Now;
                         //转发到TcpClient;
-                        _ = SendMessage(socketDataBlock);
+                        SendMessage(socketDataBlock);
                         //保存心跳;
                         _= ReplyHeartInfo(socketDataBlock);
                         valid = true;
@@ -334,7 +330,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
                             //动作:拍照；
                             //转发到TcpClient;
                             _heartTime = DateTime.Now;
-                            _ = SendMessage(socketDataBlock);
+                            SendMessage(socketDataBlock);
                             cameraBean.Type = PublicConst.DoorStateCapture;
                             _= ReplyCaptureInfo(socketDataBlock, cameraBean);
                             valid = true;
@@ -344,7 +340,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
                             //动作:录像;
                             //转发到TcpClient;
                             _heartTime = DateTime.Now;
-                            _ = SendMessage(socketDataBlock);
+                            SendMessage(socketDataBlock);
                             cameraBean.Type = PublicConst.DoorStateCamera;
                             _= ReplyCameraInfo(socketDataBlock, cameraBean);
                             valid = true;
@@ -371,22 +367,10 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         }
     }
     //发送到client
-    private async Task SendMessage(SocketDataBlock socketDataBlock)
+    private void SendMessage(SocketDataBlock socketDataBlock)
     {
-        await Task.Delay(10).ConfigureAwait(false); 
-        try
-        {
-            var tcpServer = ParaSetupModules.HostInfo!.TcpServer;
-            tcpServer?.SendMessage(socketDataBlock);
-        }
-        catch (Exception ex)
-        {
-            Dispatcher.UIThread.Post(() =>
-            {
-                var currDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                MessageText = $"发送消息失败：{ex.Message}，【{currDate}】";
-            });
-        }
+        //发送消息;
+        WeakReferenceMessenger.Default.Send(new TcpMessage(socketDataBlock));
     }
     //心跳；
     private async Task ReplyHeartInfo(SocketDataBlock socketDataBlock)
@@ -410,7 +394,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         var mainInfoBean = ParseMainBordData.ReplyHeartInfo(socketDataBlock);
         if (mainInfoBean != null)
         {
-            mainInfoBean.HostBh = ParaSetupModules.CamInfo!.HostBh;
+            mainInfoBean.HostBh = ParaSetupModules.HostInfo!.Bh;
             var data = ParseMainBordData.ParsePack(mainInfoBean);
             ResultInfo resultInfo;
             if (mainInfoBean.A1gzm > 0 || mainInfoBean.A2gzm > 0 || mainInfoBean.B1gzm > 0 ||
@@ -473,44 +457,8 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         //次数；
         iPosition = 8;
         cameraBean.Serial = publicUntil.GetUshort(socketDataBlock.Content!, iPosition);
-        
-        var camInfo = ParaSetupModules.CamInfo;
-        var camRemoteLinkImpl = camInfo!.CamRemoteLinkImpl;
-        if (camRemoteLinkImpl!=null && camRemoteLinkImpl.GetUserId()>=0)
-        {
-            //动作：拍照；
-            var value = await camRemoteLinkImpl.CaptureJpegPicture(cameraBean,SystemInfo.PhotoDir); 
-            if (value.Code.Equals(PublicConst.FlagYes))
-            {
-                cameraBean.Message = "拍照执行成功！";
-                Dispatcher.UIThread.Post(() => { MessageText = $"{cameraBean.Message}【{cameraBean.DateTime}】";});
-                var resultInfo = await ParaSetupModules.DbService!.AddAlarm(cameraBean);
-                if (!resultInfo.Code.Equals(PublicConst.FlagYes))
-                {
-                    ParaSetupModules.RaiseAscDataProdEvent($"{resultInfo.Message}【{cameraBean.DateTime}】");
-                }
-            }
-            else
-            {
-                cameraBean.Message = value.Message;
-                ParaSetupModules.RaiseAscDataProdEvent($"{value.Message}【{cameraBean.DateTime}】");
-                var resultInfo = await ParaSetupModules.DbService!.AddError(cameraBean);
-                if (!resultInfo.Code.Equals(PublicConst.FlagYes))
-                {
-                    ParaSetupModules.RaiseAscDataProdEvent($"{resultInfo.Message}【{cameraBean.DateTime}】");
-                }
-            }
-        }
-        else
-        {
-            cameraBean.Message = "触发拍照，但未连接摄像头！";
-            Dispatcher.UIThread.Post(() => { MessageText = $"{cameraBean.Message}【{cameraBean.DateTime}】";});
-            var resultInfo = await ParaSetupModules.DbService!.AddError(cameraBean);
-            if (!resultInfo.Code.Equals(PublicConst.FlagYes))
-            {
-                ParaSetupModules.RaiseAscDataProdEvent(resultInfo.Message);
-            }
-        }
+        //拍照;
+        WeakReferenceMessenger.Default.Send(new CamMessage(PublicConst.CamPhoto,cameraBean));
     }
     //录像
     private async Task ReplyCameraInfo(SocketDataBlock socketDataBlock, CameraBean cameraBean)
@@ -540,43 +488,8 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         //次数；
         iPosition = 8;
         cameraBean.Serial = publicUntil.GetUshort(socketDataBlock.Content!, iPosition);
-        var camInfo = ParaSetupModules.CamInfo;
-        var camRemoteLinkImpl = camInfo!.CamRemoteLinkImpl;
-        if (camRemoteLinkImpl != null && camRemoteLinkImpl.GetUserId()>=0)
-        {
-            //动作：录像；
-            var value = await camRemoteLinkImpl.PlayCam(cameraBean,SystemInfo.PhotoDir); 
-            if (value.Code.Equals(PublicConst.FlagYes))
-            {
-                cameraBean.Message = "录像执行成功！";
-                Dispatcher.UIThread.Post(() => { MessageText = $"{cameraBean.Message}【{cameraBean.DateTime}】";});
-                var resultInfo = await ParaSetupModules.DbService!.AddAlarm(cameraBean);
-                if (!resultInfo.Code.Equals(PublicConst.FlagYes))
-                {
-                    ParaSetupModules.RaiseAscDataProdEvent($"{resultInfo.Message}【{cameraBean.DateTime}】");
-                }
-            }
-            else
-            {
-                cameraBean.Message = value.Message;
-                ParaSetupModules.RaiseAscDataProdEvent($"{value.Message}【{cameraBean.DateTime}】");
-                var resultInfo = await ParaSetupModules.DbService!.AddError(cameraBean);
-                if (!resultInfo.Code.Equals(PublicConst.FlagYes))
-                {
-                    ParaSetupModules.RaiseAscDataProdEvent($"{resultInfo.Message}【{cameraBean.DateTime}】");
-                }
-            }
-        }
-        else
-        {
-            cameraBean.Message = "触发录像，但未连接摄像头！";
-            Dispatcher.UIThread.Post(() => { MessageText = $"{cameraBean.Message}【{cameraBean.DateTime}】";});
-            var resultInfo = await ParaSetupModules.DbService!.AddError(cameraBean);
-            if (!resultInfo.Code.Equals(PublicConst.FlagYes))
-            {
-                ParaSetupModules.RaiseAscDataProdEvent(resultInfo.Message);
-            }
-        }
+        //录像;
+        WeakReferenceMessenger.Default.Send(new CamMessage(PublicConst.CamCamera,cameraBean));
     }
     private async Task CountQueryPersonInfo(SocketDataBlock socketDataBlock,CameraBean cameraBean)
     {
@@ -602,36 +515,8 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         //设备id
         cameraBean.Id = publicUntil.GetUshort(socketDataBlock.Content!, iPosition);
         cameraBean.DateTime = DateTime.Now; 
-        var camInfo = ParaSetupModules.CamInfo;
-        var camRemoteLinkImpl = camInfo!.CamRemoteLinkImpl;
-        if (camRemoteLinkImpl != null && camRemoteLinkImpl.GetUserId() >= 0)
-        {
-            var value = await camRemoteLinkImpl.CountPerson(_callBackForPerson);
-            if (value.Code.Equals(PublicConst.FlagYes))
-                return;
-            cameraBean.Message = value.Message;
-        }
-        else
-        {
-            cameraBean.Message = "触发人数统计，但未连接摄像头！";
-        }
-        Dispatcher.UIThread.Post(() => { MessageText = $"{cameraBean.Message}【{cameraBean.DateTime}】";});
-        var resultInfo = await ParaSetupModules.DbService!.AddError(cameraBean);
-        if (!resultInfo.Code.Equals(PublicConst.FlagYes))
-        {
-            ParaSetupModules.RaiseAscDataProdEvent(resultInfo.Message);
-        }
-    }
-    private void OnCallBackForPerson(
-        int lCommand, 
-        ref ChcNetSdk.NetDvrAlarmer pAlarmer, 
-        IntPtr pAlarmInfo, 
-        uint dwBufLen, 
-        IntPtr pUser)
-    {
-        if (lCommand != 0X000) //COMM_ALARM_PDC)
-            return;
-        var peopleRegion = Marshal.PtrToStructure<ChcNetSdk.NetDvrAlarmer>(pAlarmInfo);
+        //统计人数;
+        WeakReferenceMessenger.Default.Send(new CamMessage(PublicConst.CamPerson,cameraBean));
     }
     public void Start()
     {

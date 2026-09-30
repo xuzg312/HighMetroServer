@@ -80,7 +80,7 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
 
     public CameraPreviewViewModel(HardInfo hardInfo,ResultInfo resultInfo)
     {
-        CamState = "【 摄像头连接状态：❌ 】";
+        CamState = "【 摄像头连接状态：✘ 】";
         _hardInfo= hardInfo;
         if (!resultInfo.Code.Equals(PublicConst.FlagYes))
         {
@@ -241,7 +241,7 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
         _start = true;
         Dispatcher.UIThread.Post(() =>
         {
-            CamState = "【 摄像头连接状态：✅ 】";
+            CamState = "【 摄像头连接状态：✔ 】";
             StatusText = string.Empty;
             OpenCommand.NotifyCanExecuteChanged();
             SnapCommand.NotifyCanExecuteChanged();
@@ -353,7 +353,7 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
         }
         _start = false;
         StopPreview();
-        CamState = "【 摄像头连接状态：❌ 】";
+        CamState = "【 摄像头连接状态：✘ 】";
         StatusText = "等待连接摄像头！";
         OpenCommand.NotifyCanExecuteChanged();
         SnapCommand.NotifyCanExecuteChanged();
@@ -371,7 +371,7 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
             }
             _start = false;            
         }
-        ClearResource();
+        _= ClearResource();
         OnClose?.Invoke();
     }
     private bool CanOpen()
@@ -405,19 +405,20 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
         }
         return true;
     }
-    private void ClearResource()
+    private async Task ClearResource()
     {
         Console.WriteLine("释放---摄像头调试----CameraPreviewViewModel！");
-        if (_start)
-        {
-            _camRemoteLinkImpl.Logout();
-        }
         if (_isClosed) 
             return;
         _isClosed = true;
+        if (_start)
+        {
+            _camRemoteLinkImpl.Logout();
+            _start = false;
+        }
         try
         {
-            _cts.Cancel();
+            await _cts.CancelAsync();
         }
         catch
         {
@@ -450,6 +451,14 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
         {
             //忽略；
         }
+        try
+        {
+            await _showUiTask!;
+        }
+        catch
+        {
+            //忽略；
+        }
         _showUiTask = null;
         _wbA?.Dispose();
         _wbB?.Dispose();
@@ -462,6 +471,6 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
     }
     public void Receive(AppCleanupMessage message)
     {
-        ClearResource();
+        _= ClearResource();
     }
 }

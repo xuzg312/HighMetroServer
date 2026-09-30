@@ -643,7 +643,7 @@ public class CamRemoteLinkImpl
             _asyncLock.Release();
         }
     }
-    public async Task<LoadCamResult> CountPerson(MsgCallBack msgCallBack)
+    public async Task<LoadCamResult> SetupAlarm(MsgCallBack msgCallBack)
     {
         if (_userId < 0)
         {
@@ -651,6 +651,14 @@ public class CamRemoteLinkImpl
             {
                 Code = PublicConst.FlagNo,
                 Message = "CountPerson:UserId无效！"
+            };
+        }
+        if (_alarmHandle >= 0)
+        {
+            return new LoadCamResult()
+            {
+                Code = PublicConst.FlagNo,
+                Message = "CountPerson:_alarmHandle:{_alarmHandle}！"
             };
         }
         await _asyncLock.WaitAsync();
@@ -664,16 +672,21 @@ public class CamRemoteLinkImpl
                     Message = "CountPerson:UserId无效！"
                 };
             }
+            if (_alarmHandle >= 0)
+            {
+                return new LoadCamResult()
+                {
+                    Code = PublicConst.FlagNo,
+                    Message = "CountPerson:_alarmHandle:{_alarmHandle}！"
+                };
+            }
             var value = HikSdk.NET_DVR_SetDVRMessageCallBack_V50(0,msgCallBack,IntPtr.Zero);
             if (!value)
                 return HikSdkGetLastError("NET_DVR_SetDVRMessageCallBack_V50");
             var netDvrSetupAlarmParam = new ChcNetSdk.NetDvrSetupAlarmParam
             {
                 dwSize = (uint)Marshal.SizeOf<ChcNetSdk.NetDvrSetupAlarmParam>(),
-                byLevel = 1,
-                byAlarmInfoType = 1,      
-                byFaceAlarmDetection = 0,
-                byDeployType = 0
+                byLevel = 1,//0- 一级布防,1- 二级布防
             };
             _alarmHandle = HikSdk.NET_DVR_SetupAlarmChan_V41(_userId,ref netDvrSetupAlarmParam);
             if (_alarmHandle < 0)

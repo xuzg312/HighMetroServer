@@ -42,4 +42,11 @@ public static class PublicConst
     public const int HeartCame = 5*60*1000;//检测周期；单位：秒；
     public const int HeartCommInter = 1;//主板空闲时间内无数据回传，断开重连接；单位：分钟；
     public const int HeartTcpInter = 2;//客户端空闲时间内无消息，强制关闭；单位：分钟；
+
+    public const byte CamPhoto = 0X01;
+    public const byte CamCamera = 0X02;
+    public const byte CamPerson = 0X03;
+    
+    public const int CommAlarmPdc = 0x1103;//人流量统计报警上传，对应NET_DVR_PDC_ALRAM_INFO
+
 }

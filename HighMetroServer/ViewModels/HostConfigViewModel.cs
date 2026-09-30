@@ -15,7 +15,9 @@ using HighMetroServer.Services;
 
 namespace HighMetroServer.ViewModels;
 
-public partial class HostConfigViewModel : ObservableObject, IRecipient<AppCleanupMessage>
+public partial class HostConfigViewModel : ObservableObject, 
+    IRecipient<AppCleanupMessage>,
+    IRecipient<TcpMessage>
 {
     [ObservableProperty]
     private HostOptions? _config;
@@ -53,8 +55,9 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
         _buildServer = false;
         _manClose = false;
         _hostInfo = ParaSetupModules.HostInfo!;
-        HostState = "【 TCP端口监听状态：❌ 】";
-        WeakReferenceMessenger.Default.Register(this);
+        HostState = "【 TCP端口监听状态：✘ 】";
+        WeakReferenceMessenger.Default.Register<AppCleanupMessage>(this);
+        WeakReferenceMessenger.Default.Register<TcpMessage>(this);
         _ctsHeart = new CancellationTokenSource();
         _heartTask = Task.Run(() => HeartLoop(_ctsHeart.Token), _ctsHeart.Token);
     }
@@ -168,7 +171,7 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
         {
             ParaSetupModules.TcpServerBufferDataProdEvent += OnShowTcpServerDataProdEvent;
             ParaSetupModules.TcpClientConnEvent += OnClientConnEvent;
-            _tcpServer = new TcpServerListenerImpl(_hostInfo, PublicConst.TcpDataParseTask); //建立2个消费者线程；
+            _tcpServer = new TcpServerListenerImpl(_hostInfo, PublicConst.TcpDataParseTask); 
             _buildServer = true;
             _hostInfo.TcpServer = _tcpServer;
         }
@@ -177,7 +180,7 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 _start = true;
-                HostState = "【 TCP端口监听状态：✅ 】";
+                HostState = "【 TCP端口监听状态：✔ 】";
                 OpenCommand.NotifyCanExecuteChanged();
                 CloseCommand.NotifyCanExecuteChanged();
             });
@@ -203,7 +206,7 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
         _start = false;
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
-            HostState = "【 TCP端口监听状态：❌ 】";
+            HostState = "【 TCP端口监听状态：✘ 】";
             OpenCommand.NotifyCanExecuteChanged();
             CloseCommand.NotifyCanExecuteChanged();
         });
@@ -227,6 +230,29 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
     {
         await Task.Delay(1000).ConfigureAwait(false); 
         await Open();
+    }
+    private async Task SendMessage(SocketDataBlock socketDataBlock)
+    {
+        if (!_buildServer)
+        {
+            var currDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            ParaSetupModules.RaiseAscDataProdEvent($"Tcp-Server未启动！{currDate}");
+            return;
+        }
+        await Task.Delay(10).ConfigureAwait(false); 
+        try
+        {
+            var tcpServer = _tcpServer;
+            tcpServer!.SendMessage(socketDataBlock);
+        }
+        catch (Exception ex)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                var currDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                MessageText = $"发送消息失败：{ex.Message}，【{currDate}】";
+            });
+        }
     }
     [RelayCommand(CanExecute = nameof(CanOpen))]
     private async Task Open()
@@ -416,6 +442,10 @@ public partial class HostConfigViewModel : ObservableObject, IRecipient<AppClean
         {
             _sem.Release();
         }
+    }
+    public void Receive(TcpMessage message)
+    {
+        _ = SendMessage(message.SocketDataBlock);
     }
     public void Receive(AppCleanupMessage message)
     {
