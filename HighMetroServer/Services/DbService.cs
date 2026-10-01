@@ -471,13 +471,18 @@ public class DbService : IDbService
             await using var conn = new MySqlConnection(GetConnectionString());
             await conn.OpenAsync();
             var sql =
-                "INSERT INTO t_personday (hostbh,id,personcount,date) values(@hostbh,@id,@personcount,@date);SELECT LAST_INSERT_ID();";
+                "INSERT INTO t_personday (hostbh,id,personcount,date,entercount,zhiliucount,yiwucount) " +
+                "values(@hostbh,@id,@personcount,@date,entercount,zhiliucount,yiwucount);" +
+                "SELECT LAST_INSERT_ID();";
             await using var cmd = new MySqlCommand(sql, conn);
             // 添加参数（避免拼接字符串导致SQL注入）
             cmd.Parameters.AddWithValue("@hostbh", mainInfoBean.HostBh);
             cmd.Parameters.AddWithValue("@id", mainInfoBean.Id);
             cmd.Parameters.AddWithValue("@personcount", mainInfoBean.Kmcs);
             cmd.Parameters.AddWithValue("@date", mainInfoBean.Datetime);
+            cmd.Parameters.AddWithValue("@entercount", mainInfoBean.EnterCount);
+            cmd.Parameters.AddWithValue("@zhiliucount", mainInfoBean.ZhiLiuCount);
+            cmd.Parameters.AddWithValue("@yiwucount", mainInfoBean.YiWuCount);
             // 执行并返回自增ID
             var scalarResult = await cmd.ExecuteScalarAsync();
             if (scalarResult != null && scalarResult != DBNull.Value)
@@ -502,10 +507,14 @@ public class DbService : IDbService
         {
             await using var conn = new MySqlConnection(GetConnectionString());
             await conn.OpenAsync();
-            var sql = "update t_personday set personcount=@personcount where bh=@bh;";
+            var sql = "update t_personday set personcount=@personcount,entercount=@entercount," +
+                      "zhiliucount=@zhiliucount,yiwucount=@yiwucount where bh=@bh;";
             await using var cmd = new MySqlCommand(sql, conn);
             // 添加参数（避免拼接字符串导致SQL注入）
             cmd.Parameters.AddWithValue("@personcount", mainInfoBean.Kmcs);
+            cmd.Parameters.AddWithValue("@entercount", mainInfoBean.EnterCount);
+            cmd.Parameters.AddWithValue("@zhiliucount", mainInfoBean.ZhiLiuCount);
+            cmd.Parameters.AddWithValue("@yiwucount", mainInfoBean.YiWuCount);
             cmd.Parameters.AddWithValue("@bh", _bh);
             // 执行并返回行数
             resultInfo.Tag = await cmd.ExecuteNonQueryAsync();

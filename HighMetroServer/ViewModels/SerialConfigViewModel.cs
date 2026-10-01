@@ -299,7 +299,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         if (socketDataBlock.Length >= 11)
         {
             if (socketDataBlock.Content![0] == 0XEB &&
-                    socketDataBlock.Content[1] == 0XAA)
+                socketDataBlock.Content[1] == 0XAA)
             {
                 if (socketDataBlock.Content[5] == 0X80 && socketDataBlock.Content[6] == 0X0F)
                 {
@@ -347,7 +347,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
                         } 
                     }
                 }
-                else if (socketDataBlock.Content[5] == 0X8F)
+                else if (socketDataBlock.Content[5] == 0X31)
                 {
                     //获取区域内的人数;
                     var cameraBean = new CameraBean
@@ -506,7 +506,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
             });
         }
     }
-    private async Task CountQueryPerson(SocketDataBlock socketDataBlock,CameraBean  cameraBean)
+    private async Task CountQueryPerson(SocketDataBlock socketDataBlock, CameraBean cameraBean)
     {
         await Task.Delay(10).ConfigureAwait(false);
         cameraBean.HostBh = ParaSetupModules.HostInfo!.Bh;
@@ -514,9 +514,22 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         byte iPosition = 3;
         //设备id
         cameraBean.Id = publicUntil.GetUshort(socketDataBlock.Content!, iPosition);
-        cameraBean.DateTime = DateTime.Now; 
+        cameraBean.DateTime = DateTime.Now;
         //统计人数;
-        WeakReferenceMessenger.Default.Send(new CamMessage(PublicConst.CamPerson,cameraBean));
+        if (!_start || _commSerialImpl==null)
+        {
+            var currDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            ParaSetupModules.RaiseAscDataProdEvent($"串口未启动，无法返回统计人数！【{currDate}】");
+            return;
+        }
+        var data = new byte[11];
+        Array.Copy(socketDataBlock.Content!, data, 8);
+        data[5] = 0XB1;
+        data[7] = 0X02;
+        var enterCount = ParaSetupModules.PersonInfo!.Enter;
+        publicUntil.GetUShort((ushort)enterCount, data,8);
+        data[10] = 0XED;
+        _commSerialImpl.SendMessage(data,0,data.Length);
     }
     public void Start()
     {

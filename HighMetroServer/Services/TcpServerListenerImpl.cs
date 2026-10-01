@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using HighMetroServer.BaseModel;
@@ -59,10 +58,10 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
                 _start = true;
                 return true;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                CloseServer();
-                ParaSetupModules.RaiseTcpClientConnEvent("启动Server失败！");
+                AsyncCloseServer();
+                ParaSetupModules.RaiseTcpClientConnEvent($"启动Server失败:{ex.Message}");
                 return false;
             }
         }finally
@@ -286,7 +285,7 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
                 publicUntil.GetInt(fileData.Length + 3, data, iPosition);
                 iPosition += 4;
                 //设备id
-                publicUntil.GetShort((ushort)tcpDataBean.Id, data, iPosition);
+                publicUntil.GetUShort(tcpDataBean.Id, data, iPosition);
                 iPosition += 2;
                 //功能码；
                 data[iPosition++] = 0XAC;
@@ -313,6 +312,10 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
         }
     }
     #region 关闭服务；
+    private void AsyncCloseServer()
+    {
+        _= OnCloseServer();
+    }
     public void CloseServer()
     {
         _sem.Wait();
@@ -326,6 +329,13 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
         {
             _sem.Release();
         }
+        _= OnCloseServer();
+    }
+    private async Task  OnCloseServer()
+    {
+        if (!_start)
+            return;
+        _start = false;
         try
         {
             _listener?.Stop();
@@ -337,7 +347,7 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
         _listener = null;
         try
         {
-            _ctsServer?.Cancel();
+            await _ctsServer!.CancelAsync();
         }
         catch
         {
@@ -345,7 +355,7 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
         }
         try
         {
-            _ctsServer?.Dispose();
+            _ctsServer!.Dispose();
         }
         catch
         {
@@ -379,6 +389,22 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
         }
         _getBufferDataImplList.Clear();
         _acceptLoopTask = null;
+        try
+        {
+            await _readTask!;
+        }
+        catch (Exception)
+        {
+            //忽略；
+        }
+        try
+        {
+            await _acceptLoopTask!;
+        }
+        catch (Exception)
+        {
+            //忽略；
+        }
         _readTask = null;
         try
         {

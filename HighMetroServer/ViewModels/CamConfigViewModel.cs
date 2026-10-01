@@ -53,7 +53,6 @@ public partial class CamConfigViewModel : ObservableObject,
     private bool _check;
     private bool _isValid;
     private readonly MsgCallBack _callBackForPerson;
-    private readonly PersonInfo _personInfo;
     private readonly ConcurrentQueue<ChcNetSdk.NetDvrPdcAlramInfo> _receiveQueue = [];
     private readonly SemaphoreSlim _semaphoreSlim;
     private Task? _personTask;
@@ -65,7 +64,7 @@ public partial class CamConfigViewModel : ObservableObject,
         _check = false;
         _isValid = false;
         CamState = "【 摄像头连接状态：✘ 】";
-        _personInfo = new PersonInfo();
+        ParaSetupModules.PersonInfo = new PersonInfo();
         _semaphoreSlim = new SemaphoreSlim(0);
         _camRemoteLinkImpl = new CamRemoteLinkImpl();
         _callBackForPerson = OnCallBackForPerson;
@@ -369,17 +368,16 @@ public partial class CamConfigViewModel : ObservableObject,
                 ParaSetupModules.RaiseAscDataProdEvent($"获取布防消息失败！【{currDateTime}】");
                 continue;
             }
-            _personInfo.Enter = data.dwEnterNum;
-            _personInfo.Leave = data.dwLeaveNum;
-            _personInfo.Pass = data.dwPassingNum;
-            
-            var dwUnionSize = (uint)Marshal.SizeOf(data.uStatModeParam);
-            var ptrPdcUnion = Marshal.AllocHGlobal((Int32)dwUnionSize);
-            Marshal.StructureToPtr(data.uStatModeParam, ptrPdcUnion, false);
-
-            var recStatFrame = Marshal.PtrToStructure<ChcNetSdk.UnionStatFrame>(ptrPdcUnion);
-            _personInfo.RelativeTime = recStatFrame.dwRelativeTime;
-            _personInfo.AbsTime = recStatFrame.dwAbsTime;
+            ParaSetupModules.PersonInfo!.Enter = data.dwEnterNum;
+            ParaSetupModules.PersonInfo.Leave = data.dwLeaveNum;
+            ParaSetupModules.PersonInfo.Pass = data.dwPassingNum;
+            ParaSetupModules.RaiseAscDataProdEvent($"布防报警数据：Enter:{ParaSetupModules.PersonInfo.Enter};Leave:{ParaSetupModules.PersonInfo.Leave};Pass:{ParaSetupModules.PersonInfo.Pass}");
+            //var dwUnionSize = (uint)Marshal.SizeOf(data.uStatModeParam);
+            //var ptrPdcUnion = Marshal.AllocHGlobal((Int32)dwUnionSize);
+            //Marshal.StructureToPtr(data.uStatModeParam, ptrPdcUnion, false);
+            //var recStatFrame = Marshal.PtrToStructure<ChcNetSdk.UnionStatFrame>(ptrPdcUnion);
+            //_personInfo.RelativeTime = recStatFrame.dwRelativeTime;
+            //_personInfo.AbsTime = recStatFrame.dwAbsTime;
         }
     }
     [RelayCommand(CanExecute = nameof(CanOpen))]

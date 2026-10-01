@@ -13,6 +13,7 @@ public static class ParaSetupModules
     public static List<SerialCommInfo>? SerialCommList{ get; set; }
     public static UserInfo? UserInfo{ get; set; }
     public static IDbService? DbService{ get; set; }
+    public static PersonInfo? PersonInfo{ get; set; }
     //展示ASC消息；
     private static EventHandler? _ascDataProdEvent;
     public static event EventHandler? AscDataProdEvent

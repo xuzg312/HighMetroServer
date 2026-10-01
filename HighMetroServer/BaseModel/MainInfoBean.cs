@@ -31,6 +31,9 @@ public class MainInfoBean
     public int Dlcgqzt { get ; set ; }
     public int Dostate { get ; set ; }
     public int Kzdldo { get; set ; }
+    public int EnterCount { get; set ; }
+    public int ZhiLiuCount { get; set ; }
+    public int YiWuCount { get; set ; }
     public int Total { get; set ; }
     public string Datetime { get; set; } = string.Empty;
     public string Content { get; set; } = string.Empty;

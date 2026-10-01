@@ -56,9 +56,12 @@ public static class ParseMainBordData
         mainInfoBean00.A2wz = publicUntil.GetUshort(socketDataBlock.Content, iPosition);
         iPosition += 2;
 
-        //预留---4字节；
-        iPosition += 4;
+        //预留---2字节；
+        iPosition += 2;
 
+        //当日通行人数---2字节;
+        mainInfoBean00.EnterCount = publicUntil.GetUshort(socketDataBlock.Content, iPosition);
+        iPosition += 2;
         //B门状态---1字节
         mainInfoBean00.Bstate = socketDataBlock.Content[iPosition++];
         //B1故障码---1字节；
@@ -81,16 +84,21 @@ public static class ParseMainBordData
         //B2位置---2字节；
         mainInfoBean00.B2Wz = publicUntil.GetUshort(socketDataBlock.Content, iPosition);
         iPosition += 2;
+        //滞留人员---2字节；
+        mainInfoBean00.ZhiLiuCount = publicUntil.GetUshort(socketDataBlock.Content, iPosition);
+        iPosition += 2;
+        //遗物
+        mainInfoBean00.YiWuCount = publicUntil.GetUshort(socketDataBlock.Content, iPosition);
+        iPosition += 2;
         //DL传感器状态----2字节;
         mainInfoBean00.Dlcgqzt = publicUntil.GetUshort(socketDataBlock.Content, iPosition);
         iPosition += 2;
-        //DO1-4状态---2字节；
-        mainInfoBean00.Dostate = publicUntil.GetUshort(socketDataBlock.Content, iPosition);
-        iPosition += 2;
+        //DO1-4状态---1字节；
+        mainInfoBean00.Dostate = socketDataBlock.Content[iPosition++];
         //扩展DI DO---2字节；
         mainInfoBean00.Kzdldo = publicUntil.GetUshort(socketDataBlock.Content, iPosition);
         iPosition += 2;
-
+        
         //预留---8字节；
         iPosition += 8;
 
@@ -140,15 +148,23 @@ public static class ParseMainBordData
         sb.Append("\r\nB2位置：").Append(mainInfoBean.B2Wz);
         data.Add(sb.ToString());
 
+        sb = new StringBuilder();
+        sb.Append("当日通行人数：").Append(mainInfoBean.EnterCount);
+        sb.Append("\r\n滞留人员：").Append(mainInfoBean.ZhiLiuCount);
+        sb.Append("\r\n遗物：").Append(mainInfoBean.YiWuCount);
         var value = Convert.ToString(mainInfoBean.Dlcgqzt, 16).ToUpper();
         if (value.Length < 2)
         {
             value = "0" + value;
         }
-        sb = new StringBuilder();
-        sb.Append("DI传感器状态：").Append(value);
+        sb.Append("\r\nDI传感器状态：").Append(value);
         sb.Append("\r\nDO1-4状态：").Append(GetDostate(mainInfoBean.Dostate));
-        sb.Append("\r\n扩展DIDO：").Append(mainInfoBean.Kzdldo);
+        value = Convert.ToString(mainInfoBean.Kzdldo, 16).ToUpper();
+        if (value.Length < 2)
+        {
+            value = "0" + value;
+        }
+        sb.Append("\r\n扩展DIDO：").Append(value);
         sb.Append("\r\n累加和：").Append(mainInfoBean.Total);
         sb.Append("\r\n收数据帧数：").Append(mainInfoBean.Value1).Append("，长度：").Append(mainInfoBean.Value1Length);
         sb.Append("\r\n有效帧数：").Append(mainInfoBean.Value2).Append("，长度：").Append(mainInfoBean.Value2Length);

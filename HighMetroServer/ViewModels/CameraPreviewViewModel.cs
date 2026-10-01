@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Concurrent;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -317,12 +318,11 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
     [RelayCommand(CanExecute = nameof(CanSnap))]
     private async Task Snap()
     {
-        _isSyncImage = true;
-        await Dispatcher.UIThread.InvokeAsync(() =>
-        {
-            IsNoSnapshot = false;
-        });
-        /*
+        //_isSyncImage = true;
+        //await Dispatcher.UIThread.InvokeAsync(() =>
+       // {
+         //   IsNoSnapshot = false;
+        //});
         var loadCamResult = await _camRemoteLinkImpl.DebugCaptureJpegPicture();
         await Dispatcher.UIThread.InvokeAsync(() => { (SnapshotSource as Bitmap)?.Dispose(); });
         if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
@@ -341,7 +341,7 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
             SnapshotSource = new Bitmap(ms);
             IsNoSnapshot = false;
         });
-        */
+        
     }
     [RelayCommand(CanExecute= nameof(CanClose))]
     private void Close()
