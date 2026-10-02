@@ -371,7 +371,6 @@ public partial class CamConfigViewModel : ObservableObject,
             ParaSetupModules.PersonInfo!.Enter = data.dwEnterNum;
             ParaSetupModules.PersonInfo.Leave = data.dwLeaveNum;
             ParaSetupModules.PersonInfo.Pass = data.dwPassingNum;
-            ParaSetupModules.RaiseAscDataProdEvent($"布防报警数据：Enter:{ParaSetupModules.PersonInfo.Enter};Leave:{ParaSetupModules.PersonInfo.Leave};Pass:{ParaSetupModules.PersonInfo.Pass}");
             //var dwUnionSize = (uint)Marshal.SizeOf(data.uStatModeParam);
             //var ptrPdcUnion = Marshal.AllocHGlobal((Int32)dwUnionSize);
             //Marshal.StructureToPtr(data.uStatModeParam, ptrPdcUnion, false);

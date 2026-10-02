@@ -314,6 +314,7 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
     #region 关闭服务；
     private void AsyncCloseServer()
     {
+        _start = false;
         _= OnCloseServer();
     }
     public void CloseServer()
@@ -333,9 +334,6 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
     }
     private async Task  OnCloseServer()
     {
-        if (!_start)
-            return;
-        _start = false;
         try
         {
             _listener?.Stop();

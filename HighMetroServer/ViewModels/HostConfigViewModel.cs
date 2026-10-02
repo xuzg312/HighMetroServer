@@ -132,7 +132,7 @@ public partial class HostConfigViewModel : ObservableObject,
             //长度，1字节；
             data[iPosition++] = 0X07;
             //工控机编号，2字节；
-            var id = (ushort)_hostInfo.Bh;
+            var id = _hostInfo.Bh;
             publicUntil.GetUShort(id, data, iPosition);
             iPosition += 2;
             //主板ID，2字节；

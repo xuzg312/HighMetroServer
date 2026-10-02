@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Concurrent;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -76,7 +77,6 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
     private readonly CancellationTokenSource _cts;
     private Task? _showUiTask;
     private volatile bool _isClosed;
-    private bool _isSyncImage;
 
     public CameraPreviewViewModel(HardInfo hardInfo,ResultInfo resultInfo)
     {
@@ -200,26 +200,6 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
                 }
             }
             PreviewSource = useSource;
-            if (!_isSyncImage)
-                return;
-            (SnapshotSource as IDisposable)?.Dispose();
-            var snapshotCopy = new WriteableBitmap(
-                useSource.PixelSize,
-                useSource.Dpi,
-                useSource.Format);
-            using var srcLock = useSource.Lock();
-            using var dstLock = snapshotCopy.Lock();
-            var totalBytes = srcLock.RowBytes * srcLock.Size.Height;
-            unsafe
-            {
-                Buffer.MemoryCopy(
-                    source: srcLock.Address.ToPointer(),
-                    destination: dstLock.Address.ToPointer(),
-                    destinationSizeInBytes: totalBytes,
-                    sourceBytesToCopy: totalBytes);
-            }
-            SnapshotSource = snapshotCopy;
-            _isSyncImage = false;
         }, DispatcherPriority.Background);
     }
     [RelayCommand(CanExecute = nameof(CanOpen))]
@@ -333,12 +313,7 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
     [RelayCommand(CanExecute = nameof(CanSnap))]
     private async Task Snap()
     {
-        await Dispatcher.UIThread.InvokeAsync(() =>
-        {
-            IsNoSnapshot = false;
-            _isSyncImage = true;
-        });
-        /*var loadCamResult = await _camRemoteLinkImpl.DebugCaptureJpegPicture();
+        var loadCamResult = await _camRemoteLinkImpl.DebugCaptureJpegPicture();
         await Dispatcher.UIThread.InvokeAsync(() => { (SnapshotSource as Bitmap)?.Dispose(); });
         if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
         {
@@ -356,7 +331,6 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
             SnapshotSource = new Bitmap(ms);
             IsNoSnapshot = false;
         });
-        */
     }
     [RelayCommand(CanExecute= nameof(CanClose))]
     private void Close()
