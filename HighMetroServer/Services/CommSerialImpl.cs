@@ -30,10 +30,10 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
     private const byte PacketHead2 = 0xAA;
     private const byte PacketTail = 0xED;
     private const int TaskWaitTimeoutMs = 500;
-    private int _receiveTotalCount;
-    private int _parseTotalCount;
-    private int _receiveTotalBytes;
-    private int _parseTotalBytes;
+    private long _receiveTotalCount;
+    private long _parseTotalCount;
+    private long _receiveTotalBytes;
+    private long _parseTotalBytes;
     private Task? _parseBackgroundTask;
     private CancellationTokenSource? _parseCts;
     private SemaphoreSlim? _semaphoreSlim;
@@ -106,8 +106,15 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
                 Array.Copy(validData, temp, actualRead);
                 validData = temp;
             }
-            Interlocked.Increment(ref _receiveTotalCount);
-            Interlocked.Add(ref _receiveTotalBytes, actualRead);
+
+            if (_receiveTotalCount == long.MaxValue)
+                _receiveTotalCount = 0;
+            _receiveTotalCount++;
+            
+            if (_receiveTotalBytes + actualRead >= long.MaxValue)
+                _receiveTotalBytes = 0;
+            _receiveTotalBytes+=actualRead;
+            
             _receiveQueue.Enqueue(validData);
             _semaphoreSlim!.Release();
         }
@@ -226,8 +233,13 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
             frame[i] = _receiveBuffer.Dequeue();
         }
         // 统计计数原子更新
-        Interlocked.Increment(ref _parseTotalCount);
-        Interlocked.Add(ref _parseTotalBytes, totalFrameLength);
+        if (_parseTotalCount == long.MaxValue)
+            _parseTotalCount = 0;
+        _parseTotalCount++;
+        
+        if (_parseTotalBytes + totalFrameLength >= long.MaxValue)
+            _parseTotalBytes = 0;
+        _parseTotalBytes += totalFrameLength;
         // 6. 抛出完整包事件
         var socketDataBlock00 = new SocketDataBlock
         {

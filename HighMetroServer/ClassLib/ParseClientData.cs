@@ -87,25 +87,13 @@ public static class ParseClientData
                 iPosition = 3;
                 tcpDataBean.HostBh = publicUntil.GetUshort(socketDataBlock.Content, iPosition);
                 break;
-            case 0X55: //Server端自检测；
-                tcpDataBean = new TcpDataBean
-                {
-                    TurnComm = false,
-                    Type = PublicConst.IdentifySelfCheck
-                };
-                //hostBh；
-                iPosition = 3;
-                tcpDataBean.HostBh = publicUntil.GetUshort(socketDataBlock.Content, iPosition);
-                break;
         }
         return tcpDataBean;
     }
     public static byte[]? GetPhotoFile(TcpDataBean tcpDataBean)
     {
         if (!File.Exists(tcpDataBean.FileName))
-        {
             return null;
-        }
         return File.ReadAllBytes(tcpDataBean.FileName);
     }
 }

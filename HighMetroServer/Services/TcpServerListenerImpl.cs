@@ -210,8 +210,7 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
             {
                 if (!child.IsStart())
                     continue;
-                if (child.GetClientType() == PublicConst.IdentifyAll ||
-                    child.GetClientType() == PublicConst.IdentifySelfCheck)
+                if (child.GetClientType() == PublicConst.IdentifyAll)
                 {
                     child.SendMessage(socketDataBlock.Content!, socketDataBlock.Length);
                 }
@@ -281,7 +280,7 @@ public class TcpServerListenerImpl(HostInfo hostInfo, int threadCount)
                 data[iPosition++] = 0XEC;
                 data[iPosition++] = 0XAB;
                 //文件大小，占用4表字节；
-                PublicUntil publicUntil = new PublicUntil();
+                var publicUntil = new PublicUntil();
                 publicUntil.GetInt(fileData.Length + 3, data, iPosition);
                 iPosition += 4;
                 //设备id

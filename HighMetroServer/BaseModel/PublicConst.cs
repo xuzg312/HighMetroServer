@@ -22,7 +22,6 @@ public static class PublicConst
     public const byte IdentifyHeart = 1;//验证,仅发送心跳；
     public const byte IdentifyAll = 2;//验证,实时监控数据；
     public const byte IdentifyPhoto = 3;//获取拍照的图片文件；
-    public const byte IdentifySelfCheck = 4;//Server自检测；
 
     public const string DoorStateCapture = "拍照";
     public const string DoorStateCamera = "录像";
@@ -37,10 +36,10 @@ public static class PublicConst
     public const byte TcpMessage = 0X01;//TCP消息;
     public const byte CommMessage = 0X02;//Comm消息;
 
-    public const int HeartTcp = 5*60*1000;//检测周期；单位：秒；
-    public const int HeartComm = 5*60*1000;//检测周期；单位：秒；
-    public const int HeartCame = 5*60*1000;//检测周期；单位：秒；
-    public const int HeartCommInter = 1;//主板空闲时间内无数据回传，断开重连接；单位：分钟；
+    public const int HeartTcp = 2*60*1000;//检测周期；单位：秒；
+    public const int HeartComm = 2*60*1000;//检测周期；单位：秒；
+    public const int HeartCame = 2*60*1000;//检测周期；单位：秒；
+    public const int HeartCommInter = 1;//串口空闲时间内无数据回传，断开重连接；单位：分钟；
     public const int HeartTcpInter = 2;//客户端空闲时间内无消息，强制关闭；单位：分钟；
 
     public const byte CamPhoto = 0X01;

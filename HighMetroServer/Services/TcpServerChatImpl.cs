@@ -31,6 +31,7 @@ public class TcpServerChatImpl : IChildCommunication
     private const byte PacketTail = 0xED;
     private readonly SemaphoreSlim _semaphoreSlim;
     private readonly SemaphoreSlim _sem = new (1,1);
+    private readonly SemaphoreSlim _sendMessage = new (1,1);
     #endregion
 
     #region 构造函数；
@@ -115,12 +116,11 @@ public class TcpServerChatImpl : IChildCommunication
         }
     }
     #endregion
-    
     #region 发送消息；
     public async Task<bool> SendMessage(byte[] content,int length)
     {
-        if (length <= 0 || length > content.Length) return false;
-        // 防御：TcpClient已经关闭
+        if (length <= 0 || length > content.Length) 
+            return false;
         if (_client is not { Connected: true })
         {
             CloseClient();
@@ -128,14 +128,14 @@ public class TcpServerChatImpl : IChildCommunication
             ParaSetupModules.RaiseTcpClientConnEvent($"{_key}：发送消息，客户端连接已断开！【{currDateTime}】");
             return false;
         }
-        // 异步锁，保证同一时刻只有一处进入写逻辑，解决并发WriteAsync错乱
         var currTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        await _sendMessage.WaitAsync(_clientCts.Token);
         try
         {
             var ns = _client.GetStream();
             var offset = 0;
             var remaining = length;
-            while (remaining > 0 && !_clientCts.Token.IsCancellationRequested)
+            while (remaining > 0)
             {
                 var sendSize = Math.Min(MaxPacket, remaining);
                 // 使用Memory<T> 高性能异步写入
@@ -145,6 +145,7 @@ public class TcpServerChatImpl : IChildCommunication
                 offset += sendSize;
                 remaining -= sendSize;
             }
+
             // 分包写完强制冲刷缓冲区
             await ns.FlushAsync(_clientCts.Token);
             return true;
@@ -155,23 +156,15 @@ public class TcpServerChatImpl : IChildCommunication
             ParaSetupModules.RaiseTcpClientConnEvent($"{_key}：发送消息会话取消！【{currTime}】");
             return false;
         }
-        catch (IOException)
-        {
-            CloseClient();
-            ParaSetupModules.RaiseTcpClientConnEvent($"{_key}：发送消息IO异常，强制下线！【{currTime}】");
-            return false;
-        }
-        catch (SocketException)
-        {
-            CloseClient();
-            ParaSetupModules.RaiseTcpClientConnEvent($"{_key}：发送消息Socket异常，强制下线！【{currTime}】");
-            return false;
-        }
         catch (Exception ex)
         {
             CloseClient();
-            ParaSetupModules.RaiseAscDataProdEvent($"{_key}：发送消息异常，强制下线：{ex.Message}！【{currTime}】");                
+            ParaSetupModules.RaiseAscDataProdEvent($"{_key}：发送消息异常，强制下线：{ex.Message}！【{currTime}】");
             return false;
+        }
+        finally
+        {
+            _sendMessage.Release();
         }
     }
     #endregion

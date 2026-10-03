@@ -151,7 +151,7 @@ public static class ParseMainBordData
         sb = new StringBuilder();
         sb.Append("当日通行人数：").Append(mainInfoBean.EnterCount);
         sb.Append("\r\n滞留人员：").Append(mainInfoBean.ZhiLiuCount);
-        sb.Append("\r\n遗物：").Append(mainInfoBean.YiWuCount);
+        sb.Append("\r\n遗留物品：").Append(mainInfoBean.YiWuCount);
         var value = Convert.ToString(mainInfoBean.Dlcgqzt, 16).ToUpper();
         if (value.Length < 2)
         {
@@ -166,8 +166,8 @@ public static class ParseMainBordData
         }
         sb.Append("\r\n扩展DIDO：").Append(value);
         sb.Append("\r\n累加和：").Append(mainInfoBean.Total);
-        sb.Append("\r\n收数据帧数：").Append(mainInfoBean.Value1).Append("，长度：").Append(mainInfoBean.Value1Length);
-        sb.Append("\r\n有效帧数：").Append(mainInfoBean.Value2).Append("，长度：").Append(mainInfoBean.Value2Length);
+        sb.Append("\r\n收到：").Append(mainInfoBean.Value1).Append("，长度：").Append(mainInfoBean.Value1Length);
+        sb.Append("\r\n有效：").Append(mainInfoBean.Value2).Append("，长度：").Append(mainInfoBean.Value2Length);
         data.Add(sb.ToString());
 
         return data;

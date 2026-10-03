@@ -81,7 +81,6 @@ public partial class HostConfigViewModel : ObservableObject,
         while (!token.IsCancellationRequested)
         {
             await Task.Delay(PublicConst.HeartTcp, token);
-            await _sem.WaitAsync(token);
             try
             {
                 if (_manClose)
@@ -89,15 +88,7 @@ public partial class HostConfigViewModel : ObservableObject,
                 if (_start)
                 {
                     _tcpServer!.CheckHeart();
-                    var isOnLine = await CheckIsLine(token);
-                    if (!isOnLine)
-                    {
-                        await CloseAsync();
-                        await OpenAsync(); 
-                    }
-                    continue;
                 }
-                await OpenAsync();
             }
             catch (OperationCanceledException)
             {
@@ -106,64 +97,9 @@ public partial class HostConfigViewModel : ObservableObject,
             catch (Exception ex)
             {
                 var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                ParaSetupModules.RaiseAscDataProdEvent($"摄像头在线监听异常：{ex.Message}【{currDateTime}】");
-            }
-            finally
-            {
-                _sem.Release(); 
+                ParaSetupModules.RaiseAscDataProdEvent($"客户端在线监听异常：{ex.Message}【{currDateTime}】");
             }
         }
-    }
-    private async Task<bool> CheckIsLine(CancellationToken token)
-    {
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
-        cts.CancelAfter(20000);
-        using var client = new TcpClient();
-        try
-        {
-            await client.ConnectAsync(_hostInfo.Ip, _hostInfo.Port, cts.Token);
-            await using var ns = client.GetStream();
-            var publicUntil = new PublicUntil();
-            var iPosition = 0;
-            var data = new byte[11];
-            //帧头，2字节；
-            data[iPosition++] = 0XEB;
-            data[iPosition++] = 0XAA;
-            //长度，1字节；
-            data[iPosition++] = 0X07;
-            //工控机编号，2字节；
-            var id = _hostInfo.Bh;
-            publicUntil.GetUShort(id, data, iPosition);
-            iPosition += 2;
-            //主板ID，2字节；
-            data[iPosition++] = 0X00;
-            data[iPosition++] = 0X00;
-            //功能码，1字节；
-            data[iPosition++] = 0X55;
-            //备用；
-            data[iPosition++] = 0X99;
-            data[iPosition++] = 0X99;
-            //帧尾，1字节；
-            data[iPosition] = 0XED;
-            await ns.WriteAsync(data, cts.Token);
-            await ns.FlushAsync(cts.Token);
-            var resp = new byte[64];
-            var read = await ns.ReadAsync(resp, cts.Token);
-            return read == 11
-                   && resp[0] == 0XEB
-                   && resp[1] == 0XAA
-                   && resp[7] == 0X55;
-        }
-        catch (Exception ex)
-        {
-            var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-            ParaSetupModules.RaiseAscDataProdEvent($"检测TCPServer服务异常：{ex.Message}【{currDateTime}】");
-            return false;
-        }
-    }
-    private async Task OpenAsync()
-    {
-        await OnOpen();
     }
     private async Task OnOpen()
     {
@@ -194,10 +130,6 @@ public partial class HostConfigViewModel : ObservableObject,
                 CloseCommand.NotifyCanExecuteChanged();
             });
         }
-    }
-    private async Task CloseAsync()
-    {
-        await OnClose();
     }
     private async Task OnClose()
     {
@@ -232,7 +164,7 @@ public partial class HostConfigViewModel : ObservableObject,
     }
     private async Task SendMessage(SocketDataBlock socketDataBlock)
     {
-        if (!_buildServer)
+        if (!_buildServer || !_start)
         {
             var currDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             ParaSetupModules.RaiseAscDataProdEvent($"Tcp-Server未启动！{currDate}");
@@ -355,9 +287,6 @@ public partial class HostConfigViewModel : ObservableObject,
                         var value01 = $"文件【{{tcpDataBean.FileName}}】不存在！【{currentTime}】";
                         ParaSetupModules.RaiseTcpClientConnEvent(value01);
                     }
-                    break;
-                case PublicConst.IdentifySelfCheck:
-                    _tcpServer!.IdentifyInfo(socketDataBlock, tcpDataBean);
                     break;
                 default:
                     var value00 = $"工控机HostBh【{tcpDataBean.HostBh}】,请求功能码无效！【{currentTime}】";

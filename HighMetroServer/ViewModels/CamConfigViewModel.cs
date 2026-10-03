@@ -245,6 +245,8 @@ public partial class CamConfigViewModel : ObservableObject,
     }
     private async Task OpenAsync()
     {
+        var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        ParaSetupModules.RaiseAscDataProdEvent($"摄像头未在线，尝试登录：【{currDateTime}】");
         await OnOpen();
     }
     private async Task OnOpen()
@@ -284,6 +286,7 @@ public partial class CamConfigViewModel : ObservableObject,
             {
                 MessageText = loadCamResult.Message;
             });
+            _= _camRemoteLinkImpl.Logout();
             return;
         }
         //布防；
@@ -296,9 +299,9 @@ public partial class CamConfigViewModel : ObservableObject,
             });
             return;
         }
+        _start = true;
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
-            _start = true;
             CamState = "【 摄像头连接状态：✔ 】";
             OpenCommand.NotifyCanExecuteChanged();
             CloseCommand.NotifyCanExecuteChanged();
@@ -306,6 +309,8 @@ public partial class CamConfigViewModel : ObservableObject,
     }
     private async Task CloseAsync()
     {
+        var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        ParaSetupModules.RaiseAscDataProdEvent($"摄像头未在线，退出登录：【{currDateTime}】");
         await OnClose();
     }
     private async Task OnClose()
@@ -315,13 +320,13 @@ public partial class CamConfigViewModel : ObservableObject,
         {
             if (!loadCamResult.Code.Equals(PublicConst.FlagYes))
             {
-                MessageText = "退出登录失败！";
+                MessageText = $"退出登录失败:{loadCamResult.Message}";
             }
+            _start = false;
             CamState = "【 摄像头连接状态：✘ 】";
             OpenCommand.NotifyCanExecuteChanged();
             CloseCommand.NotifyCanExecuteChanged();
         });
-        _start = false;
     }
     partial void OnConfigChanged(CamOptions? value)
     {

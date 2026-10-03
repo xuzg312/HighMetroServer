@@ -5,6 +5,7 @@
         <Nullable>enable</Nullable>
         <ApplicationManifest>app.manifest</ApplicationManifest>
 	    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
         <PublishReadyToRun>false</PublishReadyToRun>
         <DebugType>none</DebugType>
         <SelfContained>true</SelfContained>
@@ -16,6 +17,7 @@
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         <NoWarn>$(NoWarn);IL2104</NoWarn>
         <NoWarn>$(NoWarn);IL3053</NoWarn>
+        
     </PropertyGroup>
     
     <ItemGroup>

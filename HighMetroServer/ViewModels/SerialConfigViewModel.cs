@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -81,161 +80,15 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     private int _serial;
     private CommSerialImpl? _commSerialImpl;
     private bool _buildServer;
-
-    private Task? _heartTask;
-    private CancellationTokenSource? _ctsHeart;
-    private readonly SemaphoreSlim _sem = new (1,1);
-    private bool _manClose;
-    private DateTime _heartTime;
-
+    
     public SerialConfigViewModel(int serial)
     {
         _serial = serial;
         _start = false;
-        _manClose = false;
         _buildServer = false;
         ParaSetupModules.CommBufferDataProdEvent += OnBufferDataProdEvent;
         CommState = "【 串口连接状态：✘ 】";
         WeakReferenceMessenger.Default.Register(this);
-        _ctsHeart = new CancellationTokenSource();
-        _heartTask = Task.Run(() => HeartLoop(_ctsHeart.Token), _ctsHeart.Token);
-    }
-    private async Task HeartLoop(CancellationToken token)
-    {
-        try
-        {
-            await HeartLoopAsync(token);
-        }
-        catch (OperationCanceledException)
-        {
-        }
-        catch (Exception ex)
-        {
-            var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-            ParaSetupModules.RaiseAscDataProdEvent($"摄像头在线监听顶层异常：{ex.Message}【{currDateTime}】");
-        }
-    }
-    private async Task HeartLoopAsync(CancellationToken token)
-    {
-        while (!token.IsCancellationRequested)
-        {
-            await Task.Delay(PublicConst.HeartComm, token);
-            await _sem.WaitAsync(token);
-            try
-            {
-                if (SelectPortName is null || SelectedBaudRate is null || SelectedDataBits is null ||
-                    SelectedStopBits is null || SelectedParity is null || _serial == 0 || _manClose)
-                    continue;
-                if (_start)
-                {
-                    var isOnLine = CheckIsLine();
-                    if (!isOnLine)
-                    {
-                        await CloseAsync();
-                        await OpenAsync(); 
-                    }
-                    continue;
-                }
-                await OpenAsync();
-            }
-            catch (OperationCanceledException)
-            {
-                break;
-            }
-            catch (Exception ex)
-            {
-                var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                ParaSetupModules.RaiseAscDataProdEvent($"摄像头在线监听异常：{ex.Message}【{currDateTime}】");
-            }
-            finally
-            {
-                _sem.Release(); // 释放信号量锁
-            }
-        }
-    }
-    private bool CheckIsLine()
-    {
-        return (DateTime.Now - _heartTime).TotalMinutes <= PublicConst.HeartCommInter;
-    }
-    private async Task OpenAsync()
-    {
-        await OnOpen();
-    }
-    private async Task OnOpen()
-    {
-        if (!_buildServer)
-        {
-            if (_serial == 0)
-            {
-                await Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    MessageText = "主板参数处理逻辑有误，请联系开发人员检查！";
-                });
-                return;
-            }
-            if (SelectPortName is null || SelectedBaudRate is null || SelectedDataBits is null ||
-                SelectedStopBits is null || SelectedParity is null)
-            {
-                await Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    MessageText = "主板参数未配置，请点击菜单【设备管理--主板维护】进行设置，设置后需要重新启动程序！";
-                });
-                return;
-            }
-            var serialCommList = ParaSetupModules.SerialCommList;
-            if (serialCommList!.Count < _serial)
-            {
-                await Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    MessageText = "主板内部处理逻辑有误，serial与主板列表不一致！";
-                });
-                return;
-            }
-            var serialCommInfo = serialCommList[_serial - 1];
-            if (!serialCommInfo.IsValid())
-            {
-                await Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    MessageText = "主板参数无效，如果已经配置过，请重新启动程序加载！";
-                });
-                return;
-            }
-            //连接尝试串口
-            _commSerialImpl = new CommSerialImpl(PublicConst.CommDataParseTask, serialCommInfo);
-            serialCommInfo.CommSerialImpl = _commSerialImpl;
-            _buildServer = true;
-        }
-        if (_commSerialImpl!.Open())
-        {
-            _start = true;
-            _heartTime = DateTime.Now;
-            await Dispatcher.UIThread.InvokeAsync(() => { CommState = "【 串口连接状态：✔ 】"; });
-        }
-        else
-        {
-            await Dispatcher.UIThread.InvokeAsync(() => { CommState = "【 串口连接状态：✘ 】"; });
-        }
-        await Dispatcher.UIThread.InvokeAsync(() =>
-        {
-            OpenCommand.NotifyCanExecuteChanged();
-            CloseCommand.NotifyCanExecuteChanged();
-        });
-    }
-    private async Task CloseAsync()
-    {
-        await OnClose();
-    }
-    private async Task OnClose()
-    {
-        _commSerialImpl!.Close();
-        _start = false;
-        _heartTime = DateTime.Now;
-        await Dispatcher.UIThread.InvokeAsync(() =>
-        {
-            CommState = "【 串口连接状态：✘ 】";
-            OpenCommand.NotifyCanExecuteChanged();
-            CloseCommand.NotifyCanExecuteChanged();
-        });
     }
     public void UpdateParams(int serial, SerialPortOptions? options)
     {
@@ -289,7 +142,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         catch (Exception ex)
         {
             var currentTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-            ParaSetupModules.RaiseAscDataProdEvent($"解析串口数据异常：{ex.Message}，【{currentTime}】");
+            ParaSetupModules.RaiseAscDataProdEvent($"解析串口数据异常：{ex.Message}:{ex.Message}，【{currentTime}】");
         }
     }
     private async Task OnBufferDataProd(SocketDataBlock socketDataBlock)
@@ -306,7 +159,6 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
                     //心跳；
                     if (socketDataBlock.Length >= 62)
                     {
-                        _heartTime = DateTime.Now;
                         //转发到TcpClient;
                         SendMessage(socketDataBlock);
                         //保存心跳;
@@ -329,7 +181,6 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
                         {
                             //动作:拍照；
                             //转发到TcpClient;
-                            _heartTime = DateTime.Now;
                             SendMessage(socketDataBlock);
                             cameraBean.Type = PublicConst.DoorStateCapture;
                             _= ReplyCaptureInfo(socketDataBlock, cameraBean);
@@ -339,7 +190,6 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
                         {
                             //动作:录像;
                             //转发到TcpClient;
-                            _heartTime = DateTime.Now;
                             SendMessage(socketDataBlock);
                             cameraBean.Type = PublicConst.DoorStateCamera;
                             _= ReplyCameraInfo(socketDataBlock, cameraBean);
@@ -550,30 +400,70 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     [RelayCommand(CanExecute = nameof(CanOpen))]
     private async Task Open()
     {
-        await _sem.WaitAsync(_ctsHeart!.Token);
-        try
+        if (!_buildServer)
         {
-            _manClose = false;
-            await OnOpen();
+            if (_serial == 0)
+            {
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    MessageText = "主板参数处理逻辑有误，请联系开发人员检查！";
+                });
+                return;
+            }
+            if (SelectPortName is null || SelectedBaudRate is null || SelectedDataBits is null ||
+                SelectedStopBits is null || SelectedParity is null)
+            {
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    MessageText = "主板参数未配置，请点击菜单【设备管理--主板维护】进行设置，设置后需要重新启动程序！";
+                });
+                return;
+            }
+            var serialCommList = ParaSetupModules.SerialCommList;
+            if (serialCommList!.Count < _serial)
+            {
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    MessageText = "主板内部处理逻辑有误，serial与主板列表不一致！";
+                });
+                return;
+            }
+            var serialCommInfo = serialCommList[_serial - 1];
+            if (!serialCommInfo.IsValid())
+            {
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    MessageText = "主板参数无效，如果已经配置过，请重新启动程序加载！";
+                });
+                return;
+            }
+            //连接尝试串口
+            _commSerialImpl = new CommSerialImpl(PublicConst.CommDataParseTask, serialCommInfo);
+            serialCommInfo.CommSerialImpl = _commSerialImpl;
+            _buildServer = true;
         }
-        finally
+        if (_commSerialImpl!.Open())
         {
-            _sem.Release();
+            _start = true;
         }
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            CommState = _start?"【 串口连接状态：✔ 】":"【 串口连接状态：✘ 】";
+            OpenCommand.NotifyCanExecuteChanged();
+            CloseCommand.NotifyCanExecuteChanged();
+        });
     }
     [RelayCommand(CanExecute = nameof(CanClose))]
     private async Task Close()
     {
-        await _sem.WaitAsync(_ctsHeart!.Token);
-        try
+        _commSerialImpl!.Close();
+        _start = false;
+        await Dispatcher.UIThread.InvokeAsync(() =>
         {
-            _manClose = true;
-            await OnClose();
-        }
-        finally
-        {
-            _sem.Release();
-        }
+            CommState = "【 串口连接状态：✘ 】";
+            OpenCommand.NotifyCanExecuteChanged();
+            CloseCommand.NotifyCanExecuteChanged();
+        });
     }
     private bool CanOpen()
     {
@@ -583,52 +473,18 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     {
         return _start; 
     }
-    private async Task ClearResource()
+    private void ClearResource()
     {
-        await _sem.WaitAsync(_ctsHeart!.Token);
-        try
+        if (_start)
         {
-            if (_start)
-            {
-                _commSerialImpl!.Close();
-            }
-            try
-            {
-                await _ctsHeart.CancelAsync();
-            }
-            catch
-            {
-                //忽略；
-            }
-            try
-            {
-                _ctsHeart.Dispose();
-            }
-            catch
-            {
-                //忽略；
-            }
-            try
-            {
-                await _heartTask!;
-            }
-            catch
-            {
-                //忽略；
-            }
-            _ctsHeart = null;
-            _heartTask = null;
-            _start = false;
+            _commSerialImpl!.Close();
         }
-        finally
-        {
-            _sem.Release();
-        }
+        _start = false;
     }
     public void Receive(AppCleanupMessage message)
     {
         Console.WriteLine("释放串口资源-----Receive！");
         WeakReferenceMessenger.Default.UnregisterAll(this);
-        _= ClearResource();
+        ClearResource();
     }
 }

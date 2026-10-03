@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using HighMetroServer.BaseModel;
 using HighMetroServer.HikVision;
+using HighMetroServer.Models;
 
 namespace HighMetroServer.Services;
 
@@ -783,7 +784,7 @@ public class CamRemoteLinkImpl
             }
             // 检测在线
             var value = HikSdk.NET_DVR_RemoteControl(_userId, 20005, IntPtr.Zero, 0);
-            return value >= 0;
+            return value > 0;
         }
         finally
         {
