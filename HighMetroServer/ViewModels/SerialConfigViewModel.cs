@@ -302,7 +302,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     }
     private async Task ReplyCapture(SocketDataBlock socketDataBlock, CameraBean cameraBean)
     {
-        await Task.Delay(10).ConfigureAwait(false); 
+        await Task.Delay(5).ConfigureAwait(false); 
         cameraBean.HostBh = ParaSetupModules.HostInfo!.Bh;
         var publicUntil = new PublicUntil();
         byte iPosition = 3;
@@ -333,7 +333,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     }
     private async Task ReplyCamera(SocketDataBlock socketDataBlock, CameraBean cameraBean)
     {
-        await Task.Delay(10).ConfigureAwait(false); 
+        await Task.Delay(5).ConfigureAwait(false); 
         cameraBean.HostBh = ParaSetupModules.HostInfo!.Bh;
         var publicUntil = new PublicUntil();
         byte iPosition = 3;
@@ -363,7 +363,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     }
     private async Task CountQueryPerson(SocketDataBlock socketDataBlock, CameraBean cameraBean)
     {
-        await Task.Delay(10).ConfigureAwait(false);
+        await Task.Delay(5).ConfigureAwait(false);
         cameraBean.HostBh = ParaSetupModules.HostInfo!.Bh;
         var publicUntil = new PublicUntil();
         byte iPosition = 3;
