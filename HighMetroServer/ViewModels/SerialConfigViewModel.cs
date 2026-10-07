@@ -490,6 +490,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     {
         Console.WriteLine("释放串口资源-----Receive！");
         WeakReferenceMessenger.Default.UnregisterAll(this);
+        ParaSetupModules.CommBufferDataProdEvent -= OnBufferDataProdEvent;
         ClearResource();
     }
 }

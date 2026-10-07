@@ -378,6 +378,8 @@ public partial class HostConfigViewModel : ObservableObject,
     public void Receive(AppCleanupMessage message)
     {
         WeakReferenceMessenger.Default.UnregisterAll(this);
+        ParaSetupModules.TcpServerBufferDataProdEvent -= OnShowTcpServerDataProdEvent;
+        ParaSetupModules.TcpClientConnEvent -= OnClientConnEvent;
         Console.WriteLine("释放TCP资源！");
         _= ClearResource();
     }
