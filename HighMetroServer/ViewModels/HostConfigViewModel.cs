@@ -243,7 +243,7 @@ public partial class HostConfigViewModel : ObservableObject,
     }
     private async Task ParseData(SocketDataBlock socketDataBlock)
     {
-        await Task.Delay(10).ConfigureAwait(false); 
+        await Task.Delay(5).ConfigureAwait(false); 
         //解析tcp-client消息，转发到对应的串口；
         var currentTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
         var tcpDataBean = ParseClientData.ParseTcpClientData(socketDataBlock);

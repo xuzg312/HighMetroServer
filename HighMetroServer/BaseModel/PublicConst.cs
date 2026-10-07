@@ -47,5 +47,5 @@ public static class PublicConst
     public const byte CamPerson = 0X03;
     
     public const int CommAlarmPdc = 0x1103;//人流量统计报警上传，对应NET_DVR_PDC_ALRAM_INFO
-
+    public const int DataBufferPoolMaxLength = 1_000;//最大1000个生产者数据;
 }

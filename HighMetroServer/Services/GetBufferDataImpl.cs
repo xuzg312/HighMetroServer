@@ -20,31 +20,20 @@ public class GetBufferDataImpl : IGetBufferData
     {
         _iDataBufferPool = dataBufferPool;
         _cts = new CancellationTokenSource();
-        _workerTask = Task.Factory.StartNew(
-            () =>
-            {
-                Thread.CurrentThread.Name = messageType switch
-                {
-                    PublicConst.TcpMessage => "GetBufferDataImpl-Task-Tcp",
-                    PublicConst.CommMessage => "GetBufferDataImpl-Task-Comm",
-                    _ => "GetBufferDataImpl-Task-UnKnown"
-                };
-                GetBufferSocketData(_cts.Token);
-            },
-            _cts.Token,
-            TaskCreationOptions.LongRunning,
-            TaskScheduler.Default);
+        _workerTask = Task.Run(() => ConsumeAsync(_cts.Token));
     }
     #endregion
     #region 获取数据池中数据；
-    private void GetBufferSocketData(CancellationToken token)
+    private async Task  ConsumeAsync(CancellationToken token)
     {
         while (!token.IsCancellationRequested)
         {
             try
             {
-                var socketDataBlock = _iDataBufferPool.DataDequeue();
-                if (socketDataBlock != null)
+                var socketDataBlock = await _iDataBufferPool.DataDequeueAsync(token);
+                if (socketDataBlock == null)
+                    break;  
+                try
                 {
                     //解析数据；
                     switch (socketDataBlock.MessageType)
@@ -61,9 +50,10 @@ public class GetBufferDataImpl : IGetBufferData
                             break;
                     }
                 }
-                else
+                catch (Exception ex)
                 {
-                    Thread.Sleep(100);
+                    var now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                    ParaSetupModules.RaiseAscDataProdEvent($"单条消息处理异常：{ex.Message}【{now}】");
                 }
             }
             catch (OperationCanceledException)
@@ -74,7 +64,6 @@ public class GetBufferDataImpl : IGetBufferData
             {
                 var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                 ParaSetupModules.RaiseAscDataProdEvent($"消息池中监听消息异常：{ex.Message}【{currDateTime}】");
-                Thread.Sleep(100);
             }
         }
     }
@@ -93,6 +82,7 @@ public class GetBufferDataImpl : IGetBufferData
         {
             //忽略;
         }
+        _iDataBufferPool.Complete(); 
         _workerTask = null;
         try
         {

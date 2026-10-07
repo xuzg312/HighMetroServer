@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using HighMetroServer.BaseModel;
@@ -86,12 +87,19 @@ public partial class MainPageViewModel : ViewModelBase
         {
             return;
         }
+
         var message = stringEventArgs.Message;
         _log4Queue.Enqueue(message);
+        _ = OnShowAscDataProdEventAsync();
+    }
+    private async Task OnShowAscDataProdEventAsync()
+    {
+        await Task.Delay(5).ConfigureAwait(false);
         while (_log4Queue.Count > PublicConst.MaxLogLines)
         {
             _log4Queue.TryDequeue(out _);
         }
+
         if (Interlocked.Exchange(ref _pendingUpdate, 1) == 1)
         {
             return; // 已有更新等待，跳过本次
@@ -105,6 +113,7 @@ public partial class MainPageViewModel : ViewModelBase
                 {
                     _stringBuilder.AppendLine(line);
                 }
+
                 AscMessageText = _stringBuilder.ToString();
             }
             finally
@@ -121,9 +130,14 @@ public partial class MainPageViewModel : ViewModelBase
             return;
         }
         var socketDataBlock = socketDataEventArgs.Data;
+        _= OnShowHexDataProdEventAsync(socketDataBlock);
+    }
+    private async Task OnShowHexDataProdEventAsync(SocketDataBlock socketDataBlock)
+    {
+        await Task.Delay(5).ConfigureAwait(false);
         var parseMessage = new ParseMessage();
         var message = parseMessage.ParseHexMessage(socketDataBlock);
         // 将更新操作提交到 UI 线程队列
-        Dispatcher.UIThread.Post(() => { HexMessageText = message; }); 
+        Dispatcher.UIThread.Post(() => { HexMessageText = message; });
     }
 }

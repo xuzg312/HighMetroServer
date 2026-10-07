@@ -147,7 +147,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     }
     private async Task OnBufferDataProd(SocketDataBlock socketDataBlock)
     {
-        await Task.Delay(10);
+        await Task.Delay(5).ConfigureAwait(false);
         var valid = false;
         if (socketDataBlock.Length >= 11)
         {
