@@ -240,7 +240,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
     }
     private async Task ReplyHeart(SocketDataBlock socketDataBlock)
     { 
-        await Task.Delay(10).ConfigureAwait(false); 
+        await Task.Delay(5).ConfigureAwait(false); 
         var mainInfoBean = ParseMainBordData.ReplyHeartInfo(socketDataBlock);
         if (mainInfoBean != null)
         {
