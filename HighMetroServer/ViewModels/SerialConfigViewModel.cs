@@ -20,61 +20,61 @@ namespace HighMetroServer.ViewModels;
 public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppCleanupMessage>
 {
     [ObservableProperty]
-    private SerialPortOptions? _config;
-
-    [ObservableProperty] 
-    private string _commState;
-    
-    [ObservableProperty] 
-    private int? _id;
-    
-    [ObservableProperty] 
-    private string? _name;
-
-    [ObservableProperty] 
-    private ObservableCollection<CodeNameModals> _portNameList= new ([]);
-
-    [ObservableProperty] 
-    private ObservableCollection<CodeNameModals> _baudRateList=new ([]);
+    public partial SerialPortOptions? Config { get; set; }
 
     [ObservableProperty]
-    private ObservableCollection<CodeNameModals> _dataBitsList=new ([]);
+    public partial string CommState { get; set; }
 
-    [ObservableProperty] 
-    private ObservableCollection<CodeNameModals> _parityList=new ([]);
+    [ObservableProperty]
+    public partial int? Id { get; set; }
 
-    [ObservableProperty] 
-    private ObservableCollection<CodeNameModals> _stopBitsList=new ([]);
-    
-    [ObservableProperty] 
-    private CodeNameModals? _selectPortName;
-    
-    [ObservableProperty] 
-    private CodeNameModals? _selectedBaudRate;
-    
-    [ObservableProperty] 
-    private CodeNameModals? _selectedDataBits;
-    
-    [ObservableProperty] 
-    private CodeNameModals? _selectedStopBits;
-    
-    [ObservableProperty] 
-    private CodeNameModals? _selectedParity;
+    [ObservableProperty]
+    public partial string? Name { get; set; }
 
-    [ObservableProperty] 
-    private string? _messageText;
+    [ObservableProperty]
+    public partial ObservableCollection<CodeNameModals> PortNameList { get; set; } = new([]);
 
-    [ObservableProperty] 
-    private string? _messageText1;
-    
-    [ObservableProperty] 
-    private string? _messageText2;
-    
-    [ObservableProperty] 
-    private string? _messageText3;
-    
-    [ObservableProperty] 
-    private string? _messageText4;
+    [ObservableProperty]
+    public partial ObservableCollection<CodeNameModals> BaudRateList { get; set; } = new([]);
+
+    [ObservableProperty]
+    public partial ObservableCollection<CodeNameModals> DataBitsList { get; set; } = new([]);
+
+    [ObservableProperty]
+    public partial ObservableCollection<CodeNameModals> ParityList { get; set; } = new([]);
+
+    [ObservableProperty]
+    public partial ObservableCollection<CodeNameModals> StopBitsList { get; set; } = new([]);
+
+    [ObservableProperty]
+    public partial CodeNameModals? SelectPortName { get; set; }
+
+    [ObservableProperty]
+    public partial CodeNameModals? SelectedBaudRate { get; set; }
+
+    [ObservableProperty]
+    public partial CodeNameModals? SelectedDataBits { get; set; }
+
+    [ObservableProperty]
+    public partial CodeNameModals? SelectedStopBits { get; set; }
+
+    [ObservableProperty]
+    public partial CodeNameModals? SelectedParity { get; set; }
+
+    [ObservableProperty]
+    public partial string? MessageText { get; set; }
+
+    [ObservableProperty]
+    public partial string? MessageText1 { get; set; }
+
+    [ObservableProperty]
+    public partial string? MessageText2 { get; set; }
+
+    [ObservableProperty]
+    public partial string? MessageText3 { get; set; }
+
+    [ObservableProperty]
+    public partial string? MessageText4 { get; set; }
     
     private bool _start;
     private int _serial;

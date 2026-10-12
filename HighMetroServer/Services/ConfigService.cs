@@ -10,19 +10,26 @@ namespace HighMetroServer.Services;
 public class ConfigService : IConfigService
 {
     private readonly string _configPath = Path.Combine(SystemInfo.SysConfigDir, "config.json");
-    private static readonly JsonSerializerOptions JsonWriteIndentedOptions = new()
-    {
-        WriteIndented = true
-    };
+
     public DbSetting LoadDbConfig()
     {
         var appConfig = LoadAppConfig();
-        return appConfig.Database ?? new DbSetting();
+        if (appConfig.Database != null)
+        {
+            appConfig.Database.DbPassword=CryptoHelper.Decrypt(appConfig.Database.DbPassword);
+            return appConfig.Database;
+        }
+        return new DbSetting();
     }
     public LoginSetting LoadLoginConfig()
     {
         var appConfig = LoadAppConfig();
-        return appConfig.LoginInfo ?? new LoginSetting();
+        if (appConfig.LoginInfo != null)
+        {
+            appConfig.LoginInfo.LoginPassword=CryptoHelper.Decrypt(appConfig.LoginInfo.LoginPassword);
+            return appConfig.LoginInfo;
+        }
+        return new LoginSetting();
     }
     public HostSetting LoadHostConfig()
     {
@@ -31,9 +38,11 @@ public class ConfigService : IConfigService
     }
     public void SaveDbConfig(DbSetting setting)
     {
+        var passwd = setting.DbPassword;
         try
         {
             var appConfig = LoadAppConfig();
+            setting.DbPassword = CryptoHelper.Encrypt(passwd);
             appConfig.Database = setting;
             SaveAppConfig(appConfig);
         }
@@ -41,18 +50,28 @@ public class ConfigService : IConfigService
         {
             throw new InvalidOperationException("保存配置文件失败，请检查权限或磁盘空间", ex);
         }
+        finally
+        {
+            setting.DbPassword = passwd;
+        }
     }
     public void SaveLoginConfig(LoginSetting setting)
     {
+        var passwd = setting.LoginPassword;
         try
         {
             var appConfig = LoadAppConfig();
+            setting.LoginPassword = CryptoHelper.Encrypt(passwd);
             appConfig.LoginInfo = setting;
             SaveAppConfig(appConfig);
         }
         catch (IOException ex)
         {
             throw new InvalidOperationException("保存配置文件失败，请检查权限或磁盘空间", ex);
+        }
+        finally
+        {
+            setting.LoginPassword = passwd;
         }
     }
     public void SaveHostConfig(HostSetting setting)

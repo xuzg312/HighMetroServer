@@ -18,22 +18,23 @@ public partial class DbConfigViewModel : ViewModelBase
     public event Action? OnDbConfigCancel;
     
     [ObservableProperty]
-    private string _host;
+    public partial string Host { get; set; }
 
     [ObservableProperty]
-    private string _portText;
+    public partial string PortText { get; set; }
+
+    [ObservableProperty]
+    public partial int Port { get; set; }
+
+    [ObservableProperty]
+    public partial string DbUser { get; set; }
+
+    [ObservableProperty]
+    public partial string DbPassword { get; set; } 
+
+    [ObservableProperty]
+    public partial string MessageText { get; set; } = string.Empty;
     
-    [ObservableProperty]
-    private int _port;
-    
-    [ObservableProperty]
-    private string _dbUser;
-
-    [ObservableProperty]
-    private string _dbPassword;
-
-    [ObservableProperty]
-    private string _messageText = "";
     public DbConfigViewModel(IConfigService configService, IDbService dbService,DbSetting setting,ResultInfo resultInfo)
     {
         _dbService = dbService;

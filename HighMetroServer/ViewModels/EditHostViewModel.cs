@@ -15,24 +15,24 @@ public partial class EditHostViewModel : ViewModelBase
     private readonly IDbService _dbService;
     public event Action? OnSuccess;
     public event Action? OnCancel;
-
-    [ObservableProperty] 
-    private string _ip = string.Empty;
-
-    [ObservableProperty]
-    private string _portText = string.Empty;
     
     [ObservableProperty]
-    private int _port;
-    
-    [ObservableProperty]
-    private string _code = string.Empty;
+    public partial string Ip { get; set; }
 
     [ObservableProperty]
-    private string _name = string.Empty;
+    public partial string PortText { get; set; }
 
     [ObservableProperty]
-    private string _messageText = "";
+    public partial int Port { get; set; }
+
+    [ObservableProperty]
+    public partial string Code { get; set; }
+
+    [ObservableProperty]
+    public partial string Name { get; set; } 
+
+    [ObservableProperty]
+    public partial string MessageText { get; set; } = string.Empty;
 
     private readonly HostInfo _hostInfo;
     private readonly DbSetting _dbSetting;

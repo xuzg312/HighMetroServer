@@ -19,17 +19,17 @@ public partial class MainViewModel : ViewModelBase
     private readonly Window _mainWindow;
 
     private DbSetting? _dbSetting;
-    // 弹窗遮罩是否显示
-    [ObservableProperty]
-    private bool _showOverlay;
-
-    // 当前激活弹窗VM
-    [ObservableProperty]
-    private object? _activePopupVm;
     
     [ObservableProperty]
-    private MainPageViewModel? _mainPageVm;
+    public partial bool ShowOverlay { get; set; }
 
+// 当前激活弹窗VM
+    [ObservableProperty]
+    public partial object? ActivePopupVm { get; set; }
+
+    [ObservableProperty]
+    public partial MainPageViewModel? MainPageVm { get; set; }
+    
     private readonly HostInfo _hostInfo;
     public MainViewModel(Window mainWindow)
     {
@@ -37,7 +37,7 @@ public partial class MainViewModel : ViewModelBase
         _configService = new ConfigService();
         _dbService = new DbService();
         IsMenuEnabled = false;
-        _showOverlay = false;
+        ShowOverlay = false;
         _hostInfo = new HostInfo
         {
             Bh = -1,

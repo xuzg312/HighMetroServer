@@ -15,22 +15,22 @@ namespace HighMetroServer.ViewModels;
 public partial class MainPageViewModel : ViewModelBase
 {
     [ObservableProperty]
-    private HostOptions _hostConfig;
-    
-    [ObservableProperty]
-    private CamOptions _camConfig;
-    
-    [ObservableProperty]
-    private SerialPortOptions? _serialConfig1;
+    public partial HostOptions HostConfig { get; set; }
 
     [ObservableProperty]
-    private SerialPortOptions? _serialConfig2;
+    public partial CamOptions CamConfig { get; set; }
 
     [ObservableProperty]
-    private string? _ascMessageText;
-    
+    public partial SerialPortOptions? SerialConfig1 { get; set; }
+
     [ObservableProperty]
-    private string? _hexMessageText;
+    public partial SerialPortOptions? SerialConfig2 { get; set; }
+
+    [ObservableProperty]
+    public partial string? AscMessageText { get; set; }
+
+    [ObservableProperty]
+    public partial string? HexMessageText { get; set; }
 
     private readonly ConcurrentQueue<string> _log4Queue = [];
     private readonly StringBuilder _stringBuilder = new ();

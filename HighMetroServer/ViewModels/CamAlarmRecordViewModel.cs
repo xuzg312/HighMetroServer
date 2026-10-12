@@ -17,28 +17,25 @@ public partial class CamAlarmRecordViewModel(IDbService dbService) : ObservableO
     public event Action? OnClose;
     
     [ObservableProperty]
-    private CameraBean? _selectedRow;
-    
-    [ObservableProperty]
-    private string _messageText=string.Empty;
-    
-    [ObservableProperty]
-    private DateTime _queryDate = DateTime.Now.Date;
+    public partial CameraBean? SelectedRow { get; set; }
 
     [ObservableProperty]
-    private ObservableCollection<CameraBean> _recordList=[];
+    public partial string MessageText { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private bool _calendarPopupOpen;
+    public partial DateTime QueryDate { get; set; } = DateTime.Now.Date;
 
     [ObservableProperty]
-    private string _pageInfo = "第1页 / 共0页";
-    
-    [ObservableProperty]
-    private int _currentPage = 1;
+    public partial ObservableCollection<CameraBean> RecordList { get; set; } = [];
 
     [ObservableProperty]
-    private int _totalPage = 1;
+    public partial bool CalendarPopupOpen { get; set; }
+
+    [ObservableProperty]
+    public partial string PageInfo { get; set; } = "第1页 / 共0页";    
+    private int CurrentPage { get; set; } = 1;
+
+    private int TotalPage { get; set; } = 1;
     
     [RelayCommand]
     private void Query()

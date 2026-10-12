@@ -19,15 +19,16 @@ public partial class HostSelectViewModel : ViewModelBase
     public event Action? OnAdd;
     
     [ObservableProperty]
-    private ObservableCollection<HostModals> _hostModalsList = [];
-
-    [ObservableProperty] 
-    private bool _enableAdd;
-    
-    private HostModals? _selectedHost;
+    public partial ObservableCollection<HostModals> HostModalsList { get; set; } = [];
 
     [ObservableProperty]
-    private string _messageText = "";
+    public partial bool EnableAdd { get; set; }
+
+    [ObservableProperty]
+    public partial string MessageText { get; set; } = string.Empty;
+    
+    private HostModals? _selectedHost;
+    
     public HostSelectViewModel(IConfigService configService, ResultHostInfo resultHostInfo,bool enableAdd)
     {
         _configService = configService;
@@ -38,7 +39,7 @@ public partial class HostSelectViewModel : ViewModelBase
             if (hostList.Count > 0)
             {
                 int length = hostList.Count;
-                HostModalsList = new ObservableCollection<HostModals>();
+                HostModalsList = [];
                 for (var i = 0; i < length; i++)
                 {
                     HostInfo hostInfo = hostList[i];
@@ -59,7 +60,6 @@ public partial class HostSelectViewModel : ViewModelBase
         {
             if (SetProperty(ref _selectedHost, value))
             {
-                // ======选中变更触发逻辑======
                 OnHostSelectedChanged(value);
             }
         }

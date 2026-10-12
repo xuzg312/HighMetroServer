@@ -21,29 +21,23 @@ public partial class CamConfigViewModel : ObservableObject,
     IRecipient<CamMessage>
 {
     [ObservableProperty]
-    private CamOptions? _config;
+    public partial CamOptions? Config { get; set; }
 
-    [ObservableProperty] 
-    private string _camState;
+    [ObservableProperty]
+    public partial string CamState { get; set; }
+
+    [ObservableProperty]
+    public partial string Ip { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial int Port { get; set; }
+
+    [ObservableProperty]
+    public partial string UserName { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string MessageText { get; set; } = string.Empty;
     
-    [ObservableProperty]
-    private int _id;
-
-    [ObservableProperty]
-    private string _name = string.Empty;
-
-    [ObservableProperty]
-    private string _ip = string.Empty;
-
-    [ObservableProperty]
-    private int _port;
-    
-    [ObservableProperty]
-    private string _userName = string.Empty;
-    
-    [ObservableProperty]
-    private string _messageText = string.Empty;
-
     private bool _start;
     private readonly CamRemoteLinkImpl _camRemoteLinkImpl;
     private Task? _heartTask;

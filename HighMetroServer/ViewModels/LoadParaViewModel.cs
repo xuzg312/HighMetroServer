@@ -10,7 +10,7 @@ public partial class LoadParaViewModel : ViewModelBase
     public event Action? OnCancel;
     
     [ObservableProperty]
-    private string _errorMessage = "";
+    public partial string ErrorMessage { get; set; }
 
     public LoadParaViewModel(ResultInfo resultInfo)
     {

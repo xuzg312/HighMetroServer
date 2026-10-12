@@ -19,23 +19,22 @@ public partial class EditCamConfigViewModel : ViewModelBase,IRecipient<AppCleanu
     public event Action? OnHardConfigCancel;
     
     [ObservableProperty]
-    private string _ip;
+    public partial string Ip { get; set; }
 
     [ObservableProperty]
-    private string _portText;
+    public partial string PortText { get; set; }
+
+    private int Port { get; set; }
+
+    [ObservableProperty]
+    public partial string UserName { get; set; } 
+
+    [ObservableProperty]
+    public partial string Password { get; set; }
+
+    [ObservableProperty]
+    public partial string MessageText { get; set; } = string.Empty;
     
-    [ObservableProperty]
-    private int _port;
-    
-    [ObservableProperty]
-    private string _userName;
-
-    [ObservableProperty]
-    private string _password;
-
-    [ObservableProperty]
-    private string _messageText = "";
-
     private readonly HardInfo _hardInfo;
     private readonly CamRemoteLinkImpl _camRemoteLinkImpl;
 

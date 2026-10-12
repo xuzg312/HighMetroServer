@@ -24,44 +24,38 @@ public partial class CameraPreviewViewModel : ObservableRecipient,IRecipient<App
 {
     public event Action? OnClose;
 
-    [ObservableProperty] 
-    private string _camState;
+    [ObservableProperty]
+    public partial string CamState { get; set; }
     
     [ObservableProperty]
-    private string _ip = string.Empty;
+    public partial string Ip { get; set; }
 
     [ObservableProperty]
-    private int _port = 3000;
-    
-    [ObservableProperty]
-    private string _userName = string.Empty;
-    
-    [ObservableProperty]
-    private string _messageText = string.Empty;
-
-    // 实时预览图
-    [ObservableProperty]
-    private WriteableBitmap? _previewSource;
-
-    // 抓拍静态图
-    [ObservableProperty]
-    private IImage? _snapshotSource;
-    
-    [ObservableProperty]
-    private string _statusText = "等待连接摄像头";
+    public partial int Port { get; set; }
 
     [ObservableProperty]
-    private bool _isNoVideo = true;
+    public partial string UserName { get; set; }
 
     [ObservableProperty]
-    private string _snapshotTip = "暂无抓拍图";
+    public partial string MessageText { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private bool _isNoSnapshot = true;
+    public partial WriteableBitmap? PreviewSource { get; set; }
 
-    // 画面拉伸模式，默认Uniform保持比例（推荐）
     [ObservableProperty]
-    private Stretch _stretchMode = Stretch.Uniform;
+    public partial IImage? SnapshotSource { get; set; }
+
+    [ObservableProperty]
+    public partial string StatusText { get; set; } = "等待连接摄像头";
+
+    [ObservableProperty]
+    public partial bool IsNoVideo { get; set; } = true;
+
+    [ObservableProperty]
+    public partial string SnapshotTip { get; set; } = "暂无抓拍图";
+
+    [ObservableProperty]
+    public partial bool IsNoSnapshot { get; set; } = true;
     
     private readonly HardInfo _hardInfo;
     private bool _start;

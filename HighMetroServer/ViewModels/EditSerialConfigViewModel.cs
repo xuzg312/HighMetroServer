@@ -17,83 +17,83 @@ public partial class EditSerialConfigViewModel : ViewModelBase
     private readonly IDbService _dbService;
     public event Action? OnExit;
     
-    [ObservableProperty] 
-    private string _messageText1 = string.Empty;
-
-    [ObservableProperty] 
-    private string _id1 = string.Empty;
-    
-    [ObservableProperty] 
-    private string _name1 = string.Empty;
-    
-    [ObservableProperty] 
-    private ObservableCollection<CodeNameModals> _portNameList1 = CommParameter.PortNameList;
-
-    [ObservableProperty] 
-    private ObservableCollection<CodeNameModals> _baudRateList1 = CommParameter.BaudRateList;
+    [ObservableProperty]
+    public partial string MessageText1 { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private ObservableCollection<CodeNameModals> _dataBitsList1 = CommParameter.DataBitsList;
-
-    [ObservableProperty] 
-    private ObservableCollection<CodeNameModals> _parityList1 = CommParameter.ParityList;
-
-    [ObservableProperty] 
-    private ObservableCollection<CodeNameModals> _stopBitsList1 = CommParameter.StopBitsList;
-    
-    [ObservableProperty] 
-    private CodeNameModals? _selectPortName1;
-    
-    [ObservableProperty] 
-    private CodeNameModals? _selectedBaudRate1;
-    
-    [ObservableProperty] 
-    private CodeNameModals? _selectedDataBits1;
-    
-    [ObservableProperty] 
-    private CodeNameModals? _selectedStopBits1;
-    
-    [ObservableProperty] 
-    private CodeNameModals? _selectedParity1;
-    
-    [ObservableProperty] 
-    private string _messageText2 = string.Empty;
-
-    [ObservableProperty] 
-    private string _id2 = string.Empty;
-    
-    [ObservableProperty] 
-    private string _name2 = string.Empty;
-
-    [ObservableProperty] 
-    private ObservableCollection<CodeNameModals> _portNameList2 = CommParameter.PortNameList;
-
-    [ObservableProperty] 
-    private ObservableCollection<CodeNameModals> _baudRateList2 = CommParameter.BaudRateList;
+    public partial string Id1 { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private ObservableCollection<CodeNameModals> _dataBitsList2 = CommParameter.DataBitsList;
+    public partial string Name1 { get; set; } = string.Empty;
 
-    [ObservableProperty] 
-    private ObservableCollection<CodeNameModals> _parityList2 = CommParameter.ParityList;
+    [ObservableProperty]
+    public partial ObservableCollection<CodeNameModals> PortNameList1 { get; set; } = CommParameter.PortNameList;
 
-    [ObservableProperty] 
-    private ObservableCollection<CodeNameModals> _stopBitsList2 = CommParameter.StopBitsList;
-    
-    [ObservableProperty] 
-    private CodeNameModals? _selectPortName2;
-    
-    [ObservableProperty] 
-    private CodeNameModals? _selectedBaudRate2;
-    
-    [ObservableProperty] 
-    private CodeNameModals? _selectedDataBits2;
-    
-    [ObservableProperty] 
-    private CodeNameModals? _selectedStopBits2;
-    
-    [ObservableProperty] 
-    private CodeNameModals? _selectedParity2;
+    [ObservableProperty]
+    public partial ObservableCollection<CodeNameModals> BaudRateList1 { get; set; } = CommParameter.BaudRateList;
+
+    [ObservableProperty]
+    public partial ObservableCollection<CodeNameModals> DataBitsList1 { get; set; } = CommParameter.DataBitsList;
+
+    [ObservableProperty]
+    public partial ObservableCollection<CodeNameModals> ParityList1 { get; set; } = CommParameter.ParityList;
+
+    [ObservableProperty]
+    public partial ObservableCollection<CodeNameModals> StopBitsList1 { get; set; } = CommParameter.StopBitsList;
+
+    [ObservableProperty]
+    public partial CodeNameModals? SelectPortName1 { get; set; }
+
+    [ObservableProperty]
+    public partial CodeNameModals? SelectedBaudRate1 { get; set; }
+
+    [ObservableProperty]
+    public partial CodeNameModals? SelectedDataBits1 { get; set; }
+
+    [ObservableProperty]
+    public partial CodeNameModals? SelectedStopBits1 { get; set; }
+
+    [ObservableProperty]
+    public partial CodeNameModals? SelectedParity1 { get; set; }
+
+    [ObservableProperty]
+    public partial string MessageText2 { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string Id2 { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string Name2 { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial ObservableCollection<CodeNameModals> PortNameList2 { get; set; } = CommParameter.PortNameList;
+
+    [ObservableProperty]
+    public partial ObservableCollection<CodeNameModals> BaudRateList2 { get; set; } = CommParameter.BaudRateList;
+
+    [ObservableProperty]
+    public partial ObservableCollection<CodeNameModals> DataBitsList2 { get; set; } = CommParameter.DataBitsList;
+
+    [ObservableProperty]
+    public partial ObservableCollection<CodeNameModals> ParityList2 { get; set; } = CommParameter.ParityList;
+
+    [ObservableProperty]
+    public partial ObservableCollection<CodeNameModals> StopBitsList2 { get; set; } = CommParameter.StopBitsList;
+
+    [ObservableProperty]
+    public partial CodeNameModals? SelectPortName2 { get; set; }
+
+    [ObservableProperty]
+    public partial CodeNameModals? SelectedBaudRate2 { get; set; }
+
+    [ObservableProperty]
+    public partial CodeNameModals? SelectedDataBits2 { get; set; }
+
+    [ObservableProperty]
+    public partial CodeNameModals? SelectedStopBits2 { get; set; }
+
+    [ObservableProperty]
+    public partial CodeNameModals? SelectedParity2 { get; set; }
 
     private readonly List<SerialCommInfo> _serialCommList;
 

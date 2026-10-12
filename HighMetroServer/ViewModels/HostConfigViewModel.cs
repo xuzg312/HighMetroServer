@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
@@ -20,26 +19,26 @@ public partial class HostConfigViewModel : ObservableObject,
     IRecipient<TcpMessage>
 {
     [ObservableProperty]
-    private HostOptions? _config;
+    public partial HostOptions? Config { get; set; }
+
+    [ObservableProperty]
+    public partial string HostState { get; set; }
+
+    [ObservableProperty]
+    public partial string Ip { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial int Port { get; set; } = 3000;
+
+    [ObservableProperty]
+    public partial string Code { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string Name { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string MessageText { get; set; } = string.Empty;
     
-    [ObservableProperty] 
-    private string _hostState;
-    
-    [ObservableProperty]
-    private string _ip = string.Empty;
-
-    [ObservableProperty]
-    private int _port = 3000;
-
-    [ObservableProperty]
-    private string _code = string.Empty;
-
-    [ObservableProperty]
-    private string _name = string.Empty;
-    
-    [ObservableProperty]
-    private string _messageText = string.Empty;
-
     private bool _start;
     private readonly HostInfo _hostInfo;
     private TcpServerListenerImpl? _tcpServer;

@@ -33,13 +33,12 @@ public partial class PlayVideoViewModel : ObservableObject
     private readonly SemaphoreSlim _frameSignal;
     private readonly MemoryPool<byte> _memoryPool = MemoryPool<byte>.Shared;
     private readonly CancellationTokenSource _cts;
-    private Task? _showUiTask;
     
     [ObservableProperty]
-    private string _messageText = string.Empty;
+    public partial string MessageText { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private WriteableBitmap? _previewSource;
+    public partial WriteableBitmap? PreviewSource { get; set; }
     
     public PlayVideoViewModel()
     {
@@ -48,7 +47,7 @@ public partial class PlayVideoViewModel : ObservableObject
         _camRemoteLinkImpl = new CamRemoteLinkImpl();
         _frameSignal = new SemaphoreSlim(0);
         _cts = new CancellationTokenSource();
-        _showUiTask = Task.Run(() => SafeHandleLoop(_cts.Token), _cts.Token);
+        _= Task.Run(() => SafeHandleLoop(_cts.Token), _cts.Token);
     }
     public async Task LoadVideo(string filePath)
     {
@@ -339,7 +338,6 @@ public partial class PlayVideoViewModel : ObservableObject
         {
             //忽略；
         }
-        _showUiTask = null;
         _wbA?.Dispose();
         _wbB?.Dispose();
         _wbA = null;

@@ -9,7 +9,7 @@ namespace HighMetroServer.ViewModels;
 public partial class ImagePreviewModel : ObservableObject
 {
     [ObservableProperty]
-    private string _messageText=string.Empty;
+    public partial string MessageText { get; set; } = string.Empty;
     
     [RelayCommand]
     private void Quit()

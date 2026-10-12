@@ -19,13 +19,13 @@ public partial class LoginViewModel : ViewModelBase
     public event Action? OnLoginCancel;
 
     [ObservableProperty]
-    private string _username = "";
+    public partial string Username { get; set; }
+
+    [ObservableProperty] 
+    public partial string Password { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private string _password = "";
-
-    [ObservableProperty]
-    private string _msg = "";
+    public partial string Msg { get; set; } = string.Empty;
 
     public LoginViewModel(IConfigService configService, IDbService dbService,LoginSetting loginSetting,DbSetting dbSetting)
     {
