@@ -29,7 +29,6 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
     private const byte PacketHead1 = 0xEB;
     private const byte PacketHead2 = 0xAA;
     private const byte PacketTail = 0xED;
-    private const int TaskWaitTimeoutMs = 500;
     private long _receiveTotalCount;
     private long _parseTotalCount;
     private long _receiveTotalBytes;
@@ -48,6 +47,7 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
         {
             //open the serial port;
             _serialPort.Open();
+            _semaphoreSlim = new SemaphoreSlim(0);
             _serialPort.DataReceived += OnSerialDataReceived;
             _receiveQueue.Clear();
             _receiveBuffer.Clear();
@@ -63,7 +63,6 @@ public class CommSerialImpl(int threadCount, SerialCommInfo serialCommInfo)
             //启动1个线程，进行数据包的拆分或合并；
             _parseBackgroundTask = Task.Run(() => ParseDataLoop(_parseCts.Token), _parseCts.Token);
             ResetStatistics();
-            _semaphoreSlim = new SemaphoreSlim(0);
             _start = true;
             return true;
         }
