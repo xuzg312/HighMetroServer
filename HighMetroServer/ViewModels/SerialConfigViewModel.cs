@@ -254,7 +254,7 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
                 var logBean = new LogBean()
                 {
                     MessAge = $"异常心跳：A1gzm:{mainInfoBean.A1gzm};A2gzm:{mainInfoBean.A2gzm};B1gzm:{mainInfoBean.B1gzm};B2gzm:{mainInfoBean.B2gzm}",
-                    Key = "RestartServer",
+                    Key = "HeartException",
                 };
                 ParaSetupModules.RaiseLogDataProdEvent(logBean);
             }
