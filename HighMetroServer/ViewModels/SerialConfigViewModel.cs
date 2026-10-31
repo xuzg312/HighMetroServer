@@ -246,28 +246,28 @@ public partial class SerialConfigViewModel : ObservableObject,IRecipient<AppClea
         {
             mainInfoBean.HostBh = ParaSetupModules.HostInfo!.Bh;
             var data = ParseMainBordData.ParsePack(mainInfoBean);
-            ResultInfo resultInfo;
             if (mainInfoBean.A1gzm > 0 || mainInfoBean.A2gzm > 0 || mainInfoBean.B1gzm > 0 ||
                 mainInfoBean.B2gzm > 0)
             {
                 //异常的心跳，保存到数据库;
                 //resultInfo = await ParaSetupModules.DbService!.AddHeart(mainInfoBean);
-                resultInfo = new ResultInfo
+                var logBean = new LogBean()
                 {
-                    Code=PublicConst.FlagNo,
-                    Message = $"异常心跳：A1gzm:{mainInfoBean.A1gzm};A2gzm:{mainInfoBean.A2gzm};B1gzm:{mainInfoBean.B1gzm};B2gzm:{mainInfoBean.B2gzm}",
+                    MessAge = $"异常心跳：A1gzm:{mainInfoBean.A1gzm};A2gzm:{mainInfoBean.A2gzm};B1gzm:{mainInfoBean.B1gzm};B2gzm:{mainInfoBean.B2gzm}",
+                    Key = "RestartServer",
                 };
+                ParaSetupModules.RaiseLogDataProdEvent(logBean);
             }
             else
             {
                 //正常心跳，数据库更新次数，每天一条记录；
                 mainInfoBean.Datetime = DateTime.Now.Date.ToString("yyyy-MM-dd HH:mm:ss");
-                resultInfo = await ParaSetupModules.DbService!.SavePersonDay(mainInfoBean);
-            }
-            if (!resultInfo.Code.Equals(PublicConst.FlagYes))
-            {
-                var currDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                ParaSetupModules.RaiseAscDataProdEvent($"{resultInfo.Message}【{currDate}】");
+                var resultInfo = await ParaSetupModules.DbService!.SavePersonDay(mainInfoBean);
+                if (!resultInfo.Code.Equals(PublicConst.FlagYes))
+                {
+                    var currDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                    ParaSetupModules.RaiseAscDataProdEvent($"{resultInfo.Message}【{currDate}】");
+                }            
             }
             Dispatcher.UIThread.Post(() =>
             {

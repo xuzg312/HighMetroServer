@@ -39,6 +39,7 @@ public partial class MainPageViewModel : ViewModelBase
     {
         ParaSetupModules.AscDataProdEvent += OnShowAscDataProdEvent;
         ParaSetupModules.HexDataProdEvent += OnShowHexDataProdEvent;
+        ParaSetupModules.LogDataProdEvent += OnSaveLogDataProdEvent;
         HostConfig = new HostOptions(
             ParaSetupModules.HostInfo!.Ip, 
             ParaSetupModules.HostInfo.Port, 
@@ -48,6 +49,13 @@ public partial class MainPageViewModel : ViewModelBase
             ParaSetupModules.CamInfo!.Ip, 
             ParaSetupModules.CamInfo.Port, 
             ParaSetupModules.CamInfo.UserName);
+        var currDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        var logBean = new LogBean()
+        {
+            MessAge = $"重启Server：【{currDateTime}】",
+            Key = "RestartServer",
+        };
+        ParaSetupModules.RaiseLogDataProdEvent(logBean);
     }
     public void InitSerialPorts()
     {
@@ -139,5 +147,18 @@ public partial class MainPageViewModel : ViewModelBase
         var message = parseMessage.ParseHexMessage(socketDataBlock);
         // 将更新操作提交到 UI 线程队列
         Dispatcher.UIThread.Post(() => { HexMessageText = message; });
+    }
+    private void OnSaveLogDataProdEvent(object? obj, EventArgs arg)
+    {
+        if (arg is not LogEventArgs logEventArgs)
+        {
+            return;
+        }
+        var message = logEventArgs.Message;
+        _ = SaveLogData(message);
+    }
+    private async Task SaveLogData(LogBean logBean)
+    {
+        await LogUntil.WriteAscAsync(logBean.MessAge!,logBean.Key!);
     }
 }

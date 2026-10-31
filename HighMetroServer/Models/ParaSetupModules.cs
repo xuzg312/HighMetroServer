@@ -36,6 +36,17 @@ public static class ParaSetupModules
     {
         _hexDataProdEvent?.Invoke(null, new SocketDataEventArgs(socketDataBlock));
     }
+    //保存日志；
+    private static EventHandler? _logDataProdEvent;
+    public static event EventHandler? LogDataProdEvent
+    {
+        add => _logDataProdEvent ??= value;
+        remove => _logDataProdEvent -= value;
+    }
+    public static void RaiseLogDataProdEvent(LogBean logBean)
+    {
+        _logDataProdEvent?.Invoke(null, new LogEventArgs(logBean));
+    }
     //接收数据；
     private static EventHandler? _tcpServerBufferDataProdEvent;
     public static event EventHandler? TcpServerBufferDataProdEvent

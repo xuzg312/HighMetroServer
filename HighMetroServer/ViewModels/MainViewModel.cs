@@ -22,8 +22,7 @@ public partial class MainViewModel : ViewModelBase
     
     [ObservableProperty]
     public partial bool ShowOverlay { get; set; }
-
-// 当前激活弹窗VM
+    
     [ObservableProperty]
     public partial object? ActivePopupVm { get; set; }
 
