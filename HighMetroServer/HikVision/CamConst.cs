@@ -14,5 +14,5 @@ public static class CamConst
     public const int BufPoolSize = 1024 * 1024 * 8;//分配8M缓冲区存储摄像头传递的待解码的数据；
     public const int DisplayBufNumber = 15;//设置播放库内部“显示缓冲区”的最大缓冲帧数。
 
-    public const int PlayCamTime = 10;//录像10秒；
+    public const int PlayCamTime = 30;//录像30秒；
 }

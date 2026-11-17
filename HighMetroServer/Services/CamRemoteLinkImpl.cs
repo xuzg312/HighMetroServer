@@ -143,14 +143,14 @@ public class CamRemoteLinkImpl
                 wPicQuality = 0,
                 wPicSize = 0xff
             };
-            bufferPtr = Marshal.AllocHGlobal(PublicConst.MaxBufferSize);
+            bufferPtr = Marshal.AllocHGlobal(PublicConst.MaxCapBufferSize);
             uint actualSize = 0;
             var nativeRet = HikSdk.NET_DVR_CaptureJPEGPicture_NEW(
                 _userId,
                 1,
                 ref lpJpegPara,
                 bufferPtr,
-                PublicConst.MaxBufferSize,
+                PublicConst.MaxCapBufferSize,
                 ref actualSize);
             if (nativeRet < 0 || actualSize <= 0)
             {
@@ -249,7 +249,7 @@ public class CamRemoteLinkImpl
                 var startRet = HikSdk.NET_DVR_SaveRealData(_playHandle, fullSavePath);
                 if (startRet < 0)
                     return HikSdkGetLastError("NET_DVR_SaveRealData");
-                // 等待10秒
+                // 等待n秒
                 await Task.Delay(TimeSpan.FromSeconds(CamConst.PlayCamTime));
                 return new LoadCamResult
                 {
@@ -314,14 +314,14 @@ public class CamRemoteLinkImpl
                 wPicQuality = 0,
                 wPicSize = 0xff
             };
-            var bufferPtr = Marshal.AllocHGlobal(PublicConst.MaxBufferSize);
+            var bufferPtr = Marshal.AllocHGlobal(PublicConst.MaxCamBufferSize);
             uint actualSize = 0;
             var nativeRet = HikSdk.NET_DVR_CaptureJPEGPicture_NEW(
                 _userId,
                 lChannel,
                 ref lpJpegPara,
                 bufferPtr,
-                PublicConst.MaxBufferSize,
+                PublicConst.MaxCamBufferSize,
                 ref actualSize);
             // SDK调用失败校验
             if (nativeRet < 0 || actualSize <= 0)

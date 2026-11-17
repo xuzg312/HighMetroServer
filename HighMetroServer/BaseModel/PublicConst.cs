@@ -13,7 +13,8 @@ public static class PublicConst
     public const int SockDataMaxLength = 4096;
     public const int PerSockDataMaxLength = 128;
     public const int ClientMaxLength = 254;
-    public const int MaxBufferSize = 1024 * 512;
+    public const int MaxCamBufferSize = 1024 * 1024;
+    public const int MaxCapBufferSize = 1024 * 512;
     public const int MaxLogLines = 100;
     
     public const string DireDoor = "-";//不区分; 
